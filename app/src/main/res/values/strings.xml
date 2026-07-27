@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Narcic</string>
+    <string name="run">CONNECT</string>
+    <string name="stop">STOP</string>
+</resources>
