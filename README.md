@@ -1,7 +1,7 @@
 # Narcic Android
 
 
-<div align="center"> <a href="https://github.com/user-attachments/assets/c21aa295-8786-4494-bb77-6765bff43afd"> <img src="https://github.com/user-attachments/assets/c21aa295-8786-4494-bb77-6765bff43afd" width="18%"> </a> <a href="https://github.com/user-attachments/assets/6029401d-e02b-449e-a70b-a13575628db4"> <img src="https://github.com/user-attachments/assets/6029401d-e02b-449e-a70b-a13575628db4" width="18%"> </a> <a href="https://github.com/user-attachments/assets/c4251fc7-796f-447e-b7df-9cf4ac2d46d0"> <img src="https://github.com/user-attachments/assets/c4251fc7-796f-447e-b7df-9cf4ac2d46d0" width="18%"> </a> <a href="https://github.com/user-attachments/assets/68206bcd-d913-4cda-87a8-cc935c2b141c"> <img src="https://github.com/user-attachments/assets/68206bcd-d913-4cda-87a8-cc935c2b141c" width="18%"> </a> <a href="https://github.com/user-attachments/assets/9d244d7e-4bb7-4ec5-807e-f4738a372ba2"> <img src="https://github.com/user-attachments/assets/9d244d7e-4bb7-4ec5-807e-f4738a372ba2" width="18%"> </a> </div>
+<div align="center"> <a href="screenshots/home.jpg"> <img src="screenshots/home.jpg" width="18%"> </a> <a href="screenshots/configs.jpg"> <img src="screenshots/configs.jpg" width="18%"> </a> <a href="screenshots/sni.jpg"> <img src="screenshots/sni.jpg" width="18%"> </a> <a href="screenshots/logs.jpg"> <img src="screenshots/logs.jpg" width="18%"> </a> <a href="screenshots/support.jpg"> <img src="screenshots/support.jpg" width="18%"> </a> </div>
 
 <br> <br>
 
