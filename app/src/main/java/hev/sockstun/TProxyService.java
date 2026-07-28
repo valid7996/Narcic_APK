@@ -11,11 +11,11 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 
-import com.uac.spoofer.BypassStore;
-import com.uac.spoofer.MainActivity;
-import com.uac.spoofer.ProxyService;
-import com.uac.spoofer.R;
-import com.uac.spoofer.XrayRunner;
+import com.narcic.app.BypassStore;
+import com.narcic.app.MainActivity;
+import com.narcic.app.ProxyService;
+import com.narcic.app.R;
+import com.narcic.app.XrayRunner;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +33,7 @@ public class TProxyService extends VpnService {
     public static final String ACTION_CONNECT = "hev.sockstun.CONNECT";
     public static final String ACTION_DISCONNECT = "hev.sockstun.DISCONNECT";
 
-    private static final String CHANNEL_ID = "uac_spoofer_vpn";
+    private static final String CHANNEL_ID = "narcic_vpn";
     private static final int NOTIFICATION_ID = 40444;
     private static final int TUNNEL_MTU = 8500;
     private static final int TASK_STACK_SIZE = 81920;

@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.util.AttributeSet;

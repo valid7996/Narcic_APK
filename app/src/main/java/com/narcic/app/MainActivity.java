@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.Manifest;
 import android.app.Activity;
@@ -472,7 +472,7 @@ public class MainActivity extends Activity implements ProxyService.Listener {
         if (mapped != null) return mapped;
         mapped = pair(value, "Support the project by giving it a star on GitHub.", "با ستاره دادن به پروژه در GitHub از آن حمایت کنید.");
         if (mapped != null) return mapped;
-        mapped = pair(value, "Open Telegram Channel\nt.me/UacSniSpoofer", "باز کردن کانال تلگرام\nt.me/UacSniSpoofer");
+        mapped = pair(value, "Open Telegram Channel\nt.me/Narcic_Support", "باز کردن کانال تلگرام\nt.me/Narcic_Support");
         if (mapped != null) return mapped;
         mapped = pair(value, "credits to behroozuac", "با تشکر از behroozuac");
         if (mapped != null) return mapped;
@@ -683,7 +683,7 @@ public class MainActivity extends Activity implements ProxyService.Listener {
             if (manager == null) {
                 return;
             }
-            String channelId = "uac_updates";
+            String channelId = "narcic_updates";
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                         channelId,
@@ -2459,11 +2459,11 @@ public class MainActivity extends Activity implements ProxyService.Listener {
     }
 
     private void openTelegramSupport() {
-        Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=UacSniSpoofer"));
+        Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=Narcic_Support"));
         try {
             startActivity(appIntent);
         } catch (Exception ignored) {
-            Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/UacSniSpoofer"));
+            Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Narcic_Support"));
             try {
                 startActivity(webIntent);
             } catch (Exception e) {

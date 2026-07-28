@@ -1,10 +1,10 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
 public final class LanguageStore {
-    private static final String PREFS = "uac_spoofer_language";
+    private static final String PREFS = "narcic_language";
     private static final String KEY_PERSIAN = "persian";
 
     private LanguageStore() {

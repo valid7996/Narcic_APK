@@ -9,11 +9,11 @@ if (signingPropsFile.exists()) {
 }
 
 android {
-    namespace "com.uac.spoofer"
+    namespace "com.narcic.app"
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.uac.spoofer"
+        applicationId "com.narcic.app"
         minSdk 23
         targetSdk 35
         versionCode 6

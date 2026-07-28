@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class SniBookmarkStore {
-    private static final String PREFS = "uac_spoofer_sni_bookmarks";
+    private static final String PREFS = "narcic_sni_bookmarks";
     private static final String KEY_ITEMS = "items";
 
     private SniBookmarkStore() {

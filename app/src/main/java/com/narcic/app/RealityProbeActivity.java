@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -660,7 +660,7 @@ public class RealityProbeActivity extends Activity {
             connection = (HttpsURLConnection) new URL(testUrl).openConnection(proxy);
             connection.setConnectTimeout(timeoutMs);
             connection.setReadTimeout(timeoutMs);
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 UAC-Spoofer Reality-Probe");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 Narcic Reality-Probe");
             connection.setRequestProperty("Connection", "close");
             if (!isActive(currentRun)) {
                 return new HttpProbe(0, "cancelled");

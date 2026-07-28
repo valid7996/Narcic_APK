@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.Intent;
@@ -18,12 +18,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class GitHubSync {
-    public static final String PROJECT_URL = "https://github.com/Floxu1/UAC-SNI-Spoofer-Android";
-    public static final String RELEASES_API = "https://api.github.com/repos/Floxu1/UAC-SNI-Spoofer-Android/releases/latest";
-    public static final String REMOTE_CONFIGS_URL = "https://raw.githubusercontent.com/Floxu1/UAC-SNI-Spoofer-Android/main/configs.txt";
+    public static final String PROJECT_URL = "https://github.com/valid7996/Narcic_APK";
+    public static final String RELEASES_API = "https://api.github.com/repos/valid7996/Narcic_APK/releases/latest";
+    public static final String REMOTE_CONFIGS_URL = "https://raw.githubusercontent.com/valid7996/Narcic_APK/main/configs.txt";
     public static final String CURRENT_VERSION = "1.0.5";
     public static final String CURRENT_RELEASE_TAG = "1.0.5";
-    public static final String FALLBACK_APK_URL = "https://github.com/Floxu1/UAC-SNI-Spoofer-Android/releases/download/v1.0.5/uac-Spoofer.apk";
+    public static final String FALLBACK_APK_URL = "https://github.com/valid7996/Narcic_APK/releases/download/v1.0.5/Narcic.apk";
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
@@ -92,7 +92,7 @@ public final class GitHubSync {
             if (!name.endsWith(".apk") || url.isEmpty() || name.contains("unsigned") || name.contains("debug")) {
                 continue;
             }
-            if ("uac-spoofer.apk".equals(name) || "uac_spoofer.apk".equals(name)) {
+            if ("narcic.apk".equals(name.toLowerCase()) || "narcic-unsigned.apk".equals(name.toLowerCase())) {
                 return url;
             }
             if (fallback.isEmpty()) {
@@ -106,7 +106,7 @@ public final class GitHubSync {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(9000);
         connection.setReadTimeout(12000);
-        connection.setRequestProperty("User-Agent", "UAC-Spoofer-Android/" + CURRENT_VERSION);
+        connection.setRequestProperty("User-Agent", "Narcic-Android/" + CURRENT_VERSION);
         int code = connection.getResponseCode();
         if (code < 200 || code >= 300) {
             throw new IllegalStateException("HTTP " + code);

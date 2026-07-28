@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ProfileStore {
-    private static final String PREFS = "uac_spoofer_profiles";
+    private static final String PREFS = "narcic_profiles";
     private static final String KEY_PROFILES = "profiles";
     private static final String KEY_SELECTED = "selected";
     private static final String KEY_SELECTED_MANUAL = "selectedManual";
@@ -22,12 +22,12 @@ public class ProfileStore {
     public static final String ORIGIN_BUILTIN = "builtin";
     public static final String ORIGIN_REMOTE = "github";
     private static final String BUILTIN_CONFIGS =
-            "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.calmlunch.com&type=ws&allowInsecure=0&sni=www.calmlunch.com#uacSpoofer%201\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.ignitelimit.com&type=ws&allowInsecure=0&sni=www.ignitelimit.com#uacSpoofer%202\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=assignment&security=tls&insecure=0&type=ws&allowInsecure=0&sni=www.ignitelimit.com#uacSpoofer%203\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment%3FTELEGRAM--KANAL--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN&security=tls&insecure=0&fp=chrome&type=ws&allowInsecure=0&sni=www.gossipglove.com#uacSpoofer%204\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2F%2Fassignment&security=tls&insecure=0&host=www.multiplydose.com&type=ws&allowInsecure=0&sni=www.multiplydose.com#uacSpoofer%205\n"
-                    + "vless://30980fc4-8789-42df-80d1-0c8e5cd26881@127.0.0.1:40443?path=%2Fvpnhu&security=tls&encryption=none&insecure=1&host=cdn.veilvpn.fans&fp=chrome&type=httpupgrade&allowInsecure=1&sni=cdn.veilvpn.fans#uacSpoofer%206";
+            "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.calmlunch.com&type=ws&allowInsecure=0&sni=www.calmlunch.com#Narcic%201\n"
+                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.ignitelimit.com&type=ws&allowInsecure=0&sni=www.ignitelimit.com#Narcic%202\n"
+                    + "trojan://humanity@127.0.0.1:40443?path=assignment&security=tls&insecure=0&type=ws&allowInsecure=0&sni=www.ignitelimit.com#Narcic%203\n"
+                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment%3FTELEGRAM--KANAL--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN&security=tls&insecure=0&fp=chrome&type=ws&allowInsecure=0&sni=www.gossipglove.com#Narcic%204\n"
+                    + "trojan://humanity@127.0.0.1:40443?path=%2F%2Fassignment&security=tls&insecure=0&host=www.multiplydose.com&type=ws&allowInsecure=0&sni=www.multiplydose.com#Narcic%205\n"
+                    + "vless://30980fc4-8789-42df-80d1-0c8e5cd26881@127.0.0.1:40443?path=%2Fvpnhu&security=tls&encryption=none&insecure=1&host=cdn.veilvpn.fans&fp=chrome&type=httpupgrade&allowInsecure=1&sni=cdn.veilvpn.fans#Narcic%206";
 
     private final SharedPreferences prefs;
 
@@ -72,7 +72,7 @@ public class ProfileStore {
     public static List<ProxyConfig> defaultProfiles() {
         List<ProxyConfig> defaults = new ArrayList<>(VlessParser.parseMany(BUILTIN_CONFIGS, true));
         for (int i = 0; i < defaults.size(); i++) {
-            defaults.get(i).name = "uacSpoofer " + (i + 1);
+            defaults.get(i).name = "Narcic " + (i + 1);
             defaults.get(i).origin = ORIGIN_BUILTIN;
         }
         return defaults;

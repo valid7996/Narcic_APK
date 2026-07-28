@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.animation.ValueAnimator;
 import android.content.Context;

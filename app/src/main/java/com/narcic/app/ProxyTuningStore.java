@@ -1,11 +1,11 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
 public final class ProxyTuningStore {
-    private static final String PREFS = "uac_spoofer_proxy_tuning";
+    private static final String PREFS = "narcic_proxy_tuning";
     private static final String KEY_MODE = "mode";
     private static final String KEY_FAKE_PROBE_ENABLED = "fakeProbeEnabled";
     private static final String KEY_FAKE_PROBE_COUNT = "fakeProbeCount";

@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -41,8 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ProxyService extends Service {
-    public static final String ACTION_START = "com.uac.spoofer.START";
-    public static final String ACTION_STOP = "com.uac.spoofer.STOP";
+    public static final String ACTION_START = "com.narcic.app.START";
+    public static final String ACTION_STOP = "com.narcic.app.STOP";
 
     public static final String EXTRA_NAME = "name";
     public static final String EXTRA_ADDRESS = "address";
@@ -68,8 +68,8 @@ public class ProxyService extends Service {
     public static final String EXTRA_STRATEGY_CACHE_TTL_MS = "strategyCacheTtlMs";
     public static final String EXTRA_LOG_LEVEL = "logLevel";
 
-    private static final String CHANNEL_ID = "uac_spoofer_proxy";
-    private static final String TAG = "UacSpoofer";
+    private static final String CHANNEL_ID = "narcic_proxy";
+    private static final String TAG = "Narcic";
     private static final int NOTIFICATION_ID = 40443;
     private static final int BUFFER_SIZE = 65535;
     private static final int MAX_LOG_LINES = 600;
@@ -288,7 +288,7 @@ public class ProxyService extends Service {
 
         RUNNING = true;
         publishState();
-        acceptThread = new Thread(this::acceptLoop, "uac-accept");
+        acceptThread = new Thread(this::acceptLoop, "narcic-accept");
         acceptThread.start();
         emit("RUN " + LISTEN_HOST + ":" + LISTEN_PORT + " -> " + getTarget() + ":" + connectPort
                 + " sni=" + fakeSni + " method=" + method + " tuning=" + tuning.summary()

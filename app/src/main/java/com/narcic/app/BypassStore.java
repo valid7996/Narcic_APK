@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public final class BypassStore {
-    private static final String PREFS = "uac_spoofer_bypass";
+    private static final String PREFS = "narcic_bypass";
     private static final String KEY_PACKAGES = "packages";
 
     private BypassStore() {

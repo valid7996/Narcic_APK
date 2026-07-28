@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import java.net.URI;
 import java.net.URLDecoder;

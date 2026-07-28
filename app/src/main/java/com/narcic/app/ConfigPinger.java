@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.os.Build;
 
@@ -79,7 +79,7 @@ public class ConfigPinger {
             setSni(ssl, config.sni);
             ssl.startHandshake();
             OutputStream output = ssl.getOutputStream();
-            output.write(("HEAD / HTTP/1.1\r\nHost: " + config.sni + "\r\nUser-Agent: UAC-Spoofer\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+            output.write(("HEAD / HTTP/1.1\r\nHost: " + config.sni + "\r\nUser-Agent: Narcic\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
             output.flush();
             BufferedReader reader = new BufferedReader(new InputStreamReader(ssl.getInputStream()));
             int status = parseStatus(reader.readLine());

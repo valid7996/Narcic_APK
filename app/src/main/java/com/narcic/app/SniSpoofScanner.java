@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -155,7 +155,7 @@ public class SniSpoofScanner {
             connection = (HttpsURLConnection) url.openConnection();
             connection.setConnectTimeout(Math.min(5000, timeoutMs));
             connection.setReadTimeout(timeoutMs);
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 UAC-Spoofer");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 Narcic");
             connection.connect();
             StringBuilder body = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {

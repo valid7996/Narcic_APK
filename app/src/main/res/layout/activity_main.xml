@@ -135,7 +135,7 @@
                     android:layout_height="214dp"
                     android:layout_marginTop="12dp">
 
-                    <com.uac.spoofer.ConnectionRingView
+                    <com.narcic.app.ConnectionRingView
                         android:id="@+id/connectionRingView"
                         android:layout_width="204dp"
                         android:layout_height="204dp"
@@ -470,7 +470,7 @@
                         android:textColor="@color/muted"
                         android:textSize="12sp" />
 
-                    <com.uac.spoofer.InnerScrollView
+                    <com.narcic.app.InnerScrollView
                         android:id="@+id/scannerResultsScroll"
                         android:layout_width="match_parent"
                         android:layout_height="360dp"
@@ -488,7 +488,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical" />
-                    </com.uac.spoofer.InnerScrollView>
+                    </com.narcic.app.InnerScrollView>
                 </LinearLayout>
 
                 <LinearLayout
@@ -667,7 +667,7 @@
                     android:lineSpacingExtra="4dp"
                     android:minHeight="76dp"
                     android:padding="14dp"
-                    android:text="Open Telegram Channel&#10;t.me/UacSniSpoofer"
+                    android:text="Open Telegram Channel&#10;t.me/Narcic_Support"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp"
                     android:textStyle="bold" />

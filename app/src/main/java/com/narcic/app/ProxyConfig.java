@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import org.json.JSONException;
 import org.json.JSONObject;

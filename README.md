@@ -56,8 +56,8 @@ flowchart LR
   - **Stealth**: حالت مخفی‌کارانه‌تر و قوی‌تر برای عبور از DPI. کندتر است ولی روی شبکه‌های سخت‌گیرتر احتمال موفقیت بیشتری دارد.
   - **Custom**: کاربر می‌تواند همه پارامترهای bypass را دستی تنظیم کند.
 
-* لینک پشتیبانی تلگرام: https://t.me/Beh50roocentzuac
-* لینک کانال تلگرام:https://t.me/UacSniSpoofer
+* لینک پشتیبانی تلگرام: https://t.me/Narcic_Support
+* لینک کانال تلگرام:https://t.me/Narcic_Support
 
 ## Build
 

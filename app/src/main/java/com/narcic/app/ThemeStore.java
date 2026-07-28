@@ -1,4 +1,4 @@
-package com.uac.spoofer;
+package com.narcic.app;
 
 import android.app.Activity;
 import android.content.Context;
@@ -7,7 +7,7 @@ import android.content.res.Configuration;
 import android.os.Build;
 
 public final class ThemeStore {
-    private static final String PREFS = "uac_spoofer_theme";
+    private static final String PREFS = "narcic_theme";
     private static final String KEY_DARK = "dark";
 
     private ThemeStore() {
