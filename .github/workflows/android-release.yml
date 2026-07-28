@@ -46,6 +46,16 @@ jobs:
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
           echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
 
+      - name: Stamp version into app
+        shell: bash
+        run: |
+          sed -i "s/versionName \".*\"/versionName \"${RELEASE_VERSION}\"/" app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode ${GITHUB_RUN_NUMBER}/" app/build.gradle
+          sed -i "s/CURRENT_VERSION = \".*\"/CURRENT_VERSION = \"${RELEASE_VERSION}\"/" app/src/main/java/com/narcic/app/GitHubSync.java
+          sed -i "s/CURRENT_RELEASE_TAG = \".*\"/CURRENT_RELEASE_TAG = \"${RELEASE_VERSION}\"/" app/src/main/java/com/narcic/app/GitHubSync.java
+          grep -n "versionName\|versionCode" app/build.gradle
+          grep -n "CURRENT_VERSION\|CURRENT_RELEASE_TAG" app/src/main/java/com/narcic/app/GitHubSync.java
+
       - name: Prepare optional signing config
         shell: bash
         env:
