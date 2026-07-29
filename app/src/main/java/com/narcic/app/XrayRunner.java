@@ -28,14 +28,14 @@ public class XrayRunner {
     private Process process;
     private ExecutorService logExecutor;
 
-    public synchronized void start(Context context, ProxyConfig profile, Logger logger) throws Exception {
+    public synchronized void start(Context context, ProxyConfig profile, ProxyTuning tuning, Logger logger) throws Exception {
         stop();
         if (profile.sourceUri == null || profile.sourceUri.trim().isEmpty()) {
             throw new IllegalArgumentException("Selected config has no V2Ray/Trojan URI.");
         }
         File binary = prepareBinary(context);
         File config = new File(context.getFilesDir(), "xray-config.json");
-        writeText(config, buildConfig(profile).toString(2));
+        writeText(config, buildConfig(profile, tuning).toString(2));
 
         ProcessBuilder builder = new ProcessBuilder(
                 binary.getAbsolutePath(),
@@ -92,7 +92,7 @@ public class XrayRunner {
         throw new IllegalStateException("This APK includes Xray only for arm64-v8a and x86_64.");
     }
 
-    private static JSONObject buildConfig(ProxyConfig profile) throws Exception {
+    private static JSONObject buildConfig(ProxyConfig profile, ProxyTuning tuning) throws Exception {
         ParsedConfig parsed = ParsedConfig.parse(profile);
 
         JSONObject inbound = new JSONObject();
@@ -102,6 +102,9 @@ public class XrayRunner {
         inbound.put("settings", new JSONObject()
                 .put("auth", "noauth")
                 .put("udp", true));
+        inbound.put("sniffing", new JSONObject()
+                .put("enabled", tuning != null && tuning.sniffingEnabled)
+                .put("destOverride", new JSONArray().put("http").put("tls").put("quic")));
 
         JSONObject outbound = new JSONObject();
         outbound.put("protocol", parsed.protocol);
@@ -151,11 +154,19 @@ public class XrayRunner {
                     .put("headers", new JSONObject().put("Host", parsed.hostHeader)));
         }
         outbound.put("streamSettings", stream);
+        outbound.put("mux", new JSONObject()
+                .put("enabled", tuning != null && tuning.muxEnabled)
+                .put("concurrency", 8));
 
-        return new JSONObject()
+        JSONObject rootConfig = new JSONObject()
                 .put("log", new JSONObject().put("loglevel", "warning"))
                 .put("inbounds", new JSONArray().put(inbound))
                 .put("outbounds", new JSONArray().put(outbound));
+        if (tuning != null && tuning.dnsEnabled) {
+            rootConfig.put("dns", new JSONObject()
+                    .put("servers", new JSONArray().put("1.1.1.1").put("8.8.8.8")));
+        }
+        return rootConfig;
     }
 
     private static void readLogs(Process process, Logger logger) {

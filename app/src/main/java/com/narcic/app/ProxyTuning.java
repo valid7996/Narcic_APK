@@ -29,6 +29,10 @@ public final class ProxyTuning {
     public boolean strategyCacheEnabled = true;
     public int strategyCacheTtlMs = DEFAULT_CACHE_TTL_MS;
     public String logLevel = LOG_NORMAL;
+    public boolean fragmentEnabled = true;
+    public boolean dnsEnabled = false;
+    public boolean sniffingEnabled = true;
+    public boolean muxEnabled = false;
 
     public static ProxyTuning balanced() {
         return new ProxyTuning().sanitize();
@@ -95,6 +99,10 @@ public final class ProxyTuning {
         tuning.strategyCacheEnabled = intent.getBooleanExtra(ProxyService.EXTRA_STRATEGY_CACHE_ENABLED, tuning.strategyCacheEnabled);
         tuning.strategyCacheTtlMs = intent.getIntExtra(ProxyService.EXTRA_STRATEGY_CACHE_TTL_MS, tuning.strategyCacheTtlMs);
         tuning.logLevel = normalizeLog(intent.getStringExtra(ProxyService.EXTRA_LOG_LEVEL));
+        tuning.fragmentEnabled = intent.getBooleanExtra(ProxyService.EXTRA_FRAGMENT_ENABLED, tuning.fragmentEnabled);
+        tuning.dnsEnabled = intent.getBooleanExtra(ProxyService.EXTRA_DNS_ENABLED, tuning.dnsEnabled);
+        tuning.sniffingEnabled = intent.getBooleanExtra(ProxyService.EXTRA_SNIFFING_ENABLED, tuning.sniffingEnabled);
+        tuning.muxEnabled = intent.getBooleanExtra(ProxyService.EXTRA_MUX_ENABLED, tuning.muxEnabled);
         return tuning.sanitize();
     }
 
@@ -112,6 +120,10 @@ public final class ProxyTuning {
         intent.putExtra(ProxyService.EXTRA_STRATEGY_CACHE_ENABLED, strategyCacheEnabled);
         intent.putExtra(ProxyService.EXTRA_STRATEGY_CACHE_TTL_MS, strategyCacheTtlMs);
         intent.putExtra(ProxyService.EXTRA_LOG_LEVEL, logLevel);
+        intent.putExtra(ProxyService.EXTRA_FRAGMENT_ENABLED, fragmentEnabled);
+        intent.putExtra(ProxyService.EXTRA_DNS_ENABLED, dnsEnabled);
+        intent.putExtra(ProxyService.EXTRA_SNIFFING_ENABLED, sniffingEnabled);
+        intent.putExtra(ProxyService.EXTRA_MUX_ENABLED, muxEnabled);
     }
 
     public ProxyTuning copy() {
@@ -129,6 +141,10 @@ public final class ProxyTuning {
         out.strategyCacheEnabled = strategyCacheEnabled;
         out.strategyCacheTtlMs = strategyCacheTtlMs;
         out.logLevel = logLevel;
+        out.fragmentEnabled = fragmentEnabled;
+        out.dnsEnabled = dnsEnabled;
+        out.sniffingEnabled = sniffingEnabled;
+        out.muxEnabled = muxEnabled;
         return out;
     }
 
@@ -148,9 +164,11 @@ public final class ProxyTuning {
     }
 
     public String summary() {
-        return String.format(Locale.US, "%s, fake=%s/%d, multi=%d, timeout=%dms, log=%s",
+        return String.format(Locale.US, "%s, fake=%s/%d, multi=%d, timeout=%dms, log=%s, frag=%s, dns=%s, sniff=%s, mux=%s",
                 mode, fakeProbeEnabled ? "on" : "off", fakeProbeCount, multiFragmentSize,
-                routeProbeTimeoutMs, logLevel);
+                routeProbeTimeoutMs, logLevel,
+                fragmentEnabled ? "on" : "off", dnsEnabled ? "on" : "off",
+                sniffingEnabled ? "on" : "off", muxEnabled ? "on" : "off");
     }
 
     private static int clamp(int value, int min, int max) {

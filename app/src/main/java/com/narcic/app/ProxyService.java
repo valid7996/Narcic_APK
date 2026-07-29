@@ -67,6 +67,10 @@ public class ProxyService extends Service {
     public static final String EXTRA_STRATEGY_CACHE_ENABLED = "strategyCacheEnabled";
     public static final String EXTRA_STRATEGY_CACHE_TTL_MS = "strategyCacheTtlMs";
     public static final String EXTRA_LOG_LEVEL = "logLevel";
+    public static final String EXTRA_FRAGMENT_ENABLED = "fragmentEnabled";
+    public static final String EXTRA_DNS_ENABLED = "dnsEnabled";
+    public static final String EXTRA_SNIFFING_ENABLED = "sniffingEnabled";
+    public static final String EXTRA_MUX_ENABLED = "muxEnabled";
 
     private static final String CHANNEL_ID = "narcic_proxy";
     private static final String TAG = "Narcic";
@@ -316,7 +320,7 @@ public class ProxyService extends Service {
         profile.configPort = configPort;
         try {
             xrayRunner = new XrayRunner();
-            xrayRunner.start(this, profile, ProxyService::emit);
+            xrayRunner.start(this, profile, tuning, ProxyService::emit);
             return true;
         } catch (Exception e) {
             startupError("Xray: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
@@ -548,7 +552,7 @@ public class ProxyService extends Service {
         String normalized = method == null ? "" : method.toLowerCase(Locale.US);
         boolean combined = normalized.contains("combined") || normalized.contains("fake");
         boolean fakeProbe = tuning.fakeProbeEnabled && tuning.fakeProbeCount > 0 && combined;
-        if (tls) {
+        if (tls && tuning.fragmentEnabled) {
             if (ProxyTuning.MODE_FAST.equals(tuning.mode)) {
                 attempts.add(new StrategyAttempt("raw", "raw", 0, false));
                 attempts.add(new StrategyAttempt("fragment/half", "half", tuning.halfDelayMs, false));

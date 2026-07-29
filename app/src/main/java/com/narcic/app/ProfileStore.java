@@ -18,16 +18,26 @@ public class ProfileStore {
     private static final String KEY_AUTO_MODE = "autoMode";
     private static final String KEY_PICK_BEST_MANUAL = "pickBestManual";
     private static final String KEY_SEEDED_VERSION = "seededVersion";
-    private static final int SEEDED_VERSION = 9;
+    private static final int SEEDED_VERSION = 10;
     public static final String ORIGIN_BUILTIN = "builtin";
     public static final String ORIGIN_REMOTE = "github";
     private static final String BUILTIN_CONFIGS =
-            "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.calmlunch.com&type=ws&allowInsecure=0&sni=www.calmlunch.com#Narcic%201\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment&security=tls&insecure=0&host=www.ignitelimit.com&type=ws&allowInsecure=0&sni=www.ignitelimit.com#Narcic%202\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=assignment&security=tls&insecure=0&type=ws&allowInsecure=0&sni=www.ignitelimit.com#Narcic%203\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2Fassignment%3FTELEGRAM--KANAL--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN&security=tls&insecure=0&fp=chrome&type=ws&allowInsecure=0&sni=www.gossipglove.com#Narcic%204\n"
-                    + "trojan://humanity@127.0.0.1:40443?path=%2F%2Fassignment&security=tls&insecure=0&host=www.multiplydose.com&type=ws&allowInsecure=0&sni=www.multiplydose.com#Narcic%205\n"
-                    + "vless://30980fc4-8789-42df-80d1-0c8e5cd26881@127.0.0.1:40443?path=%2Fvpnhu&security=tls&encryption=none&insecure=1&host=cdn.veilvpn.fans&fp=chrome&type=httpupgrade&allowInsecure=1&sni=cdn.veilvpn.fans#Narcic%206";
+            "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2F9XYDaLaF4fMbAPWf%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NarGes-1999.PAges.dev#Narcic%201\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FDNWDkHk7g0nplzx6%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=nARGeS-1999.pAges.dEV#Narcic%202\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2F85aAikDueTdXGNeN%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NarGEs-1999.PAGES.dev#Narcic%203\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FogwodGSdl6qqZXIc%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=naRgEs-1999.pAGEs.dev#Narcic%204\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FdHQ1hsPCxI8qeBqE%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=naRgEs-1999.pAGEs.dEV#Narcic%205\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FMmMpiCOhasZCkcj9%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NArgEs-1999.pageS.DEV#Narcic%206\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2Fwi1tG1ElSplefDTf%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=naRgES-1999.PAges.dEv#Narcic%207\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FAuJkWwnKa7NWE2CX%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NARgEs-1999.PAgEs.Dev#Narcic%208\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FLMW7bV5ijr7Q76MD%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=nArGeS-1999.pagEs.Dev#Narcic%209\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FmHPJZC2RZd4OO2dS%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NaRGeS-1999.pages.deV#Narcic%2010\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FJUWgC5VDMy6ETdb1%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=naRgES-1999.PAGes.DEv#Narcic%2011\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2Fua2WwoGo8IyJSqF6%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NaRGEs-1999.pAGes.dEv#Narcic%2012\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FbQCBqI2Zs6t4abEm%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NARgeS-1999.PAgES.DEV#Narcic%2013\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2F9xrxfQwg5WMgjQ9b%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=nArGes-1999.PAGEs.DEV#Narcic%2014\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2FYdSGLRnro9UsKM1P%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NARges-1999.pAGeS.dEv#Narcic%2015\n"
+                    + "vless://baad4fab-ceee-4a9d-a714-e641d39405f4@127.0.0.1:40443?path=%2F3E6nZ9O3WPzyHH3K%3Fed%3D2560&security=tls&alpn=h2%2Chttp%2F1.1&encryption=none&host=narges-1999.pages.dev&fp=randomized&type=ws&sni=NaRgeS-1999.PagES.DEv#Narcic%2016";
 
     private final SharedPreferences prefs;
 
@@ -55,8 +65,12 @@ public class ProfileStore {
         int storedVersion = prefs.getInt(KEY_SEEDED_VERSION, 0);
         boolean upgradingSpoofDefaults = storedVersion < SEEDED_VERSION;
         boolean removedLegacy = removeLegacyNonV2rayProfiles(profiles);
+        boolean removedObsoleteBuiltins = upgradingSpoofDefaults && removeObsoleteBuiltins(profiles);
         boolean repaired = repairTargetsFromSourceUri(profiles, upgradingSpoofDefaults);
         boolean renamed = normalizeBuiltinProfileNames(profiles);
+        if (upgradingSpoofDefaults) {
+            addMissingBuiltins(profiles);
+        }
         if (storedVersion < SEEDED_VERSION || firstLaunchSeeded) {
             saveProfiles(profiles);
             if (firstLaunchSeeded) {
@@ -142,6 +156,36 @@ public class ProfileStore {
             }
         }
         return false;
+    }
+
+    private boolean removeObsoleteBuiltins(List<ProxyConfig> profiles) {
+        List<ProxyConfig> currentBuiltins = defaultProfiles();
+        List<String> currentSources = new ArrayList<>();
+        for (ProxyConfig builtin : currentBuiltins) {
+            currentSources.add(stripFragment(builtin.sourceUri));
+        }
+        boolean selectedRemoved = false;
+        String selectedBefore = getSelectedId(profiles);
+        int before = profiles.size();
+        profiles.removeIf(profile -> ORIGIN_BUILTIN.equals(profile.origin)
+                && !currentSources.contains(stripFragment(profile.sourceUri)));
+        boolean changed = profiles.size() != before;
+        if (changed) {
+            boolean stillExists = false;
+            for (ProxyConfig profile : profiles) {
+                if (profile.id.equals(selectedBefore)) {
+                    stillExists = true;
+                    break;
+                }
+            }
+            if (!stillExists) {
+                selectedRemoved = true;
+            }
+        }
+        if (selectedRemoved && !profiles.isEmpty()) {
+            setSelectedId(profiles.get(0).id);
+        }
+        return changed;
     }
 
     private boolean removeLegacyNonV2rayProfiles(List<ProxyConfig> profiles) {

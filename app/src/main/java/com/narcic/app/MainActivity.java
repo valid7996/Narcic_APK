@@ -474,8 +474,6 @@ public class MainActivity extends Activity implements ProxyService.Listener {
         if (mapped != null) return mapped;
         mapped = pair(value, "Open Telegram Channel\nt.me/Narcic_Support", "باز کردن کانال تلگرام\nt.me/Narcic_Support");
         if (mapped != null) return mapped;
-        mapped = pair(value, "credits to behroozuac", "با تشکر از behroozuac");
-        if (mapped != null) return mapped;
         mapped = pair(value, "Home", "خانه");
         if (mapped != null) return mapped;
         mapped = pair(value, "SNI", "SNI");
@@ -1528,21 +1526,56 @@ public class MainActivity extends Activity implements ProxyService.Listener {
         EditText routeTimeout = edit("Route probe timeout ms 1000-4000", "", InputType.TYPE_CLASS_NUMBER);
         Button logLevel = dialogButton("Log: Normal", false);
 
-        form.addView(fakeProbeEnabled);
-        form.addView(labeledInput("Fake probe count", fakeProbeCount));
-        form.addView(labeledInput("Fake probe delay ms", fakeProbeDelay));
+        TextView fragmentHeader = new TextView(this);
+        fragmentHeader.setText("Fragment");
+        fragmentHeader.setTextColor(getResources().getColor(R.color.ink));
+        fragmentHeader.setTextSize(15);
+        fragmentHeader.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams fragmentHeaderParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        fragmentHeaderParams.setMargins(0, dp(10), 0, dp(4));
+        form.addView(fragmentHeader, fragmentHeaderParams);
+
+        Switch fragmentEnabled = tuningSwitch("Enable Fragment", true);
+        form.addView(fragmentEnabled);
         form.addView(labeledInput("Multi fragment size", multiFragmentSize));
         form.addView(labeledInput("SNI split delay ms", sniSplitDelay));
         form.addView(labeledInput("TLS record delay ms", tlsRecordDelay));
         form.addView(labeledInput("Multi delay ms", multiDelay));
         form.addView(labeledInput("Half delay ms", halfDelay));
+
+        form.addView(fakeProbeEnabled);
+        form.addView(labeledInput("Fake probe count", fakeProbeCount));
+        form.addView(labeledInput("Fake probe delay ms", fakeProbeDelay));
         form.addView(labeledInput("Route probe timeout ms", routeTimeout));
         form.addView(strategyCacheEnabled);
+
+        TextView networkHeader = new TextView(this);
+        networkHeader.setText("Network");
+        networkHeader.setTextColor(getResources().getColor(R.color.ink));
+        networkHeader.setTextSize(15);
+        networkHeader.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams networkHeaderParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        networkHeaderParams.setMargins(0, dp(10), 0, dp(4));
+        form.addView(networkHeader, networkHeaderParams);
+
+        Switch dnsEnabled = tuningSwitch("Enable DNS", false);
+        Switch sniffingEnabled = tuningSwitch("Enable Sniffing", true);
+        Switch muxEnabled = tuningSwitch("Enable Mux", false);
+        form.addView(dnsEnabled);
+        form.addView(sniffingEnabled);
+        form.addView(muxEnabled);
+
         LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(46)
         );
-        logParams.setMargins(0, 0, 0, dp(8));
+        logParams.setMargins(0, dp(10), 0, dp(8));
         form.addView(logLevel, logParams);
 
         Runnable refresh = () -> {
@@ -1563,6 +1596,10 @@ public class MainActivity extends Activity implements ProxyService.Listener {
             halfDelay.setText(String.valueOf(value.halfDelayMs));
             routeTimeout.setText(String.valueOf(value.routeProbeTimeoutMs));
             logLevel.setText("Log: " + logLabel(value.logLevel));
+            fragmentEnabled.setChecked(value.fragmentEnabled);
+            dnsEnabled.setChecked(value.dnsEnabled);
+            sniffingEnabled.setChecked(value.sniffingEnabled);
+            muxEnabled.setChecked(value.muxEnabled);
         };
         refresh.run();
 
@@ -1652,6 +1689,10 @@ public class MainActivity extends Activity implements ProxyService.Listener {
             value.multiDelayMs = readInt(multiDelay, value.multiDelayMs);
             value.halfDelayMs = readInt(halfDelay, value.halfDelayMs);
             value.routeProbeTimeoutMs = readInt(routeTimeout, value.routeProbeTimeoutMs);
+            value.fragmentEnabled = fragmentEnabled.isChecked();
+            value.dnsEnabled = dnsEnabled.isChecked();
+            value.sniffingEnabled = sniffingEnabled.isChecked();
+            value.muxEnabled = muxEnabled.isChecked();
             value.sanitize();
             ProxyTuningStore.save(this, value);
             ProxyService.clearStrategyCache();
