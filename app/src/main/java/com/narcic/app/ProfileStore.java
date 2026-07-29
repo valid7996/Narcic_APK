@@ -358,4 +358,3 @@ public class ProfileStore {
         prefs.edit().putString(KEY_SELECTED, id).putString(KEY_SELECTED_SUGGESTED, id).apply();
     }
 }
-
