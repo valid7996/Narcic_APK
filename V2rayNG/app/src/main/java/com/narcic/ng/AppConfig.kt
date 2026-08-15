@@ -134,7 +134,7 @@ object AppConfig {
     const val GITHUB_DOWNLOAD_URL = "$GITHUB_URL/%s/releases/latest/download"
     const val ANDROID_PACKAGE_NAME_LIST_URL = "$GITHUB_RAW_URL/2dust/androidpackagenamelist/master/proxy.txt"
     const val APP_URL = "$GITHUB_URL/valid7996/NarcicNG"
-    const val DEFAULT_SUBSCRIPTION_URL = "https://raw.githubusercontent.com/valid7996/NarcicNG/refs/heads/main/conf2.txt"
+    const val DEFAULT_SUBSCRIPTION_URL = "https://raw.githubusercontent.com/valid7996/Narcic_APK/refs/heads/main/config%20(2).txt"
     const val APP_API_URL = "https://api.github.com/repos/valid7996/NarcicNG/releases"
     const val APP_ISSUES_URL = "$APP_URL/issues"
     const val APP_WIKI_MODE = "$APP_URL/wiki/Mode"
