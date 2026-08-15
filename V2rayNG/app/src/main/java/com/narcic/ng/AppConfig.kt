@@ -24,6 +24,10 @@ object AppConfig {
         "ohpqfasgenjinbmofhtmpsbqqboptojnhscsklinppljmrqlhdgkpfjkeqgfddlbhqjcon"
     const val TAPSELL_ZONE_ID_CONNECT = "6a7fa27eb471e817c86ad6d1"
 
+    /** Persistent counter (MMKV settings) tracking connect attempts, used to show the
+     *  rewarded ad only on every [com.narcic.ng.ads.ConnectRewardedAdGate] Nth attempt. */
+    const val PREF_CONNECT_AD_COUNTER = "pref_connect_ad_counter"
+
     // Default subscription ID for ungrouped servers
     const val DEFAULT_SUBSCRIPTION_ID = "__default_subscription__"
 

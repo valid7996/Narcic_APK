@@ -176,13 +176,13 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     /**
-     * Shows a Tapsell rewarded video ad before letting the user connect. If the ad is
-     * watched to completion (or none was available), [onAllowed] runs; otherwise the
-     * connection is not started.
+     * Shows a Tapsell rewarded video ad before letting the user connect, on the cadence
+     * defined in [ConnectRewardedAdGate]. If the ad is watched to completion (or this
+     * attempt doesn't require one), [onAllowed] runs; otherwise the connection is not
+     * started.
      */
     private fun gateConnectBehindRewardedAd(onAllowed: () -> Unit) {
-        toast(R.string.ad_gate_loading)
-        ConnectRewardedAdGate.requestAndShow(
+        ConnectRewardedAdGate.gateConnect(
             this,
             object : ConnectRewardedAdGate.Callback {
                 override fun onAllowConnect() {
