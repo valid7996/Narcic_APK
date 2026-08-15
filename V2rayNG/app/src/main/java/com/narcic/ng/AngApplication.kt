@@ -8,6 +8,7 @@ import com.tencent.mmkv.MMKV
 import com.narcic.ng.AppConfig.ANG_PACKAGE
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.ui.compose.ThemeManager
+import ir.tapsell.sdk.Tapsell
 
 class AngApplication : Application() {
     companion object {
@@ -43,5 +44,8 @@ class AngApplication : Application() {
 
         // Initialize theme state from MMKV
         ThemeManager.refresh()
+
+        // Initialize Tapsell ads (rewarded video shown before connecting)
+        Tapsell.initialize(this, AppConfig.TAPSELL_APP_KEY)
     }
 }

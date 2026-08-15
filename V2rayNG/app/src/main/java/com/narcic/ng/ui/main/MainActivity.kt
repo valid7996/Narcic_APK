@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.narcic.ng.AngApplication
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
+import com.narcic.ng.ads.ConnectRewardedAdGate
 import com.narcic.ng.core.LauncherManager
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
@@ -169,7 +170,34 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun handleFabAction() {
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
-        } else if (SettingsManager.isVpnMode()) {
+        } else {
+            gateConnectBehindRewardedAd { proceedToConnect() }
+        }
+    }
+
+    /**
+     * Shows a Tapsell rewarded video ad before letting the user connect. If the ad is
+     * watched to completion (or none was available), [onAllowed] runs; otherwise the
+     * connection is not started.
+     */
+    private fun gateConnectBehindRewardedAd(onAllowed: () -> Unit) {
+        toast(R.string.ad_gate_loading)
+        ConnectRewardedAdGate.requestAndShow(
+            this,
+            object : ConnectRewardedAdGate.Callback {
+                override fun onAllowConnect() {
+                    runOnUiThread { onAllowed() }
+                }
+
+                override fun onBlockConnect() {
+                    runOnUiThread { toastError(R.string.ad_gate_watch_required) }
+                }
+            }
+        )
+    }
+
+    private fun proceedToConnect() {
+        if (SettingsManager.isVpnMode()) {
             val intent = VpnService.prepare(this)
             if (intent == null) startV2Ray() else requestVpnPermission.launch(intent)
         } else {

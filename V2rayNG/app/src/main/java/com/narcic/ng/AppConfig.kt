@@ -16,6 +16,14 @@ object AppConfig {
     /** Legacy configuration keys. */
     const val ANG_CONFIG = "ang_config"
 
+    /**
+     * Tapsell rewarded-video ad credentials, shown before the VPN connects.
+     * See [com.narcic.ng.ads.ConnectRewardedAdGate].
+     */
+    const val TAPSELL_APP_KEY =
+        "ohpqfasgenjinbmofhtmpsbqqboptojnhscsklinppljmrqlhdgkpfjkeqgfddlbhqjcon"
+    const val TAPSELL_ZONE_ID_CONNECT = "6a7fa27eb471e817c86ad6d1"
+
     // Default subscription ID for ungrouped servers
     const val DEFAULT_SUBSCRIPTION_ID = "__default_subscription__"
 

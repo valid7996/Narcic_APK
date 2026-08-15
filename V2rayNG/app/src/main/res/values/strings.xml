@@ -387,6 +387,8 @@
     <string name="connection_test_error_status_code">Error code: #%d</string>
     <string name="connection_connected">Connected, tap to check connection</string>
     <string name="connection_not_connected">Not connected</string>
+    <string name="ad_gate_loading">Loading ad…</string>
+    <string name="ad_gate_watch_required">Watch the full ad to connect</string>
     <string name="connection_runing_task_left">Number of running test tasks: %s</string>
 
     <string name="import_subscription_success">Subscription imported Successfully</string>
