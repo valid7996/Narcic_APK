@@ -74,6 +74,19 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Ensure Gradle wrapper jar exists
+        run: |
+          if [ ! -s V2rayNG/gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar missing (likely stripped by .gitignore) - regenerating it"
+            GRADLE_VERSION=$(grep -oP 'gradle-\K[0-9.]+(?=-bin\.zip)' V2rayNG/gradle/wrapper/gradle-wrapper.properties)
+            curl -sSL -o /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+            unzip -q /tmp/gradle.zip -d /tmp
+            cd V2rayNG
+            /tmp/gradle-${GRADLE_VERSION}/bin/gradle wrapper --gradle-version "${GRADLE_VERSION}"
+            cd ..
+          fi
+          ls -la V2rayNG/gradle/wrapper/
+
       - name: Decode Keystore
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > V2rayNG/app/release-key.jks
