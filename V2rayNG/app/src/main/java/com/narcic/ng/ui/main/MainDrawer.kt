@@ -27,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,8 +45,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
 import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AppDivider
+import com.narcic.ng.ui.compose.AuroraCyan
+import com.narcic.ng.ui.compose.AuroraDeep
+import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.verticalScrollbar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,10 +83,15 @@ fun MainDrawerContent(
                 .verticalScrollbar(drawerScrollState)
                 .padding(bottom = 80.dp)
         ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(AuroraDeep, Color(0xFF0E2338), AuroraIndigo.copy(alpha = 0.35f)),
+                        )
+                    )
             ) {
                 Column(
                     modifier = Modifier
@@ -96,9 +104,17 @@ fun MainDrawerContent(
                         text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontFamily = FontFamily(Font(R.font.montserrat_thin)),
-                            fontWeight = FontWeight.Thin
+                            fontWeight = FontWeight.Thin,
+                            color = Color.White
                         ),
                         textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(2.dp)
+                            .width(36.dp)
+                            .background(Brush.linearGradient(listOf(AuroraCyan, AuroraIndigo)))
                     )
                 }
             }

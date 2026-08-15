@@ -1,5 +1,6 @@
 package com.narcic.ng.ui.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,8 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.narcic.ng.ui.compose.AuroraCyan
+import com.narcic.ng.ui.compose.AuroraDeep
+import com.narcic.ng.ui.compose.AuroraIndigo
+import com.narcic.ng.ui.compose.LocalDarkTheme
 import kotlinx.coroutines.launch
 
 /**
@@ -90,48 +97,62 @@ fun MainScreen(
             )
         }
     ) {
-        Scaffold(
-            contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
-            topBar = {
-                MainTopBar(
-                    isLoading = isLoading,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
+        val isDark = LocalDarkTheme.current
+        val backdrop = remember(isDark) {
+            if (isDark) {
+                Brush.radialGradient(
+                    colors = listOf(AuroraIndigo.copy(alpha = 0.16f), AuroraCyan.copy(alpha = 0.06f), AuroraDeep),
+                    radius = 900f,
                 )
-            },
-        ) { innerPadding ->
-            if (groups.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    ConnectHero(
-                        isRunning = isRunning,
-                        isTesting = uiState.isTesting,
-                        statusText = displayText,
-                        onToggle = { onAction(MainAction.ToggleService) },
-                        onTest = { onAction(MainAction.TestRealAllServers) },
+            } else {
+                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
+            Scaffold(
+                contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
+                containerColor = Color.Transparent,
+                topBar = {
+                    MainTopBar(
+                        isLoading = isLoading,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
                     )
+                },
+            ) { innerPadding ->
+                if (groups.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+                        ConnectHero(
+                            isRunning = isRunning,
+                            isTesting = uiState.isTesting,
+                            statusText = displayText,
+                            onToggle = { onAction(MainAction.ToggleService) },
+                            onTest = { onAction(MainAction.TestRealAllServers) },
+                        )
 
-                    SuggestedServers(
-                        mainViewModel = mainViewModel,
-                        groupId = uiState.selectedGroupId,
-                        selectedGuid = selectedGuid,
-                        onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                        onViewAll = { /* full list already shown below */ },
-                    )
+                        SuggestedServers(
+                            mainViewModel = mainViewModel,
+                            groupId = uiState.selectedGroupId,
+                            selectedGuid = selectedGuid,
+                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                            onViewAll = { /* full list already shown below */ },
+                        )
 
-                    Box(modifier = Modifier.padding(top = 12.dp))
+                        Box(modifier = Modifier.padding(top = 12.dp))
 
-                    AllServersList(
-                        mainViewModel = mainViewModel,
-                        groups = groups,
-                        selectedGuid = selectedGuid,
-                        onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                    )
+                        AllServersList(
+                            mainViewModel = mainViewModel,
+                            groups = groups,
+                            selectedGuid = selectedGuid,
+                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(bottom = 24.dp),
+                        )
+                    }
                 }
             }
         }
