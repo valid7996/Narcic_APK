@@ -110,7 +110,7 @@ jobs:
           for f in *universal*.apk; do cp "$f" ${{ github.workspace }}/output/NarcicNG-universal.apk; done
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: "Narcic NG ${{ github.ref_name }}"
