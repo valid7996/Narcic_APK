@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import com.narcic.ng.AngApplication
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
-import com.narcic.ng.ads.ConnectRewardedAdGate
 import com.narcic.ng.core.LauncherManager
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
@@ -171,29 +170,8 @@ class MainActivity : HelperBaseComponentActivity() {
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
-            gateConnectBehindRewardedAd { proceedToConnect() }
+            proceedToConnect()
         }
-    }
-
-    /**
-     * Shows a Tapsell rewarded video ad before letting the user connect, on the cadence
-     * defined in [ConnectRewardedAdGate]. If the ad is watched to completion (or this
-     * attempt doesn't require one), [onAllowed] runs; otherwise the connection is not
-     * started.
-     */
-    private fun gateConnectBehindRewardedAd(onAllowed: () -> Unit) {
-        ConnectRewardedAdGate.gateConnect(
-            this,
-            object : ConnectRewardedAdGate.Callback {
-                override fun onAllowConnect() {
-                    runOnUiThread { onAllowed() }
-                }
-
-                override fun onBlockConnect() {
-                    runOnUiThread { toastError(R.string.ad_gate_watch_required) }
-                }
-            }
-        )
     }
 
     private fun proceedToConnect() {

@@ -174,9 +174,6 @@ dependencies {
     implementation(libs.camerax.compose)
     implementation(libs.core) // zxing core
 
-    // Tapsell rewarded video ads (mavenCentral, no extra repo needed since SDK v4.5.4)
-    implementation("ir.tapsell.sdk:tapsell-sdk-android:4.9.10")
-
     // AndroidX Lifecycle and Architecture Components
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.lifecycle.runtime.ktx)

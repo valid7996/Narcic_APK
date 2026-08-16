@@ -363,8 +363,6 @@
     <string name="connection_test_error_status_code">کد خطا: #%d</string>
     <string name="connection_connected">متصل است، برای بررسی اتصال ضربه بزنید</string>
     <string name="connection_not_connected">متصل نیست</string>
-    <string name="ad_gate_loading">در حال بارگذاری تبلیغ…</string>
-    <string name="ad_gate_watch_required">برای اتصال باید تبلیغ را تا انتها ببینید</string>
     <string name="connection_runing_task_left">تعداد وظایف آزمایشی در حال اجرا: %s</string>
 
     <string name="import_subscription_success">اشتراک با موفقیت ذخیره شد</string>
