@@ -66,6 +66,14 @@ class MainRepository(
                     safeIntent.getStringExtra("content")
                 )
 
+                AppConfig.MSG_STATE_TRAFFIC_UPDATE -> {
+                    val parts = safeIntent.getStringExtra("content").orEmpty().split('|')
+                    MainServiceEvent.TrafficUpdate(
+                        downloadBps = parts.getOrNull(0)?.toLongOrNull() ?: 0L,
+                        uploadBps = parts.getOrNull(1)?.toLongOrNull() ?: 0L,
+                    )
+                }
+
                 else -> null
             }
             event?.let { _mainServiceEvent.tryEmit(it) }

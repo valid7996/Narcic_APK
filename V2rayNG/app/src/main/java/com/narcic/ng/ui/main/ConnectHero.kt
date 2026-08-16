@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,23 +50,29 @@ import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.AuroraViolet
+import com.narcic.ng.ui.compose.RoundedPolygonShape
 
 // Local, hero-specific neutrals. The accent itself (AuroraCyan/Indigo/Violet)
 // comes from Theme.kt so the whole app shares one signature gradient — the
 // same one used in the app's own launcher icon — instead of a one-off color.
 private val FgMuted = Color(0xFF8A97B0)
 private val RingBorderIdle = Color(0xFF232E45)
-private val CoreIdleTop = Color(0xFF141C2E)
+private val CoreIdleTop = Color(0xFF1A2338)
 private val CoreIdleBottom = Color(0xFF0A0E1A)
-private val CoreRunningTop = Color(0xFF14324B)
+private val CoreRunningTop = Color(0xFF163852)
 private val CoreRunningBottom = Color(0xFF0A0E1A)
 
+// The hero core is a rounded hexagon instead of a plain circle — a more
+// deliberate, "secured network" silhouette that still nests cleanly inside
+// the circular orbit/pulse rings drawn around it.
+private val HeroCoreShape = RoundedPolygonShape(sides = 6, cornerRadius = 26.dp)
+
 /**
- * Large animated connect button (orbit ring + conic glow + pulse) matching
- * the Narcic NG "Aurora" design, wired to REAL app state and actions only
- * (isRunning, isTesting, statusText, ToggleService, TestRealAllServers).
- * No mock data, no simulated timers — everything here reflects the actual
- * VPN service state.
+ * Large animated connect button (orbit ring + conic glow + pulse, rounded
+ * hexagonal core) matching the Narcic NG "Aurora" design, wired to REAL app
+ * state and actions only (isRunning, isTesting, statusText, ToggleService,
+ * TestRealAllServers, AutoConnect). No mock data, no simulated timers —
+ * everything here reflects the actual VPN service state.
  */
 @Composable
 fun ConnectHero(
@@ -73,6 +81,7 @@ fun ConnectHero(
     statusText: String,
     onToggle: () -> Unit,
     onTest: () -> Unit,
+    onAutoConnect: () -> Unit,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "hero")
 
@@ -140,17 +149,31 @@ fun ConnectHero(
                         radius = 86.dp.toPx()
                     )
                 }
+            } else {
+                // Idle state still gets a faint static hex outline one size up,
+                // so the core doesn't read as a flat, static circle-in-waiting.
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .border(1.dp, RingBorderIdle, HeroCoreShape)
+                )
             }
 
             Box(
                 modifier = Modifier
-                    .size(164.dp)
+                    .size(158.dp)
+                    .shadow(
+                        elevation = if (isRunning) 22.dp else 8.dp,
+                        shape = HeroCoreShape,
+                        ambientColor = if (isRunning) AuroraCyan.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.3f),
+                        spotColor = if (isRunning) AuroraCyan.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.3f),
+                    )
                     .background(
                         brush = Brush.radialGradient(
                             colors = if (isRunning) listOf(CoreRunningTop, CoreRunningBottom)
                             else listOf(CoreIdleTop, CoreIdleBottom)
                         ),
-                        shape = CircleShape
+                        shape = HeroCoreShape
                     )
                     .border(
                         width = 2.dp,
@@ -159,8 +182,9 @@ fun ConnectHero(
                         } else {
                             Brush.linearGradient(listOf(RingBorderIdle, RingBorderIdle))
                         },
-                        shape = CircleShape
+                        shape = HeroCoreShape
                     )
+                    .clip(HeroCoreShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -170,11 +194,10 @@ fun ConnectHero(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        painter = if (isRunning) painterResource(R.drawable.ic_stop_24dp)
-                        else painterResource(R.drawable.ic_play_24dp),
+                        painter = painterResource(R.drawable.ic_power_24dp),
                         contentDescription = null,
                         tint = if (isRunning) AuroraCyan else FgMuted,
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(38.dp)
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -186,6 +209,27 @@ fun ConnectHero(
                         color = if (isRunning) AuroraCyan else FgMuted,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+
+            // Small "secured" badge on the core's edge, only while connected.
+            if (isRunning) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .offset(x = 48.dp, y = 48.dp)
+                        .size(26.dp)
+                        .shadow(elevation = 4.dp, shape = CircleShape)
+                        .background(AuroraCyan, CircleShape)
+                        .border(2.dp, CoreRunningBottom, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_fab_check),
+                        contentDescription = null,
+                        tint = Color(0xFF04121F),
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -205,29 +249,63 @@ fun ConnectHero(
             Spacer(Modifier.height(14.dp))
         }
 
-        // Test speed button — dispatches the app's real ping-test action
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(24.dp))
-                .background(AuroraCyan.copy(alpha = 0.10f))
-                .border(1.dp, AuroraCyan.copy(alpha = 0.28f), RoundedCornerShape(24.dp))
-                .clickable(enabled = !isTesting) { onTest() }
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_flash_on_24dp),
-                contentDescription = null,
-                tint = AuroraCyan,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = if (isTesting) "در حال تست..." else "تست سرعت",
-                color = AuroraCyan,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
+            // Test speed button — dispatches the app's real ping-test action
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(AuroraCyan.copy(alpha = 0.10f))
+                    .border(1.dp, AuroraCyan.copy(alpha = 0.28f), RoundedCornerShape(24.dp))
+                    .clickable(enabled = !isTesting) { onTest() }
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_flash_on_24dp),
+                    contentDescription = null,
+                    tint = AuroraCyan,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = if (isTesting) "در حال تست..." else "تست سرعت",
+                    color = AuroraCyan,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Auto Connect — picks the fastest known server (testing first if
+            // none has been measured yet) and connects with a single tap.
+            if (!isRunning) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(AuroraViolet.copy(alpha = 0.12f))
+                        .border(1.dp, AuroraViolet.copy(alpha = 0.32f), RoundedCornerShape(24.dp))
+                        .clickable(enabled = !isTesting) { onAutoConnect() }
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_autoconnect_24dp),
+                        contentDescription = null,
+                        tint = AuroraViolet,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "اتصال خودکار",
+                        color = AuroraViolet,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
+

@@ -1,6 +1,7 @@
 package com.narcic.ng.ui.main
 
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,8 @@ import com.narcic.ng.dto.entities.SubscriptionCache
 import com.narcic.ng.extension.isComplexType
 import com.narcic.ng.extension.matchesPattern
 import com.narcic.ng.extension.moveItem
+import com.narcic.ng.extension.toSpeedString
+import com.narcic.ng.handler.SpeedtestManager
 import com.narcic.ng.ui.base.BaseViewModel
 import com.narcic.ng.util.LogUtil
 import kotlinx.coroutines.CancellationException
@@ -25,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.PatternSyntaxException
 
@@ -76,6 +81,14 @@ class MainViewModel(
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
+
+    // ---------- Live connection stats ----------
+    private var connectionTimerJob: Job? = null
+    private var ipLookupJob: Job? = null
+    private var connectStartElapsedRealtime: Long = 0L
+
+    @Volatile
+    private var pendingAutoConnect: Boolean = false
 
     @Volatile
     private var testingGroupId: String? = null
@@ -144,6 +157,15 @@ class MainViewModel(
                     onTestsFinished()
                 }
             }
+
+            is MainServiceEvent.TrafficUpdate -> {
+                _uiState.update {
+                    it.copy(
+                        downloadSpeedText = event.downloadBps.toSpeedString(),
+                        uploadSpeedText = event.uploadBps.toSpeedString()
+                    )
+                }
+            }
         }
     }
 
@@ -172,6 +194,7 @@ class MainViewModel(
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
+            MainAction.AutoConnect -> autoConnect()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.SelectServer -> updateSelectedGuid(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
@@ -714,14 +737,53 @@ class MainViewModel(
         viewModelScope.launch(ioDispatcher) {
             cacheMutex.withLock { groupDataCache.clear() }
             testingGroupId = null
+            val groupId = uiState.value.selectedGroupId
             _uiState.update {
                 it.copy(
                     isTesting = false,
                     statusText = if (it.isRunning) connectedText else disconnectedText
                 )
             }
+            if (pendingAutoConnect) {
+                pendingAutoConnect = false
+                val freshServers = loadGroup(groupId, forceRefresh = true)
+                updateGroupUi(groupId, freshServers)
+                val best = freshServers.filter { it.testDelayMillis > 0L }.minByOrNull { it.testDelayMillis }
+                if (best != null) {
+                    requestAutoConnect(best.guid)
+                } else {
+                    toast("سرور مناسبی برای اتصال خودکار پیدا نشد")
+                }
+            }
             reloadAllGroups(_uiState.value.groups.map { it.id })
         }
+    }
+
+    // ---------- Auto connect ----------
+    /**
+     * Picks the fastest already-tested server in the current group and
+     * requests a real connect. If nothing has been tested yet, runs a real
+     * ping test first and picks the best result once it finishes.
+     */
+    fun autoConnect() {
+        if (uiState.value.isRunning || uiState.value.isTesting) return
+        val servers = currentServers()
+        if (servers.isEmpty()) {
+            toast("ابتدا یک سرور اضافه کنید")
+            return
+        }
+        val best = servers.filter { it.testDelayMillis > 0L }.minByOrNull { it.testDelayMillis }
+        if (best != null) {
+            requestAutoConnect(best.guid)
+        } else {
+            pendingAutoConnect = true
+            testAllRealPing()
+        }
+    }
+
+    private fun requestAutoConnect(guid: String) {
+        updateSelectedGuid(guid)
+        _uiState.update { it.copy(autoConnectRequest = it.autoConnectRequest + 1) }
     }
 
     fun triggerLocateSelectedServer() {
@@ -757,6 +819,81 @@ class MainViewModel(
                 else if (running) connectedText else disconnectedText
             )
         }
+        if (running) {
+            startConnectionTimer()
+            startRemoteIpLookup()
+        } else {
+            stopConnectionStats()
+        }
+    }
+
+    private fun startConnectionTimer() {
+        if (connectionTimerJob?.isActive == true) return
+        connectStartElapsedRealtime = SystemClock.elapsedRealtime()
+        connectionTimerJob = viewModelScope.launch {
+            while (isActive) {
+                val elapsedSeconds =
+                    (SystemClock.elapsedRealtime() - connectStartElapsedRealtime) / 1000L
+                _uiState.update { it.copy(connectionDurationText = formatDuration(elapsedSeconds)) }
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun formatDuration(totalSeconds: Long): String {
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) String.format("%d:%02d:%02d", h, m, s)
+        else String.format("%02d:%02d", m, s)
+    }
+
+    /**
+     * Fetches the tunnel's exit IP/country once shortly after connecting,
+     * retrying on failure (e.g. tunnel still settling) until it succeeds or
+     * the connection drops. Reuses the same IP-info lookup already used by
+     * the "Test Speed" flow, just surfaced in the main UI as well.
+     */
+    private fun startRemoteIpLookup() {
+        if (ipLookupJob?.isActive == true) return
+        ipLookupJob = viewModelScope.launch(ioDispatcher) {
+            delay(1500L)
+            while (isActive && uiState.value.isRunning) {
+                val info = runCatching { SpeedtestManager.getRemoteIPInfoDetailed() }.getOrNull()
+                if (info != null) {
+                    val countryName = info.countryCode?.let { code ->
+                        runCatching { Locale("", code).displayCountry }.getOrNull()
+                            ?.takeUnless { it.isBlank() || it.equals(code, ignoreCase = true) }
+                    }.orEmpty()
+                    _uiState.update {
+                        it.copy(
+                            remoteIp = info.ip,
+                            remoteCountryCode = info.countryCode.orEmpty(),
+                            remoteCountryName = countryName
+                        )
+                    }
+                    break
+                }
+                delay(5000L)
+            }
+        }
+    }
+
+    private fun stopConnectionStats() {
+        connectionTimerJob?.cancel()
+        connectionTimerJob = null
+        ipLookupJob?.cancel()
+        ipLookupJob = null
+        _uiState.update {
+            it.copy(
+                connectionDurationText = "",
+                downloadSpeedText = "",
+                uploadSpeedText = "",
+                remoteIp = "",
+                remoteCountryName = "",
+                remoteCountryCode = ""
+            )
+        }
     }
 
     override fun onCleared() {
@@ -765,6 +902,8 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
+        connectionTimerJob?.cancel()
+        ipLookupJob?.cancel()
         cancelAllPing()
         dataSource.close()
         super.onCleared()

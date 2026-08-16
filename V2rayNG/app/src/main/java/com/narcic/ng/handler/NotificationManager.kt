@@ -16,6 +16,7 @@ import com.narcic.ng.R
 import com.narcic.ng.core.CoreServiceManager
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.extension.toSpeedString
+import com.narcic.ng.helper.MessageHelper
 import com.narcic.ng.ui.main.MainActivity
 import com.narcic.ng.util.LogUtil
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +45,7 @@ object NotificationManager {
      * @param currentConfig The current profile configuration.
      */
     fun startSpeedNotification() {
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) return
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true) != true) return
         if (speedNotificationJob != null || CoreServiceManager.isRunning() == false) return
 
         var lastZeroSpeed = false
@@ -147,6 +148,9 @@ object NotificationManager {
             it.cancel()
             speedNotificationJob = null
             updateNotification("", 0, 0)
+            getService()?.let { service ->
+                MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_TRAFFIC_UPDATE, "0|0")
+            }
         }
     }
 
@@ -260,6 +264,16 @@ object NotificationManager {
         val proxyTotal = proxyUplink + proxyDownlink
         val directTotal = directUplink + directDownlink
         val zeroSpeed = proxyTotal + directTotal == 0L
+
+        // Push the same measurement to the in-app UI on every poll (not just
+        // when the notification text changes) so the main screen's live
+        // download/upload chips stay accurate, including showing 0 B/s.
+        getService()?.let { service ->
+            val totalDownBps = ((proxyDownlink + directDownlink) / sinceLastQueryInSeconds).toLong()
+            val totalUpBps = ((proxyUplink + directUplink) / sinceLastQueryInSeconds).toLong()
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_TRAFFIC_UPDATE, "$totalDownBps|$totalUpBps")
+        }
+
         if (!zeroSpeed || !lastZeroSpeed) {
             val text = StringBuilder()
             appendSpeedString(

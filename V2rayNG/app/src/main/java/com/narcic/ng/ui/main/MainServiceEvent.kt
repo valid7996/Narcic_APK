@@ -10,4 +10,5 @@ sealed class MainServiceEvent {
     data object MeasureConfigSuccess : MainServiceEvent()
     data class MeasureConfigNotify(val progress: String) : MainServiceEvent()
     data class MeasureConfigFinish(val finishedCount: String?) : MainServiceEvent()
+    data class TrafficUpdate(val downloadBps: Long, val uploadBps: Long) : MainServiceEvent()
 }

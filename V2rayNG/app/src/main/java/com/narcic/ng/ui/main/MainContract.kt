@@ -16,7 +16,18 @@ data class MainUiState(
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
-    val shareQRCodeBitmap: android.graphics.Bitmap? = null
+    val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    // Live connection stats — only meaningful while isRunning is true.
+    val downloadSpeedText: String = "",
+    val uploadSpeedText: String = "",
+    val connectionDurationText: String = "",
+    val remoteIp: String = "",
+    val remoteCountryName: String = "",
+    val remoteCountryCode: String = "",
+    // Monotonically increasing one-shot trigger: the Activity observes this
+    // and performs a real connect (VPN permission + start) whenever it
+    // changes, after AutoConnect has picked and selected the best server.
+    val autoConnectRequest: Int = 0,
 )
 
 /**
@@ -26,6 +37,7 @@ sealed interface MainAction {
     data object Initialize : MainAction
     data object RefreshGroups : MainAction
     data object ToggleService : MainAction
+    data object AutoConnect : MainAction
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
     data object TestRealAllServers : MainAction

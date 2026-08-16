@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +66,15 @@ fun MainScreen(
 
     val removeServer: (String) -> Unit = { guid ->
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
+    }
+
+    // AutoConnect (ViewModel) only selects the best server and bumps this
+    // counter; the actual connect (VPN permission + start) is handled the
+    // same way the hero button does it, via the Activity's ToggleService path.
+    LaunchedEffect(uiState.autoConnectRequest) {
+        if (uiState.autoConnectRequest > 0) {
+            onAction(MainAction.ToggleService)
+        }
     }
 
     MainDialogs(
@@ -132,6 +142,17 @@ fun MainScreen(
                             statusText = displayText,
                             onToggle = { onAction(MainAction.ToggleService) },
                             onTest = { onAction(MainAction.TestRealAllServers) },
+                            onAutoConnect = { onAction(MainAction.AutoConnect) },
+                        )
+
+                        ConnectionStatsPanel(
+                            isRunning = isRunning,
+                            downloadSpeedText = uiState.downloadSpeedText,
+                            uploadSpeedText = uiState.uploadSpeedText,
+                            connectionDurationText = uiState.connectionDurationText,
+                            remoteIp = uiState.remoteIp,
+                            remoteCountryName = uiState.remoteCountryName,
+                            remoteCountryCode = uiState.remoteCountryCode,
                         )
 
                         SuggestedServers(

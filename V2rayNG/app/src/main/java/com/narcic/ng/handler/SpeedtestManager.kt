@@ -10,6 +10,7 @@ import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.UnknownHostException
+import java.util.Locale
 
 object SpeedtestManager {
 
@@ -48,7 +49,12 @@ object SpeedtestManager {
         return -1
     }
 
-    fun getRemoteIPInfo(): String? {
+    /**
+     * Fetches and parses the raw IP-API response. Shared by [getRemoteIPInfo]
+     * (used by the "Test Speed" status text) and [getRemoteIPInfoDetailed]
+     * (used by the main screen's live IP/country display).
+     */
+    private fun fetchRemoteIpApiInfo(): IPAPIInfo? {
         val url = MmkvManager.decodeSettingsString(AppConfig.PREF_IP_API_URL)
             .takeIf { !it.isNullOrBlank() } ?: AppConfig.IP_API_URL
 
@@ -65,7 +71,11 @@ object SpeedtestManager {
                 proxyPassword = proxyPassword
             )
         ) ?: return null
-        val ipInfo = JsonUtil.fromJsonSafe(content, IPAPIInfo::class.java) ?: return null
+        return JsonUtil.fromJsonSafe(content, IPAPIInfo::class.java)
+    }
+
+    fun getRemoteIPInfo(): String? {
+        val ipInfo = fetchRemoteIpApiInfo() ?: return null
 
         val ip = listOf(
             ipInfo.ip,
@@ -82,5 +92,28 @@ object SpeedtestManager {
         ).firstOrNull { !it.isNullOrBlank() }
 
         return "(${country ?: "unknown"}) ${ip ?: "unknown"}"
+    }
+
+    /** Exit IP and ISO-3166-1 alpha-2 country code, for the main screen's connection stats panel. */
+    data class RemoteIpDetails(val ip: String, val countryCode: String?)
+
+    fun getRemoteIPInfoDetailed(): RemoteIpDetails? {
+        val ipInfo = fetchRemoteIpApiInfo() ?: return null
+
+        val ip = listOf(
+            ipInfo.ip,
+            ipInfo.clientIp,
+            ipInfo.ip_addr,
+            ipInfo.query
+        ).firstOrNull { !it.isNullOrBlank() } ?: return null
+
+        val countryCode = listOf(
+            ipInfo.country_code,
+            ipInfo.countryCode,
+            ipInfo.location?.country_code
+        ).firstOrNull { !it.isNullOrBlank() }
+            ?: ipInfo.country?.takeIf { it.length == 2 }
+
+        return RemoteIpDetails(ip = ip, countryCode = countryCode?.uppercase(Locale.US))
     }
 }
