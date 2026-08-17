@@ -4,64 +4,57 @@ import com.narcic.ng.AppConfig
 import com.narcic.ng.dto.entities.SubscriptionItem
 
 /**
- * Ensures the app always has exactly the default Narcic subscriptions
- * listed in [AppConfig.DEFAULT_SUBSCRIPTION_URLS] — creating any that are
- * missing and removing any old default subscription that is no longer in
- * that list. The actual fetch is left to the app's own standard,
- * already-tested subscription update pipeline (MainAction.UpdateSubscriptions),
- * so there is only ever ONE code path that fetches and refreshes the
- * server list.
+ * Ensures the app always has a subscription pointing to the Narcic NG
+ * GitHub config repository. Only creates/updates the subscription entry —
+ * the actual fetch is left to the app's own standard, already-tested
+ * subscription update pipeline (MainAction.UpdateSubscriptions), so there
+ * is only ever ONE code path that fetches and refreshes the server list.
  */
 object DefaultConfigSource {
 
     /**
-     * @return true if a fetch should be triggered afterwards (at least one
-     * default subscription was just created or was disabled and got
-     * re-enabled).
+     * @return true if a fetch should be triggered afterwards (subscription
+     * was just created or was disabled and got re-enabled).
      */
     fun ensureSubscriptionExists(): Boolean {
-        val defaultUrls = AppConfig.DEFAULT_SUBSCRIPTION_URLS
+        val baseUrl = AppConfig.DEFAULT_SUBSCRIPTION_URL
+        // Cache-buster: raw.githubusercontent.com CDN caches content for a
+        // few minutes, so append a changing query param to always get fresh data.
+        val fetchUrl = "$baseUrl?_=${System.currentTimeMillis()}"
+
         val subscriptions = MmkvManager.decodeSubscriptions()
+        val existing = subscriptions.find { it.subscription.url.substringBefore("?") == baseUrl }
 
-        // Drop any previously-seeded default subscription that is no longer
-        // part of the current default list (e.g. the old single Narcic NG
-        // GitHub-config subscription, or a since-removed link).
-        subscriptions
-            .filter { it.subscription.url !in defaultUrls }
-            .forEach { MmkvManager.removeSubscription(it.guid) }
+        val guid: String
+        val needsFetch: Boolean
 
-        val remaining = MmkvManager.decodeSubscriptions()
-        var needsFetch = false
-
-        defaultUrls.forEachIndexed { index, url ->
-            val existing = remaining.find { it.subscription.url == url }
-            if (existing != null) {
-                if (!existing.subscription.enabled) {
-                    needsFetch = true
-                }
-                existing.subscription.enabled = true
-                existing.subscription.autoUpdate = true
-                existing.subscription.updateInterval = 720 // 12 hours
-                MmkvManager.encodeSubscription(existing.guid, existing.subscription)
-            } else {
-                val subItem = SubscriptionItem().apply {
-                    remarks = "Narcic ${index + 1}"
-                    this.url = url
-                    enabled = true
-                    autoUpdate = true
-                    updateInterval = 720 // 12 hours
-                }
-                MmkvManager.encodeSubscription("", subItem)
-                needsFetch = true
+        if (existing != null) {
+            needsFetch = !existing.subscription.enabled
+            existing.subscription.url = fetchUrl
+            existing.subscription.enabled = true
+            existing.subscription.autoUpdate = true
+            existing.subscription.updateInterval = 720 // 12 hours
+            MmkvManager.encodeSubscription(existing.guid, existing.subscription)
+            guid = existing.guid
+        } else {
+            val subItem = SubscriptionItem().apply {
+                remarks = "Narcic NG"
+                url = fetchUrl
+                enabled = true
+                autoUpdate = true
+                updateInterval = 720 // 12 hours
             }
+            MmkvManager.encodeSubscription("", subItem)
+            guid = MmkvManager.decodeSubscriptions()
+                .find { it.subscription.url.substringBefore("?") == baseUrl }?.guid.orEmpty()
+            needsFetch = true
         }
 
-        // If the previously active tab pointed at a subscription that was
-        // just removed above, fall back to the unfiltered default tab
-        // instead of pointing at a now-nonexistent group.
-        val activeId = MmkvManager.decodeSettingsString(AppConfig.CACHE_SUBSCRIPTION_ID, "").orEmpty()
-        if (activeId.isNotEmpty() && MmkvManager.decodeSubscriptions().none { it.guid == activeId }) {
-            MmkvManager.encodeSettings(AppConfig.CACHE_SUBSCRIPTION_ID, "")
+        // Always keep the Narcic NG subscription as the active tab, so the
+        // manual fetch button and the test button operate on the right
+        // group by default (instead of the empty "Default" tab).
+        if (guid.isNotEmpty()) {
+            MmkvManager.encodeSettings(AppConfig.CACHE_SUBSCRIPTION_ID, guid)
         }
 
         return needsFetch
