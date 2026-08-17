@@ -97,7 +97,7 @@ class MainActivity : HelperBaseComponentActivity() {
         val justCreated = DefaultConfigSource.ensureSubscriptionExists()
         mainViewModel.onAction(MainAction.Initialize)
         if (justCreated) {
-            mainViewModel.onAction(MainAction.UpdateSubscriptions)
+            mainViewModel.onAction(MainAction.UpdateAllSubscriptions)
         }
         SubscriptionUpdater.sync(forceReschedule = justCreated)
 
