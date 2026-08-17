@@ -1,0 +1,1239 @@
+{
+  "dns": {
+    "hosts": {
+      "domain:googleapis.cn": "googleapis.com",
+      "dns.alidns.com": [
+        "223.5.5.5",
+        "223.6.6.6",
+        "2400:3200::1",
+        "2400:3200:baba::1"
+      ],
+      "dns.sse.cisco.com": [
+        "208.67.220.220",
+        "208.67.222.222",
+        "2620:119:35::35",
+        "2620:119:53::53"
+      ],
+      "dns.umbrella.com": [
+        "208.67.220.220",
+        "208.67.222.222",
+        "2620:119:35::35",
+        "2620:119:53::53"
+      ],
+      "one.one.one.one": [
+        "1.1.1.1",
+        "1.0.0.1",
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1001"
+      ],
+      "1dot1dot1dot1.cloudflare-dns.com": [
+        "1.1.1.1",
+        "1.0.0.1",
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1001"
+      ],
+      "dns.cloudflare.com": [
+        "162.159.61.8",
+        "172.64.41.8",
+        "2a06:98c1:52::8",
+        "2803:f800:53::8"
+      ],
+      "cloudflare-dns.com": [
+        "104.16.248.249",
+        "104.16.249.249",
+        "2606:4700::6810:f8f9",
+        "2606:4700::6810:f9f9"
+      ],
+      "engage.cloudflareclient.com": [
+        "162.159.192.1",
+        "2606:4700:d0::a29f:c001"
+      ],
+      "doh.pub": [
+        "1.12.12.12",
+        "120.53.53.53"
+      ],
+      "dot.pub": [
+        "1.12.12.12",
+        "120.53.53.53"
+      ],
+      "dns.google": [
+        "8.8.8.8",
+        "8.8.4.4",
+        "2001:4860:4860::8888",
+        "2001:4860:4860::8844"
+      ],
+      "dns.quad9.net": [
+        "9.9.9.9",
+        "149.112.112.112",
+        "2620:fe::fe",
+        "2620:fe::9"
+      ],
+      "dns.sb": [
+        "45.11.45.11",
+        "185.222.222.222",
+        "2a09::",
+        "2a11::"
+      ],
+      "common.dot.dns.yandex.net": [
+        "77.88.8.8",
+        "77.88.8.1",
+        "2a02:6b8::feed:0ff",
+        "2a02:6b8:0:1::feed:0ff"
+      ],
+      "www.speedtest.net": [
+        "104.17.147.22",
+        "104.17.148.22"
+      ]
+    },
+    "servers": [
+      "1.1.1.1",
+      {
+        "address": "223.5.5.5",
+        "domains": [
+          "geosite:cn"
+        ],
+        "expectIPs": [
+          "geoip:cn"
+        ],
+        "skipFallback": true,
+        "tag": "domestic-dns_cn_expect_0"
+      },
+      {
+        "address": "1.1.1.1",
+        "domains": [
+          "geosite:google"
+        ]
+      },
+      {
+        "address": "223.5.5.5",
+        "domains": [
+          "geosite:private"
+        ],
+        "skipFallback": true,
+        "tag": "domestic-dns_1_0"
+      },
+      {
+        "address": "223.5.5.5",
+        "domains": [
+          "domain:alidns.com",
+          "domain:doh.pub",
+          "domain:dot.pub",
+          "domain:360.cn",
+          "domain:onedns.net"
+        ],
+        "skipFallback": true,
+        "tag": "domestic-dns_2_0"
+      },
+      {
+        "address": "223.5.5.5",
+        "domains": [
+          "geosite:cn"
+        ],
+        "skipFallback": true,
+        "tag": "domestic-dns_3_0"
+      }
+    ],
+    "tag": "dns-module"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true,
+        "userLevel": 8
+      },
+      "sniffing": {
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ],
+        "enabled": true,
+        "routeOnly": false
+      },
+      "tag": "socks"
+    }
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "observatory": {
+    "enableConcurrency": true,
+    "probeInterval": "3m",
+    "probeUrl": "https://www.gstatic.com/generate_204",
+    "subjectSelector": [
+      "proxy-proxy-"
+    ]
+  },
+  "outbounds": [
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "167.88.60.244:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "/oz2frQv99JveBgmTXW22QXIEulQURK79BW+ugk8fCE="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-1-🇺🇸 Narcic 2"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.107.198.228:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "tJa6iPx6mpOktn5KoalMslWcpg6pRUdVx3bKDi3wtDg="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-2-🇸🇬 Narcic 3"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "156.146.56.112:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "sv9o+LudivUcZh3f92hEFFu5KGCT/2QISYy3OpPC0h0="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-3-🇸🇬 Narcic 4"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "138.186.142.204:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "3L8yhe+v7TzBeesOFxSdU2VUa8FG4PTuoiiUoV7DAGY="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-4-🇵🇦 Narcic 5"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.108.94.164:80",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "el0He87GLmmywBmn7ErEiuKd5Bjc6Q4zWciL86rYcxw="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-5-🇳🇿 Narcic 6"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "185.225.28.52:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "9J0kA4c4i7N/+6B+3j0zFkDTHocZNsw6eK6+sLZ1qCQ="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-6-🇲🇰 Narcic 7"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "45.138.86.228:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "S/qPJPWnfwfb1pWIcKN8FH71j5dFt9eH2KbEeU1+QlE="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-7-🇰🇪 Narcic 8"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "185.165.170.3:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "ua7TUXkcSiiHeTyCok5b3PX9DkJ4l5yVvGlSmJ34WU8="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-8-🇮🇸 Narcic 9"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "84.17.57.115:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "zi62xnrtbvAbaavB8MLoTF36BX/stxjfnGJ6mIsZYzg="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-9-🇭🇰 Narcic 10"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "193.36.118.228:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "bGn6yuCFQWWF8+ZMGlJ0M6+IJRlkLXn0/UI/mvIyYwQ="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-10-🇬🇧 Narcic 11"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "104.244.210.244:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "IMHoX/bhNghQVQB0pYKi14pwJhkOcLevpiMa7Khaz2I="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-11-🇨🇦 Narcic 12"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.62.50.132:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "KvFr7Te5+RaFATDKJzrNXKf44ws8J6E9WbNVsMPvY1I="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-12-🇦🇺 Narcic 13"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "116.90.72.244:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "tEh6Z8bnFmQU2KWHWYOS7yuDFZgwn3LGOZAdR1hN8kU="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-13-🇦🇺 Narcic 14"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "116.206.228.180:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "r5BDU0T+VGZU6I+zuF3vlGrdORtgNvLhY08gQxrFRCw="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-14-🇦🇺 Narcic 15"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.108.95.228:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "iY4MhQqQTP4uT7U4w9DfUEVxi5I3HJvjZcIL2dwmtTw="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-15-🇦🇺 Narcic 16"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.77.232.76:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "eSxX+L8qX+1MdmwjtlZGIDbDivFdURBh5Rm1KfUpYzc="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-16-🇦🇺 Narcic 17"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "103.9.79.220:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "SxBT11IISNRou7thGo5A1QtaMjfzPIzZXDxdYEbDxhE="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-17-🇻🇳 Narcic 18"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "165.73.248.92:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "stPvzj5yM1z5Qg9H3gMvAKNPJLU0X3SeUSJPg3wqDR8="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-18-🇿🇦 Narcic 19"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "100.80.234.177/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "197.242.159.229:65142",
+            "preSharedKey": "N/gfMZSjvP8mbXfVP2hnD5CX8BkGvOyheJ67mCpD+QQ=",
+            "publicKey": "Nh5LEJT44xbuvTQnv3OZ0bXi09BFXV4SBB1XVMI12Ec="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "cIq+3tcHVT7gRMl4kIv0WE68ERiTmDtA7rhyHhLJ/mg="
+      },
+      "tag": "proxy-proxy-19-🇿🇦 Narcic 20"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "172.16.0.2/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "8.6.112.135:864",
+            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "+LJPQaXn7t0k1b0cQECHIE4wBLT1g11GfWt2LA/tmXY="
+      },
+      "tag": "proxy-proxy-20-🇮🇷 Narcic 21"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "172.16.0.2/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "8.6.112.135:864",
+            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "iMzjHE6CqGO+tjEX+D3NjrJHY5l6l3RwpOBbOQgv+G0="
+      },
+      "tag": "proxy-proxy-21-🇮🇷 Narcic 22"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "wireguard",
+      "settings": {
+        "address": [
+          "172.16.0.2/32"
+        ],
+        "mtu": 1280,
+        "peers": [
+          {
+            "endpoint": "8.6.112.87:946",
+            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
+          }
+        ],
+        "reserved": [
+          0,
+          0,
+          0
+        ],
+        "secretKey": "oPNaJTc7OtEhKMYt9Aaw7svfA6RU6dojRQRZUmY9m30="
+      },
+      "tag": "proxy-proxy-22-🇮🇷 Narcic 23"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "www.speedtest.net",
+            "port": 443,
+            "users": [
+              {
+                "encryption": "none",
+                "id": "ce440dcf-e570-4a50-af37-bf588ee8a988",
+                "level": 8
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "finalmask": {
+          "tcp": [
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "tlshello",
+                "lengths": [
+                  "5",
+                  "94",
+                  "1"
+                ],
+                "delays": [
+                  "0"
+                ],
+                "maxSplit": "0"
+              }
+            },
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "1-1",
+                "lengths": [
+                  "109",
+                  "1"
+                ],
+                "delays": [
+                  "1"
+                ],
+                "maxSplit": "355"
+              }
+            }
+          ]
+        },
+        "network": "ws",
+        "security": "tls",
+        "sockopt": {
+          "domainStrategy": "UseIP",
+          "happyEyeballs": {
+            "interleave": 2,
+            "maxConcurrentTry": 4,
+            "prioritizeIPv6": false,
+            "tryDelayMs": 250
+          }
+        },
+        "tlsSettings": {
+          "allowInsecure": false,
+          "alpn": [
+            "http/1.1"
+          ],
+          "fingerprint": "chrome",
+          "serverName": "6qWOom7KdrCoaN3ui4Ra5dY.pAgeS.dEV"
+        },
+        "wsSettings": {
+          "host": "6qwoom7kdrcoan3ui4ra5dy.pages.dev",
+          "path": "/vl/KSPdmco70dfoXFS292o2Nv6yPt?ed=2560"
+        }
+      },
+      "tag": "proxy-proxy-23-Narcic irancell 🇩🇪⭐"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "www.speedtest.net",
+            "port": 443,
+            "users": [
+              {
+                "encryption": "none",
+                "id": "433740ea-3d53-43bf-8887-a90af78ae753",
+                "level": 8
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "finalmask": {
+          "tcp": [
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "tlshello",
+                "lengths": [
+                  "5",
+                  "94",
+                  "1"
+                ],
+                "delays": [
+                  "0"
+                ],
+                "maxSplit": "0"
+              }
+            },
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "1-1",
+                "lengths": [
+                  "109",
+                  "1"
+                ],
+                "delays": [
+                  "1"
+                ],
+                "maxSplit": "355"
+              }
+            }
+          ]
+        },
+        "network": "ws",
+        "security": "tls",
+        "sockopt": {
+          "domainStrategy": "UseIP",
+          "happyEyeballs": {
+            "interleave": 2,
+            "maxConcurrentTry": 4,
+            "prioritizeIPv6": false,
+            "tryDelayMs": 250
+          }
+        },
+        "tlsSettings": {
+          "allowInsecure": false,
+          "alpn": [
+            "http/1.1"
+          ],
+          "fingerprint": "chrome",
+          "serverName": "pv3x6aL7MQ4uuCu7C-w1oU505Zc55Wmf.pAges.deV"
+        },
+        "wsSettings": {
+          "host": "pv3x6al7mq4uucu7c-w1ou505zc55wmf.pages.dev",
+          "path": "/vl/KSPdmco70dfoXFS292o2Nv6yPt?ed=2560"
+        }
+      },
+      "tag": "proxy-proxy-24-Narcic Iracell 🇹🇷⭐"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "www.speedtest.net",
+            "port": 443,
+            "users": [
+              {
+                "encryption": "none",
+                "id": "a208b94a-4c9c-4485-a2db-2d27a14c7f2f",
+                "level": 8
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "finalmask": {
+          "tcp": [
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "tlshello",
+                "lengths": [
+                  "5",
+                  "94",
+                  "1"
+                ],
+                "delays": [
+                  "0"
+                ],
+                "maxSplit": "0"
+              }
+            },
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "1-1",
+                "lengths": [
+                  "109",
+                  "1"
+                ],
+                "delays": [
+                  "1"
+                ],
+                "maxSplit": "355"
+              }
+            }
+          ]
+        },
+        "network": "ws",
+        "security": "tls",
+        "sockopt": {
+          "domainStrategy": "UseIP",
+          "happyEyeballs": {
+            "interleave": 2,
+            "maxConcurrentTry": 4,
+            "prioritizeIPv6": false,
+            "tryDelayMs": 250
+          }
+        },
+        "tlsSettings": {
+          "allowInsecure": false,
+          "alpn": [
+            "http/1.1"
+          ],
+          "fingerprint": "chrome",
+          "serverName": "cEc7lNHoOgNAZuQQ22GXn7Xi.PAGES.dEV"
+        },
+        "wsSettings": {
+          "host": "cec7lnhoognazuqq22gxn7xi.pages.dev",
+          "path": "/vl/KSPdmco70dfoXFS292o2Nv6yPt?ed=2560"
+        }
+      },
+      "tag": "proxy-proxy-25-Narcic irancell 🇦🇪⭐"
+    },
+    {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "www.speedtest.net",
+            "port": 443,
+            "users": [
+              {
+                "encryption": "none",
+                "id": "eb1ee058-c50e-48eb-9d63-b175ef94df6c",
+                "level": 8
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "finalmask": {
+          "tcp": [
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "tlshello",
+                "lengths": [
+                  "5",
+                  "94",
+                  "1"
+                ],
+                "delays": [
+                  "0"
+                ],
+                "maxSplit": "0"
+              }
+            },
+            {
+              "type": "fragment",
+              "settings": {
+                "packets": "1-1",
+                "lengths": [
+                  "109",
+                  "1"
+                ],
+                "delays": [
+                  "1"
+                ],
+                "maxSplit": "355"
+              }
+            }
+          ]
+        },
+        "network": "ws",
+        "security": "tls",
+        "sockopt": {
+          "domainStrategy": "UseIP",
+          "happyEyeballs": {
+            "interleave": 2,
+            "maxConcurrentTry": 4,
+            "prioritizeIPv6": false,
+            "tryDelayMs": 250
+          }
+        },
+        "tlsSettings": {
+          "allowInsecure": false,
+          "alpn": [
+            "http/1.1"
+          ],
+          "fingerprint": "chrome",
+          "serverName": "gcUQn1SN4ytU4zhIuIU2m0D.PAgeS.DEv"
+        },
+        "wsSettings": {
+          "host": "gcuqn1sn4ytu4zhiuiu2m0d.pages.dev",
+          "path": "/vl/KSPdmco70dfoXFS292o2Nv6yPt?ed=2560"
+        }
+      },
+      "tag": "proxy-proxy-26-Narcic irancell 🇺🇸⭐"
+    },
+    {
+      "protocol": "freedom",
+      "streamSettings": {
+        "network": "tcp",
+        "sockopt": {
+          "domainStrategy": "UseIP"
+        }
+      },
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "settings": {
+        "response": {
+          "type": "http"
+        }
+      },
+      "tag": "block"
+    }
+  ],
+  "remarks": "اتوماتیک ⚡",
+  "routing": {
+    "balancers": [
+      {
+        "selector": [
+          "proxy-proxy-"
+        ],
+        "strategy": {
+          "type": "leastPing"
+        },
+        "tag": "balancer-main"
+      }
+    ],
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "network": "udp",
+        "outboundTag": "block",
+        "port": "443",
+        "type": "field"
+      },
+      {
+        "balancerTag": "balancer-main",
+        "domain": [
+          "geosite:google"
+        ],
+        "type": "field"
+      },
+      {
+        "ip": [
+          "ext:geoip-only-cn-private.dat:private"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "domain": [
+          "geosite:private"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "ip": [
+          "223.5.5.5",
+          "223.6.6.6",
+          "2400:3200::1",
+          "2400:3200:baba::1",
+          "119.29.29.29",
+          "1.12.12.12",
+          "120.53.53.53",
+          "2402:4e00::",
+          "2402:4e00:1::",
+          "180.76.76.76",
+          "2400:da00::6666",
+          "114.114.114.114",
+          "114.114.115.115",
+          "114.114.114.119",
+          "114.114.115.119",
+          "114.114.114.110",
+          "114.114.115.110",
+          "180.184.1.1",
+          "180.184.2.2",
+          "101.226.4.6",
+          "218.30.118.6",
+          "123.125.81.6",
+          "140.207.198.6",
+          "1.2.4.8",
+          "210.2.4.8",
+          "52.80.66.66",
+          "117.50.22.22",
+          "2400:7fc0:849e:200::4",
+          "2404:c2c0:85d8:901::4",
+          "117.50.10.10",
+          "52.80.52.52",
+          "2400:7fc0:849e:200::8",
+          "2404:c2c0:85d8:901::8",
+          "117.50.60.30",
+          "52.80.60.30"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "domain": [
+          "domain:alidns.com",
+          "domain:doh.pub",
+          "domain:dot.pub",
+          "domain:360.cn",
+          "domain:onedns.net"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "ip": [
+          "ext:geoip-only-cn-private.dat:cn"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "domain": [
+          "geosite:cn"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "inboundTag": [
+          "domestic-dns_1_0",
+          "domestic-dns_2_0",
+          "domestic-dns_3_0",
+          "domestic-dns_cn_expect_0"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "balancerTag": "balancer-main",
+        "inboundTag": [
+          "dns-module"
+        ],
+        "type": "field"
+      },
+      {
+        "balancerTag": "balancer-main",
+        "network": "tcp,udp",
+        "type": "field"
+      }
+    ]
+  }
+}
