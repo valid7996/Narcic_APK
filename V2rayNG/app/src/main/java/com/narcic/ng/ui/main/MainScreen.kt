@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.narcic.ng.ui.compose.AnimatedCobwebBackground
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -119,6 +120,9 @@ fun MainScreen(
             }
         }
         Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
+            if (isDark) {
+                AnimatedCobwebBackground(modifier = Modifier.fillMaxSize())
+            }
             Scaffold(
                 contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
                 containerColor = Color.Transparent,
