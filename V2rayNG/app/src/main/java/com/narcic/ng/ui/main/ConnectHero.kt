@@ -3,6 +3,7 @@ package com.narcic.ng.ui.main
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -41,11 +42,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.cos
+import kotlin.math.sin
 import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -66,6 +70,83 @@ private val CoreRunningBottom = Color(0xFF0A0E1A)
 // deliberate, "secured network" silhouette that still nests cleanly inside
 // the circular orbit/pulse rings drawn around it.
 private val HeroCoreShape = RoundedPolygonShape(sides = 6, cornerRadius = 26.dp)
+
+@Composable
+private fun AnimatedWebBackdrop(
+    modifier: Modifier = Modifier,
+    isConnected: Boolean,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "web-backdrop")
+    val drift by infiniteTransition.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "web-drift",
+    )
+    val pull by animateFloatAsState(
+        targetValue = if (isConnected) 0.8f else 0.18f,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "web-pull",
+    )
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                translationX = drift
+            }
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val cx = size.width * 0.5f
+            val cy = size.height * 0.48f
+            val radius = minOf(size.width, size.height) * 0.42f
+
+            val anchors = listOf(
+                Offset(0f, size.height * 0.08f),
+                Offset(size.width * 0.14f, 0f),
+                Offset(size.width * 0.82f, 0f),
+                Offset(size.width, size.height * 0.1f),
+                Offset(0f, size.height * 0.78f),
+                Offset(size.width * 0.12f, size.height),
+                Offset(size.width * 0.88f, size.height),
+                Offset(size.width, size.height * 0.82f),
+                Offset(size.width * 0.5f, 0f),
+                Offset(size.width * 0.5f, size.height),
+            )
+
+            anchors.forEach { anchor ->
+                val dx = cx - anchor.x
+                val dy = cy - anchor.y
+                val end = Offset(
+                    anchor.x + dx * (0.22f + pull * 0.8f),
+                    anchor.y + dy * (0.22f + pull * 0.8f)
+                )
+                drawLine(
+                    color = if (isConnected) AuroraCyan.copy(alpha = 0.28f) else AuroraIndigo.copy(alpha = 0.18f),
+                    start = anchor,
+                    end = end,
+                    strokeWidth = 1.2f
+                )
+            }
+
+            for (i in 0..11) {
+                val angle = Math.PI * 2 * i / 12.0
+                val outerX = cx + cos(angle.toFloat()) * radius
+                val outerY = cy + sin(angle.toFloat()) * radius
+                val innerX = cx + cos(angle.toFloat()) * radius * (0.28f + pull * 0.65f)
+                val innerY = cy + sin(angle.toFloat()) * radius * (0.28f + pull * 0.65f)
+                drawLine(
+                    color = AuroraViolet.copy(alpha = if (isConnected) 0.28f else 0.14f),
+                    start = Offset(outerX.toFloat(), outerY.toFloat()),
+                    end = Offset(innerX.toFloat(), innerY.toFloat()),
+                    strokeWidth = 1f,
+                )
+            }
+        }
+    }
+}
 
 /**
  * Large animated connect button (orbit ring + conic glow + pulse, rounded
@@ -112,7 +193,18 @@ fun ConnectHero(
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.size(190.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(210.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedWebBackdrop(
+                modifier = Modifier.matchParentSize(),
+                isConnected = isRunning,
+            )
+
+            Box(modifier = Modifier.size(190.dp), contentAlignment = Alignment.Center) {
 
             if (isRunning) {
                 // Two-tone aurora pulse (cyan core wave, violet trailing wave)
@@ -232,6 +324,7 @@ fun ConnectHero(
                         modifier = Modifier.size(14.dp)
                     )
                 }
+            }
             }
         }
 
