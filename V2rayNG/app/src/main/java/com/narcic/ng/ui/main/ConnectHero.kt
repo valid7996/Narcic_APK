@@ -72,171 +72,79 @@ private val CoreRunningBottom = Color(0xFF0A0E1A)
 private val HeroCoreShape = RoundedPolygonShape(sides = 6, cornerRadius = 26.dp)
 
 @Composable
-private fun AnimatedSpiderWeb(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "spider-web")
+private fun AnimatedWebBackdrop(
+    modifier: Modifier = Modifier,
+    isConnected: Boolean,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "web-backdrop")
     val drift by infiniteTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
+        initialValue = -8f,
+        targetValue = 8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(5000, easing = FastOutSlowInEasing),
+            animation = tween(5200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "web-drift",
     )
-    val spin by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(26000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "web-spin",
+    val pull by animateFloat(
+        targetValue = if (isConnected) 0.8f else 0.18f,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "web-pull",
     )
 
     Box(
         modifier = modifier
             .graphicsLayer {
-                rotationZ = spin * 0.12f
                 translationX = drift
             }
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
-            val centerX = size.width * 0.72f
-            val centerY = size.height * 0.52f
-            val maxRadius = minOf(size.width, size.height) * 0.52f
+            val cx = size.width * 0.5f
+            val cy = size.height * 0.48f
+            val radius = minOf(size.width, size.height) * 0.42f
 
-            for (ring in 0..6) {
-                val radius = maxRadius * (ring + 1) / 7f
-                drawCircle(
-                    color = AuroraIndigo.copy(alpha = 0.18f + ring * 0.02f),
-                    radius = radius,
-                    center = Offset(centerX, centerY),
-                    style = Stroke(width = 1.2f)
+            val anchors = listOf(
+                Offset(0f, size.height * 0.08f),
+                Offset(size.width * 0.14f, 0f),
+                Offset(size.width * 0.82f, 0f),
+                Offset(size.width, size.height * 0.1f),
+                Offset(0f, size.height * 0.78f),
+                Offset(size.width * 0.12f, size.height),
+                Offset(size.width * 0.88f, size.height),
+                Offset(size.width, size.height * 0.82f),
+                Offset(size.width * 0.5f, 0f),
+                Offset(size.width * 0.5f, size.height),
+            )
+
+            anchors.forEach { anchor ->
+                val dx = cx - anchor.x
+                val dy = cy - anchor.y
+                val end = Offset(
+                    anchor.x + dx * (0.22f + pull * 0.8f),
+                    anchor.y + dy * (0.22f + pull * 0.8f)
                 )
-            }
-
-            for (i in 0..11) {
-                val angle = Math.PI * 2 * i / 12.0
-                val x = centerX + cos(angle.toFloat()) * maxRadius
-                val y = centerY + sin(angle.toFloat()) * maxRadius
                 drawLine(
-                    color = AuroraCyan.copy(alpha = 0.14f),
-                    start = Offset(centerX, centerY),
-                    end = Offset(x.toFloat(), y.toFloat()),
+                    color = if (isConnected) AuroraCyan.copy(alpha = 0.28f) else AuroraIndigo.copy(alpha = 0.18f),
+                    start = anchor,
+                    end = end,
                     strokeWidth = 1.2f
                 )
             }
 
             for (i in 0..11) {
-                val angle = (Math.PI / 12.0) + (Math.PI * 2 * i / 12.0)
-                val endX = centerX + cos(angle.toFloat()) * maxRadius
-                val endY = centerY + sin(angle.toFloat()) * maxRadius
+                val angle = Math.PI * 2 * i / 12.0
+                val outerX = cx + cos(angle.toFloat()) * radius
+                val outerY = cy + sin(angle.toFloat()) * radius
+                val innerX = cx + cos(angle.toFloat()) * radius * (0.28f + pull * 0.65f)
+                val innerY = cy + sin(angle.toFloat()) * radius * (0.28f + pull * 0.65f)
                 drawLine(
-                    color = AuroraViolet.copy(alpha = 0.18f),
-                    start = Offset(centerX, centerY),
-                    end = Offset(endX.toFloat(), endY.toFloat()),
-                    strokeWidth = 1f
+                    color = AuroraViolet.copy(alpha = if (isConnected) 0.28f else 0.14f),
+                    start = Offset(outerX.toFloat(), outerY.toFloat()),
+                    end = Offset(innerX.toFloat(), innerY.toFloat()),
+                    strokeWidth = 1f,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AnimatedSpider(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "spider")
-    val sway by infiniteTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "spider-sway",
-    )
-    val bob by infiniteTransition.animateFloat(
-        initialValue = -6f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "spider-bob",
-    )
-    val legWave by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "spider-leg-wave",
-    )
-
-    Canvas(
-        modifier = modifier
-            .graphicsLayer {
-                rotationZ = sway
-                translationY = bob
-            }
-            .size(90.dp, 90.dp)
-    ) {
-        val cx = size.width * 0.5f
-        val cy = size.height * 0.52f
-        val bodyRadius = size.minDimension * 0.18f
-
-        drawCircle(
-            color = Color(0xFF080D18),
-            radius = bodyRadius * 1.2f,
-            center = Offset(cx, cy)
-        )
-        drawCircle(
-            color = AuroraCyan,
-            radius = bodyRadius,
-            center = Offset(cx, cy)
-        )
-        drawCircle(
-            color = Color(0xFF09111A),
-            radius = bodyRadius * 0.45f,
-            center = Offset(cx, cy + bodyRadius * 0.7f)
-        )
-
-        val legLength = size.width * 0.2f
-        for (side in -1..1 step 2) {
-            val sideMult = side.toFloat()
-            repeat(4) { legIndex ->
-                val offset = (legIndex - 1.5f) / 3f
-                val startX = cx + sideMult * (bodyRadius * 0.9f)
-                val startY = cy + offset * 10f
-                val angle = if (side > 0) 0.55f + legWave * 0.4f else -0.55f - legWave * 0.4f
-                val endX = startX + sideMult * (legLength * (0.7f + legIndex * 0.12f))
-                val endY = startY + (if (side > 0) 1f else -1f) * (bodyRadius + legIndex * 6f) + (legWave - 0.5f) * 18f
-
-                drawLine(
-                    color = Color(0xFF0A111B),
-                    start = Offset(startX, startY),
-                    end = Offset(endX, endY),
-                    strokeWidth = 2.4f
-                )
-                drawLine(
-                    color = AuroraViolet.copy(alpha = 0.7f),
-                    start = Offset(startX, startY),
-                    end = Offset(endX + sideMult * (if (side > 0) 4f else -4f), endY + 4f),
-                    strokeWidth = 1.3f
-                )
-            }
-        }
-
-        drawCircle(
-            color = Color(0xFF1DE9B6),
-            radius = 3f,
-            center = Offset(cx - 8f, cy - 8f)
-        )
-        drawCircle(
-            color = Color(0xFF1DE9B6),
-            radius = 3f,
-            center = Offset(cx + 8f, cy - 8f)
-        )
     }
 }
 
@@ -291,11 +199,9 @@ fun ConnectHero(
                 .height(210.dp),
             contentAlignment = Alignment.Center
         ) {
-            AnimatedSpiderWeb(modifier = Modifier.matchParentSize())
-            AnimatedSpider(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-20).dp, y = 18.dp)
+            AnimatedWebBackdrop(
+                modifier = Modifier.matchParentSize(),
+                isConnected = isRunning,
             )
 
             Box(modifier = Modifier.size(190.dp), contentAlignment = Alignment.Center) {
