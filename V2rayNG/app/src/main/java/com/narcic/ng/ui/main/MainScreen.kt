@@ -28,6 +28,7 @@ import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.SpiderWebCorners
 import kotlinx.coroutines.launch
 
 /**
@@ -119,6 +120,11 @@ fun MainScreen(
             }
         }
         Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
+            if (isDark) {
+                // Decorative animated spiderweb in the four corners, echoing the
+                // launcher icon. Sits behind all real UI and never intercepts touch.
+                SpiderWebCorners(modifier = Modifier.fillMaxSize())
+            }
             Scaffold(
                 contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
                 containerColor = Color.Transparent,
