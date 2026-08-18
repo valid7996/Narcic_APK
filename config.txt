@@ -1,0 +1,1 @@
+vless://47388561-cf0c-4cfc-91f8-fdfd9fa3d756@0.0.9.8:8443?security=reality&encryption=none&pbk=B5F8h8tpeZ-1ydiT0uFgdc30jJyw8H89Y8e-p_VV6yw&headerType=none&fp=edge&type=tcp&flow=xtls-rprx-vision&sni=www.amazon.com&sid=7b#%F0%9F%A6%A6
