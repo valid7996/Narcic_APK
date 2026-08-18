@@ -86,7 +86,8 @@ private fun AnimatedWebBackdrop(
         ),
         label = "web-drift",
     )
-    val pull by animateFloat(
+    val pull by infiniteTransition.animateFloat(
+        initialValue = 0.18f,
         targetValue = if (isConnected) 0.8f else 0.18f,
         animationSpec = tween(500, easing = FastOutSlowInEasing),
         label = "web-pull",
