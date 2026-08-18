@@ -9,6 +9,7 @@ import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.LocateTarget
+import com.narcic.ng.dto.SubscriptionUpdateResult
 import com.narcic.ng.dto.TestServiceMessage
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
@@ -193,6 +194,7 @@ class MainViewModel(
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
+            MainAction.UpdateAllSubscriptions -> importAllConfigsViaSub()
             MainAction.ExportAll -> exportAllAsync()
             MainAction.AutoConnect -> autoConnect()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
@@ -429,20 +431,7 @@ class MainViewModel(
                         val item = dataSource.getSubscriptionItem(subId) ?: return@withContext
                         dataSource.updateConfigViaSub(SubscriptionCache(subId, item))
                     }
-                    when {
-                        result.successCount + result.failureCount + result.skipCount == 0 ->
-                            toast(R.string.title_update_subscription_no_subscription)
-
-                        result.successCount > 0 && result.failureCount + result.skipCount == 0 ->
-                            toast(dataSource.getString(R.string.title_update_config_count, result.configCount))
-
-                        else ->
-                            toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
-                    }
-                    if (result.configCount > 0) {
-                        setupGroupTab(forceRefresh = true)
-                        refreshSelectedGuid()
-                    }
+                    handleSubUpdateResult(result)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (e: Exception) {
@@ -450,6 +439,44 @@ class MainViewModel(
                     toastError(R.string.toast_failure)
                 }
             }
+        }
+    }
+
+    /**
+     * Fetches every subscription, regardless of which tab is currently selected.
+     * Used for the very first launch, where several default subscriptions are
+     * created at once (see DefaultConfigSource) and all of them need their
+     * configs pulled in immediately, not just the one that ends up selected.
+     */
+    private fun importAllConfigsViaSub() {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    handleSubUpdateResult(dataSource.updateConfigViaSubAll())
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Subscription update failed", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    private fun handleSubUpdateResult(result: SubscriptionUpdateResult) {
+        when {
+            result.successCount + result.failureCount + result.skipCount == 0 ->
+                toast(R.string.title_update_subscription_no_subscription)
+
+            result.successCount > 0 && result.failureCount + result.skipCount == 0 ->
+                toast(dataSource.getString(R.string.title_update_config_count, result.configCount))
+
+            else ->
+                toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
+        }
+        if (result.configCount > 0) {
+            setupGroupTab(forceRefresh = true)
+            refreshSelectedGuid()
         }
     }
 
@@ -697,14 +724,25 @@ class MainViewModel(
 
     fun testAllRealPing(onlyTcp: Boolean = false) {
         dataSource.cancelAllPing()
-        val groupId = uiState.value.selectedGroupId
-        val servers = currentServers()
-        dataSource.clearAllTestDelayResults(servers.map { it.guid })
-        if (servers.isEmpty()) {
+        
+        // When testing all, use empty string to test all subscriptions
+        val testGroupId = ""
+        val allServersGuids = dataSource.getServerGuidList(testGroupId)
+        
+        // Filter by keyword if needed
+        val serversToTest = if (keywordFilter.isNotEmpty()) {
+            val currentServersGuids = currentServers().map { it.guid }.toSet()
+            allServersGuids.filter { it in currentServersGuids }
+        } else {
+            allServersGuids
+        }
+        
+        dataSource.clearAllTestDelayResults(serversToTest)
+        if (serversToTest.isEmpty()) {
             _uiState.update { it.copy(isTesting = false) }
             return
         }
-        testingGroupId = groupId
+        testingGroupId = testGroupId
         _uiState.update {
             it.copy(
                 isTesting = true,
@@ -712,12 +750,15 @@ class MainViewModel(
             )
         }
         viewModelScope.launch(ioDispatcher) {
-            cacheMutex.withLock { groupDataCache.remove(groupId) }
+            cacheMutex.withLock { 
+                // Clear cache for all groups
+                groupDataCache.clear()
+            }
             dataSource.sendMsg2TestService(
                 TestServiceMessage(
                     key = AppConfig.MSG_MEASURE_CONFIG_START,
-                    subscriptionId = groupId,
-                    serverGuids = if (keywordFilter.isNotEmpty()) servers.map { it.guid } else emptyList(),
+                    subscriptionId = testGroupId,
+                    serverGuids = if (keywordFilter.isNotEmpty()) serversToTest else emptyList(),
                     onlyTcp = onlyTcp
                 )
             )

@@ -13,10 +13,13 @@ import com.narcic.ng.handler.SpeedtestManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -37,6 +40,13 @@ class RealPingWorkerService(
 
     private val runningCount = AtomicInteger(0)
     private val totalCount = AtomicInteger(0)
+
+    companion object {
+        // Ceiling for a single real-ping test (mainly guards Custom/PolicyGroup/ProxyChain
+        // configs, which skip the fast TCP pre-check). Generous enough for a slow-but-
+        // working server, short enough that one bad config can't stall the whole batch.
+        private const val REAL_PING_TIMEOUT_MS = 10_000L
+    }
 
     fun start() {
         val jobs = guids.map { guid ->
@@ -80,7 +90,7 @@ class RealPingWorkerService(
         }
     }
 
-    private fun startRealPing(guid: String): Long {
+    private suspend fun startRealPing(guid: String): Long {
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
@@ -103,7 +113,19 @@ class RealPingWorkerService(
         if (!configResult.status) {
             return retFailure
         }
-        return CoreNativeManager.measureOutboundDelay(configResult.content, SettingsManager.getDelayTestUrl())
+
+        // measureOutboundDelay is a blocking native call with no timeout of its own.
+        // Custom/PolicyGroup/ProxyChain configs (and protocols like Hysteria2/WireGuard/h3)
+        // skip the quick TCP pre-check above, so an unreachable or slow one can hang here
+        // far longer than a normal test. Run it on Dispatchers.IO and bound it with a
+        // timeout so a single stuck config occupies a throwaway IO thread instead of a
+        // slot in this batch's fixed-size thread pool — otherwise every config still
+        // queued behind it never gets a thread to run on and never gets tested.
+        return withTimeoutOrNull(REAL_PING_TIMEOUT_MS) {
+            withContext(Dispatchers.IO) {
+                CoreNativeManager.measureOutboundDelay(configResult.content, SettingsManager.getDelayTestUrl())
+            }
+        } ?: retFailure
     }
 
     private fun startTcping(guid: String): Long {

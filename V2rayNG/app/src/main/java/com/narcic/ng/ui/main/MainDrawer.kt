@@ -64,9 +64,7 @@ fun MainDrawerContent(
 ) {
     val drawerScrollState = rememberScrollState()
     var showImportMenu by remember { mutableStateOf(false) }
-    var showManageMenu by remember { mutableStateOf(false) }
     val importMenuScrollState = rememberScrollState()
-    val manageMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
@@ -144,39 +142,12 @@ fun MainDrawerContent(
                     )
                 }
             }
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-                DrawerMenuItem(
-                    icon = painterResource(R.drawable.ic_more_vert_24dp),
-                    label = "Manage configs",
-                    onClick = { showManageMenu = true }
-                )
-                DropdownMenu(
-                    expanded = showManageMenu,
-                    onDismissRequest = { showManageMenu = false },
-                    scrollState = manageMenuScrollState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .heightIn(max = maxMenuHeight)
-                        .verticalScrollbar(manageMenuScrollState)
-                ) {
-                    MoreMenuContent(
-                        onAction = { action ->
-                            showManageMenu = false
-                            onAction(action)
-                        },
-                        onDelAllConfig = { showManageMenu = false; onDelAllConfig() },
-                        onDelDuplicateConfig = { showManageMenu = false; onDelDuplicateConfig() },
-                        onDelInvalidConfig = { showManageMenu = false; onDelInvalidConfig() }
-                    )
-                }
-            }
+
 
             AppDivider()
             DrawerMenuGroup(
                 items = listOf(
-                    DrawerMenuItemData(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting, "sub_setting"),
                     DrawerMenuItemData(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings, "per_app_proxy"),
-                    DrawerMenuItemData(R.drawable.ic_routing_24dp, R.string.routing_settings_title, "routing_setting"),
                     DrawerMenuItemData(R.drawable.ic_file_24dp, R.string.title_user_asset_setting, "user_asset"),
                     DrawerMenuItemData(R.drawable.ic_settings_24dp, R.string.title_settings, "settings")
                 ),
@@ -185,9 +156,6 @@ fun MainDrawerContent(
             AppDivider()
             DrawerMenuGroup(
                 items = listOf(
-                    DrawerMenuItemData(R.drawable.ic_promotion_24dp, R.string.title_pref_promotion, "promotion"),
-                    DrawerMenuItemData(R.drawable.ic_logcat_24dp, R.string.title_logcat, "logcat"),
-                    DrawerMenuItemData(R.drawable.ic_check_update_24dp, R.string.update_check_for_update, "check_update"),
                     DrawerMenuItemData(R.drawable.ic_restore_24dp, R.string.title_configuration_backup_restore, "backup_restore"),
                     DrawerMenuItemData(R.drawable.ic_about_24dp, R.string.title_about, "about")
                 ),

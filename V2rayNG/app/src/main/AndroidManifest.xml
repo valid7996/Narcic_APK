@@ -128,9 +128,11 @@
             android:exported="false" />
         <activity
             android:name=".ui.logcat.LogcatActivity"
+            android:enabled="false"
             android:exported="false" />
         <activity
             android:name=".ui.routing.RoutingSettingActivity"
+            android:enabled="false"
             android:exported="false" />
         <activity
             android:name=".ui.routing.RoutingEditActivity"
@@ -138,6 +140,7 @@
             android:exported="false" />
         <activity
             android:name=".ui.subscription.SubSettingActivity"
+            android:enabled="false"
             android:exported="false" />
         <activity
             android:name=".ui.userasset.UserAssetActivity"
@@ -193,6 +196,7 @@
         </activity>
         <activity
             android:name=".ui.checkupdate.CheckUpdateActivity"
+            android:enabled="false"
             android:exported="false" />
         <activity
             android:name=".ui.backup.BackupActivity"
