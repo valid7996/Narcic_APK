@@ -112,10 +112,6 @@ fun MoreMenuContent(
         onClick = onDelInvalidConfig
     )
     DropdownMenuItem(
-        text = { Text(stringResource(R.string.title_export_all)) },
-        onClick = { onAction(MainAction.ExportAll) }
-    )
-    DropdownMenuItem(
         text = { Text(stringResource(R.string.title_locate_selected_config)) },
         onClick = { onAction(MainAction.LocateSelectedServer) }
     )

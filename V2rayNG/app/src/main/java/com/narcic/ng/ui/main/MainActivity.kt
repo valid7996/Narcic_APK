@@ -26,12 +26,9 @@ import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.handler.SubscriptionUpdater
 import com.narcic.ng.ui.AboutActivity
-import com.narcic.ng.ui.backup.BackupActivity
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
 import com.narcic.ng.ui.checkupdate.CheckUpdateActivity
-import com.narcic.ng.ui.logcat.LogcatActivity
 import com.narcic.ng.ui.perappproxy.PerAppProxyActivity
-import com.narcic.ng.ui.routing.RoutingSettingActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
 import com.narcic.ng.ui.server.ServerCustomConfigActivity
 import com.narcic.ng.ui.server.ServerGroupActivity
@@ -45,7 +42,6 @@ import com.narcic.ng.ui.server.ServerVlessActivity
 import com.narcic.ng.ui.server.ServerVmessActivity
 import com.narcic.ng.ui.server.ServerWireguardActivity
 import com.narcic.ng.ui.settings.SettingsActivity
-import com.narcic.ng.ui.subscription.SubSettingActivity
 import com.narcic.ng.ui.userasset.UserAssetActivity
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
@@ -144,22 +140,11 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun navigateTo(destination: String) {
         val intent = when (destination) {
-            "sub_setting" -> Intent(this, SubSettingActivity::class.java)
             "per_app_proxy" -> Intent(this, PerAppProxyActivity::class.java)
-            "routing_setting" -> Intent(this, RoutingSettingActivity::class.java)
             "user_asset" -> Intent(this, UserAssetActivity::class.java)
             "settings" -> Intent(this, SettingsActivity::class.java)
-            "logcat" -> Intent(this, LogcatActivity::class.java)
             "check_update" -> Intent(this, CheckUpdateActivity::class.java)
-            "backup_restore" -> Intent(this, BackupActivity::class.java)
             "about" -> Intent(this, AboutActivity::class.java)
-            "promotion" -> {
-                Utils.openUri(
-                    this,
-                    "${Utils.decode(AppConfig.APP_PROMOTION_URL)}?t=${System.currentTimeMillis()}"
-                )
-                return
-            }
 
             else -> return
         }
