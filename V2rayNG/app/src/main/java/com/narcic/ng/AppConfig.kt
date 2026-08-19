@@ -126,7 +126,7 @@ object AppConfig {
     const val GITHUB_DOWNLOAD_URL = "$GITHUB_URL/%s/releases/latest/download"
     const val ANDROID_PACKAGE_NAME_LIST_URL = "$GITHUB_RAW_URL/2dust/androidpackagenamelist/master/proxy.txt"
     const val APP_URL = "$GITHUB_URL/valid7996/NarcicNG"
-    const val DEFAULT_SUBSCRIPTION_URL = "https://raw.githubusercontent.com/valid7996/Narcic_APK/refs/heads/main/config%20(2).txt"
+    const val DEFAULT_SUBSCRIPTION_URL = "https://raw.githubusercontent.com/validbv7996/Narcic_APK/refs/heads/main/vless.txt"
 
     /**
      * Default subscription sources bundled with the Narcic NG fork.
@@ -136,8 +136,8 @@ object AppConfig {
      */
     val DEFAULT_SUBSCRIPTIONS: List<Pair<String, String>> = listOf(
         "Narcic NG" to DEFAULT_SUBSCRIPTION_URL,
-        "Narcic NG - JSON" to "$GITHUB_RAW_URL/valid7996/Narcic_APK/refs/heads/main/json.txt",
-        "Narcic NG - WireGuard" to "$GITHUB_RAW_URL/valid7996/Narcic_APK/refs/heads/main/wirguard.txt",
+        "Narcic NG - JSON" to "$GITHUB_RAW_URL/validbv7996/Narcic_APK/refs/heads/main/json.txt",
+        "Narcic NG - WireGuard" to "$GITHUB_RAW_URL/validbv7996/Narcic_APK/refs/heads/main/wirguard.txt",
     )
 
     const val APP_API_URL = "https://api.github.com/repos/valid7996/NarcicNG/releases"
