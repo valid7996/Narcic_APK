@@ -193,6 +193,7 @@ class MainViewModel(
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
+            MainAction.UpdateAllSubscriptions -> importConfigViaSub(forceAll = true)
             MainAction.ExportAll -> exportAllAsync()
             MainAction.AutoConnect -> autoConnect()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
@@ -418,8 +419,13 @@ class MainViewModel(
         }
     }
 
-    private fun importConfigViaSub() {
-        val subId = uiState.value.selectedGroupId
+    private fun importConfigViaSub(forceAll: Boolean = false) {
+        // forceAll=true always fetches every enabled subscription
+        // (dataSource.updateConfigViaSubAll), regardless of which tab is
+        // active — used for the first-run bootstrap so all bundled default
+        // subscriptions get pulled at once. The regular manual "fetch"
+        // action still targets only the currently selected tab.
+        val subId = if (forceAll) "" else uiState.value.selectedGroupId
         launchLoading {
             withContext(ioDispatcher) {
                 try {
