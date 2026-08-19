@@ -703,14 +703,26 @@ class MainViewModel(
 
     fun testAllRealPing(onlyTcp: Boolean = false) {
         dataSource.cancelAllPing()
+        val hasFilter = keywordFilter.isNotEmpty()
         val groupId = uiState.value.selectedGroupId
-        val servers = currentServers()
-        dataSource.clearAllTestDelayResults(servers.map { it.guid })
-        if (servers.isEmpty()) {
+
+        // With no active search filter, "test all" spans every subscription
+        // — not just the active tab — including any subscription added
+        // later, since getServerGuidList("") resolves to the merged list of
+        // servers across all subscriptions. An active filter narrows the
+        // test to the matching servers within the currently viewed tab.
+        val guids = if (hasFilter) {
+            currentServers().map { it.guid }
+        } else {
+            dataSource.getServerGuidList("")
+        }
+
+        dataSource.clearAllTestDelayResults(guids)
+        if (guids.isEmpty()) {
             _uiState.update { it.copy(isTesting = false) }
             return
         }
-        testingGroupId = groupId
+        testingGroupId = if (hasFilter) groupId else null
         _uiState.update {
             it.copy(
                 isTesting = true,
@@ -718,12 +730,14 @@ class MainViewModel(
             )
         }
         viewModelScope.launch(ioDispatcher) {
-            cacheMutex.withLock { groupDataCache.remove(groupId) }
+            cacheMutex.withLock {
+                if (hasFilter) groupDataCache.remove(groupId) else groupDataCache.clear()
+            }
             dataSource.sendMsg2TestService(
                 TestServiceMessage(
                     key = AppConfig.MSG_MEASURE_CONFIG_START,
-                    subscriptionId = groupId,
-                    serverGuids = if (keywordFilter.isNotEmpty()) servers.map { it.guid } else emptyList(),
+                    subscriptionId = if (hasFilter) groupId else "",
+                    serverGuids = if (hasFilter) guids else emptyList(),
                     onlyTcp = onlyTcp
                 )
             )

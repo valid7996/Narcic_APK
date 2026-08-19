@@ -125,13 +125,23 @@ class CoreTestService : Service() {
             }
 
             is RealPingEvent.Finish -> {
-                if(message.subscriptionId.isNotEmpty()){
-                    if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)) {
-                        AngConfigManager.removeInvalidServer(message.subscriptionId)
-                    }
-
-                    if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_SORT_AFTER_TEST, false)) {
-                        AngConfigManager.sortByTestResultsForSub(message.subscriptionId)
+                val autoRemoveInvalid = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)
+                val autoSort = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_SORT_AFTER_TEST, false)
+                if (autoRemoveInvalid || autoSort) {
+                    // A blank subscriptionId with no explicit guids means this
+                    // was a test across every subscription (see guidsList
+                    // above), so post-test cleanup must cover every
+                    // subscription too — including the ungrouped/default
+                    // bucket — not just skip it.
+                    val affectedSubIds =
+                        if (message.subscriptionId.isNotEmpty()) {
+                            listOf(message.subscriptionId)
+                        } else {
+                            listOf("") + MmkvManager.decodeSubsList()
+                        }
+                    affectedSubIds.forEach { subId ->
+                        if (autoRemoveInvalid) AngConfigManager.removeInvalidServer(subId)
+                        if (autoSort) AngConfigManager.sortByTestResultsForSub(subId)
                     }
                 }
 
