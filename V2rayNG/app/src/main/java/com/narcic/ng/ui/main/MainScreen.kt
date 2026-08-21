@@ -1,9 +1,13 @@
 package com.narcic.ng.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -223,6 +227,7 @@ fun MainScreen(
                 },
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {
+                    val connectedServer = mainViewModel.findServerCache(selectedGuid)
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -243,45 +248,37 @@ fun MainScreen(
                             onAutoConnect = { onAction(MainAction.AutoConnect) },
                         )
 
-                        HomeVpnCard(
-                            isRunning = isRunning,
-                            locationFlag = uiState.locationFlag,
-                            autoConnection = uiState.autoConnection,
-                            connectedServer = mainViewModel.findServerCache(selectedGuid),
-                            subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
-                            onOpenLocation = { showLocationPicker = true },
-                            onOpenConnection = { showConnectionPicker = true },
-                            onOpenSubscriptions = { showSubscriptions = true },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        )
+                        // Only one of these two cards shows at a time: while
+                        // disconnected the user picks موقعیت/اتصال/سابسکریپشن
+                        // here; once connected this makes way for the live
+                        // ping/speed/country panel below.
+                        AnimatedVisibility(
+                            visible = !isRunning,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            HomeVpnCard(
+                                isRunning = isRunning,
+                                locationFlag = uiState.locationFlag,
+                                autoConnection = uiState.autoConnection,
+                                connectedServer = connectedServer,
+                                subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
+                                onOpenLocation = { showLocationPicker = true },
+                                onOpenConnection = { showConnectionPicker = true },
+                                onOpenSubscriptions = { showSubscriptions = true },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            )
+                        }
 
                         ConnectionStatsPanel(
                             isRunning = isRunning,
+                            pingText = connectedServer?.testDelayString.orEmpty(),
                             downloadSpeedText = uiState.downloadSpeedText,
                             uploadSpeedText = uiState.uploadSpeedText,
                             connectionDurationText = uiState.connectionDurationText,
                             remoteIp = uiState.remoteIp,
                             remoteCountryName = uiState.remoteCountryName,
                             remoteCountryCode = uiState.remoteCountryCode,
-                        )
-
-                        SuggestedServers(
-                            mainViewModel = mainViewModel,
-                            groupId = uiState.selectedGroupId,
-                            selectedGuid = selectedGuid,
-                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            onViewAll = { /* full list already shown below */ },
-                        )
-
-                        Box(modifier = Modifier.padding(top = 12.dp))
-
-                        AllServersList(
-                            mainViewModel = mainViewModel,
-                            groups = groups,
-                            selectedGuid = selectedGuid,
-                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(bottom = 24.dp),
                         )
                     }
                 }

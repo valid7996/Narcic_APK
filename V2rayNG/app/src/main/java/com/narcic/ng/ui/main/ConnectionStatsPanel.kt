@@ -45,6 +45,7 @@ import com.narcic.ng.ui.compose.AuroraViolet
 @Composable
 fun ConnectionStatsPanel(
     isRunning: Boolean,
+    pingText: String,
     downloadSpeedText: String,
     uploadSpeedText: String,
     connectionDurationText: String,
@@ -94,11 +95,24 @@ fun ConnectionStatsPanel(
                     modifier = Modifier.weight(1f),
                     icon = R.drawable.ic_timer_24dp,
                     accent = AuroraViolet,
-                    label = "زمان اتصال",
-                    value = connectionDurationText.ifBlank { "—" },
+                    label = "پینگ",
+                    value = pingText.ifBlank { "—" },
                 )
                 StatChip(
                     modifier = Modifier.weight(1f),
+                    icon = R.drawable.ic_timer_24dp,
+                    accent = AuroraViolet,
+                    label = "زمان اتصال",
+                    value = connectionDurationText.ifBlank { "—" },
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                StatChip(
+                    modifier = Modifier.fillMaxWidth(),
                     icon = R.drawable.ic_public_24dp,
                     accent = AuroraCyan,
                     label = countryLabel(remoteCountryName, remoteCountryCode),
