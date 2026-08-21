@@ -17,6 +17,12 @@ data class MainUiState(
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    // ---- Home "VPN" card (location / connection / subscription rows) ----
+    // "" = خودکار (no country filter); otherwise the pinned flag emoji.
+    val locationFlag: String = "",
+    // true = اتصال خودکار (auto-pick the fastest match on toggle);
+    // false = the connection row/hero use the manually chosen selectedGuid.
+    val autoConnection: Boolean = true,
     // Live connection stats — only meaningful while isRunning is true.
     val downloadSpeedText: String = "",
     val uploadSpeedText: String = "",
@@ -70,4 +76,25 @@ sealed interface MainAction {
     data class ImportBatchConfig(val configText: String) : MainAction
 
     data class LocateHandled(val target: LocateTarget) : MainAction
+
+    // ---- Home "VPN" card ----
+    /** Pin a country filter ("" clears it, back to خودکار). */
+    data class SetLocationFilter(val flag: String) : MainAction
+
+    /** Switch the connection row back to خودکار (auto-pick fastest). */
+    data object SetAutoConnection : MainAction
+
+    /** Manually pin one server as the connection (from the connection picker). */
+    data class SetManualConnection(val guid: String) : MainAction
+
+    /** Refresh (تازه‌سازی) a single subscription, regardless of which tab is selected. */
+    data class RefreshSubscription(val subId: String) : MainAction
+
+    /**
+     * "افزودن سابسکریپشن": [content] is either one or more subscription
+     * links, or one or more raw share links (vless/vmess/trojan/ss/...),
+     * pasted directly. [name] is optional — used as the new subscription's
+     * remarks when the content isn't itself a link with a #fragment name.
+     */
+    data class AddSubscriptionFromText(val name: String, val content: String) : MainAction
 }

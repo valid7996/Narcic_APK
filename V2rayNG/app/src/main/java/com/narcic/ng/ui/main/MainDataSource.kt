@@ -18,6 +18,12 @@ interface MainDataSource : Closeable {
     fun getSelectServer(): String?
     fun setSelectServer(guid: String)
 
+    fun getLocationFlag(): String
+    fun setLocationFlag(flag: String)
+
+    fun getAutoConnection(): Boolean
+    fun setAutoConnection(auto: Boolean)
+
     fun getConfirmRemove(): Boolean
     fun getDoubleColumnDisplay(): Boolean
     fun isGroupAllDisplayEnabled(): Boolean
@@ -48,6 +54,19 @@ interface MainDataSource : Closeable {
         subscriptionId: String,
         updateUI: Boolean
     ): Pair<Int, Int>
+
+    /**
+     * Backing implementation for [MainAction.AddSubscriptionFromText]. Detects
+     * whether [content] is one/more subscription links or raw share links:
+     *  - Subscription link(s): a new subscription is created per link (named
+     *    [name] when given) and fetched immediately.
+     *  - Raw share link(s): a single new *local* subscription named [name]
+     *    (or a sensible default) is created up front, and every parsed
+     *    config is imported into it — never mixed into whatever subscription
+     *    happens to be selected on screen.
+     * Returns the number of configs and the number of subscriptions created.
+     */
+    suspend fun createSubscriptionFromText(name: String, content: String): Pair<Int, Int>
 
     fun updateConfigViaSubAll(): SubscriptionUpdateResult
     fun updateConfigViaSub(subscriptionCache: SubscriptionCache): SubscriptionUpdateResult

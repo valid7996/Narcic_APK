@@ -37,11 +37,15 @@ import kotlinx.coroutines.launch
  *    import, and the config-management menu now live in the drawer).
  *  - ConnectHero: big connect circle + a "Test" button for a real/precise
  *    delay test of every config.
+ *  - HomeVpnCard: the tappable موقعیت / اتصال / سابسکریپشن card. Each row
+ *    opens its own full-screen picker (see the `show*` overlays below).
  *  - Suggested servers: the fastest-tested configs, tap to select.
  *  - AllServersList: a clean, flat, tap-to-select list of every received
  *    server — no tabs, no swipe-to-reveal delete/play icons.
- *  - The old bottom connect bar/FAB was removed since ConnectHero already
- *    covers connect/disconnect + status.
+ *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / تنظیمات. Only the VPN tab renders
+ *    this Scaffold; the other two either open a full-screen overlay or
+ *    launch SettingsActivity, matching the reference screenshots (none of
+ *    the sub-screens keep the bottom bar visible).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +68,12 @@ fun MainScreen(
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
+
+    // Home "VPN" card + bottom-nav overlay screens.
+    var showLocationPicker by remember { mutableStateOf(false) }
+    var showConnectionPicker by remember { mutableStateOf(false) }
+    var showSubscriptions by remember { mutableStateOf(false) }
+    var showAddSubscription by remember { mutableStateOf(false) }
 
     val removeServer: (String) -> Unit = { guid ->
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
@@ -92,6 +102,73 @@ fun MainScreen(
         onDismissRemove = { showRemoveConfirm = null },
         onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) }
     )
+
+    if (showAddSubscription) {
+        AddSubscriptionDialog(
+            onAdd = { name, content ->
+                onAction(MainAction.AddSubscriptionFromText(name, content))
+                showAddSubscription = false
+            },
+            onDismiss = { showAddSubscription = false },
+        )
+    }
+
+    // ---- Full-screen overlays (image 3 / image 4-8 / image 5-7) ----
+    if (showLocationPicker) {
+        val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
+        LocationPickerScreen(
+            servers = servers,
+            selectedFlag = uiState.locationFlag,
+            onSelect = { flag ->
+                onAction(MainAction.SetLocationFilter(flag))
+                showLocationPicker = false
+            },
+            onBack = { showLocationPicker = false },
+        )
+        return
+    }
+
+    if (showConnectionPicker) {
+        val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
+        ConnectionPickerScreen(
+            servers = servers,
+            groups = groups,
+            selectedGroupId = uiState.selectedGroupId,
+            isTesting = uiState.isTesting,
+            autoConnection = uiState.autoConnection,
+            selectedGuid = selectedGuid,
+            onSelectAuto = {
+                onAction(MainAction.SetAutoConnection)
+                showConnectionPicker = false
+            },
+            onSelectServer = { guid ->
+                onAction(MainAction.SetManualConnection(guid))
+                showConnectionPicker = false
+            },
+            onRetest = { onAction(MainAction.TestRealAllServers) },
+            onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
+            onBack = { showConnectionPicker = false },
+        )
+        return
+    }
+
+    if (showSubscriptions) {
+        SubscriptionsScreen(
+            mainViewModel = mainViewModel,
+            groups = groups,
+            selectedGroupId = uiState.selectedGroupId,
+            onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
+            onRefresh = { id -> onAction(MainAction.RefreshSubscription(id)) },
+            onTest = { id ->
+                onAction(MainAction.SelectGroup(id))
+                showSubscriptions = false
+                showConnectionPicker = true
+            },
+            onAddClick = { showAddSubscription = true },
+            onBack = { showSubscriptions = false },
+        )
+        return
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -135,6 +212,15 @@ fun MainScreen(
                         onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
                     )
                 },
+                bottomBar = {
+                    MainVpnBottomNav(
+                        selectedTab = MainHomeTab.VPN,
+                        onSelectTab = { tab ->
+                            if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
+                        },
+                        onSettingsClick = { onNavigate("settings") },
+                    )
+                },
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {
                     Column(
@@ -146,9 +232,27 @@ fun MainScreen(
                             isRunning = isRunning,
                             isTesting = uiState.isTesting,
                             statusText = displayText,
-                            onToggle = { onAction(MainAction.ToggleService) },
+                            onToggle = {
+                                if (!isRunning && uiState.autoConnection) {
+                                    onAction(MainAction.AutoConnect)
+                                } else {
+                                    onAction(MainAction.ToggleService)
+                                }
+                            },
                             onTest = { onAction(MainAction.TestRealAllServers) },
                             onAutoConnect = { onAction(MainAction.AutoConnect) },
+                        )
+
+                        HomeVpnCard(
+                            isRunning = isRunning,
+                            locationFlag = uiState.locationFlag,
+                            autoConnection = uiState.autoConnection,
+                            connectedServer = mainViewModel.findServerCache(selectedGuid),
+                            subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
+                            onOpenLocation = { showLocationPicker = true },
+                            onOpenConnection = { showConnectionPicker = true },
+                            onOpenSubscriptions = { showSubscriptions = true },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         )
 
                         ConnectionStatsPanel(

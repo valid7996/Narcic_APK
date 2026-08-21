@@ -91,6 +91,15 @@ object AppConfig {
     /** Cache keys. */
     const val CACHE_SUBSCRIPTION_ID = "cache_subscription_id"
 
+    /**
+     * Home "VPN" card state — the flag-emoji of the country the user pinned
+     * in the location picker ("" means خودکار/Automatic, i.e. no filter),
+     * and whether the connection row is in خودکار (auto-pick fastest) mode
+     * versus a manually chosen server from the connection picker.
+     */
+    const val CACHE_HOME_LOCATION_FLAG = "cache_home_location_flag"
+    const val CACHE_HOME_AUTO_CONNECTION = "cache_home_auto_connection"
+
     /** Protocol identifiers. */
     const val PROTOCOL_FREEDOM = "freedom"
 

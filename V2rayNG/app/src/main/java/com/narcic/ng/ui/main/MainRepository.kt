@@ -115,6 +115,20 @@ class MainRepository(
 
     override fun setSelectServer(guid: String) = MmkvManager.setSelectServer(guid)
 
+    override fun getLocationFlag(): String =
+        MmkvManager.decodeSettingsString(AppConfig.CACHE_HOME_LOCATION_FLAG, "").orEmpty()
+
+    override fun setLocationFlag(flag: String) {
+        MmkvManager.encodeSettings(AppConfig.CACHE_HOME_LOCATION_FLAG, flag)
+    }
+
+    override fun getAutoConnection(): Boolean =
+        MmkvManager.decodeSettingsBool(AppConfig.CACHE_HOME_AUTO_CONNECTION, true)
+
+    override fun setAutoConnection(auto: Boolean) {
+        MmkvManager.encodeSettings(AppConfig.CACHE_HOME_AUTO_CONNECTION, auto)
+    }
+
     override fun getConfirmRemove(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
@@ -189,6 +203,54 @@ class MainRepository(
         subscriptionId: String,
         updateUI: Boolean
     ): Pair<Int, Int> = AngConfigManager.importBatchConfig(server, subscriptionId, updateUI)
+
+    override suspend fun createSubscriptionFromText(name: String, content: String): Pair<Int, Int> {
+        val trimmedName = name.trim()
+        val lines = content.trim().lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.isEmpty()) return 0 to 0
+
+        // If every non-empty line is itself a subscription link, treat the
+        // whole paste as one-or-more subscriptions to add (mirrors the
+        // existing "paste a sub link" behavior) instead of raw configs.
+        val allLinks = lines.all { Utils.isValidSubUrl(it) }
+        if (allLinks) {
+            var subCount = 0
+            lines.distinct().forEach { url ->
+                val alreadyExists = MmkvManager.decodeSubscriptions().any { it.subscription.url == url }
+                if (!alreadyExists) {
+                    val newId = Utils.getUuid()
+                    val subItem = SubscriptionItem().apply {
+                        remarks = trimmedName.ifBlank {
+                            runCatching { java.net.URI(Utils.fixIllegalUrl(url)).fragment }
+                                .getOrNull()?.takeIf { it.isNotBlank() } ?: "سابسکریپشن جدید"
+                        }
+                        this.url = url
+                    }
+                    MmkvManager.encodeSubscription(newId, subItem)
+                    runCatching { AngConfigManager.updateConfigViaSub(SubscriptionCache(newId, subItem)) }
+                    subCount++
+                }
+            }
+            return 0 to subCount
+        }
+
+        // Otherwise: one or more raw share links (vless/vmess/trojan/ss/...)
+        // or a Clash/Xray JSON blob. Create a single new local subscription
+        // up front so every parsed config lands together under its own name,
+        // never mixed into whatever subscription happens to be selected.
+        val newId = Utils.getUuid()
+        val subItem = SubscriptionItem().apply {
+            remarks = trimmedName.ifBlank { "سابسکریپشن جدید" }
+            url = ""
+        }
+        MmkvManager.encodeSubscription(newId, subItem)
+        val (count, _) = AngConfigManager.importBatchConfig(content, newId, true)
+        if (count <= 0) {
+            // Nothing parsed — don't leave behind an empty subscription.
+            MmkvManager.removeSubscription(newId)
+        }
+        return count to (if (count > 0) 1 else 0)
+    }
 
     override fun updateConfigViaSubAll(): SubscriptionUpdateResult =
         AngConfigManager.updateConfigViaSubAll()

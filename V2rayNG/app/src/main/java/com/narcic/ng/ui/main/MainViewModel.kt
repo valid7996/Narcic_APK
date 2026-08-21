@@ -19,6 +19,7 @@ import com.narcic.ng.extension.moveItem
 import com.narcic.ng.extension.toSpeedString
 import com.narcic.ng.handler.SpeedtestManager
 import com.narcic.ng.ui.base.BaseViewModel
+import com.narcic.ng.util.CountryFlags
 import com.narcic.ng.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -60,7 +61,9 @@ class MainViewModel(
             selectedGuid = dataSource.getSelectServer(),
             statusText = disconnectedText,
             confirmRemove = dataSource.getConfirmRemove(),
-            doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+            doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+            locationFlag = dataSource.getLocationFlag(),
+            autoConnection = dataSource.getAutoConnection()
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -202,6 +205,11 @@ class MainViewModel(
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
             is MainAction.LocateHandled -> consumeLocateTarget(action.target)
+            is MainAction.SetLocationFilter -> setLocationFilter(action.flag)
+            MainAction.SetAutoConnection -> setAutoConnection(true)
+            is MainAction.SetManualConnection -> setManualConnection(action.guid)
+            is MainAction.RefreshSubscription -> refreshSubscription(action.subId)
+            is MainAction.AddSubscriptionFromText -> addSubscriptionFromText(action.name, action.content)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -784,12 +792,20 @@ class MainViewModel(
      * Picks the fastest already-tested server in the current group and
      * requests a real connect. If nothing has been tested yet, runs a real
      * ping test first and picks the best result once it finishes.
+     *
+     * When موقعیت (location) has a country pinned (uiState.locationFlag),
+     * only servers whose remarks start with that flag are considered — so
+     * "خودکار" stays scoped to the chosen country instead of picking any
+     * fastest server in the group.
      */
     fun autoConnect() {
         if (uiState.value.isRunning || uiState.value.isTesting) return
-        val servers = currentServers()
+        val servers = currentServersForLocationFilter()
         if (servers.isEmpty()) {
-            toast("ابتدا یک سرور اضافه کنید")
+            toast(
+                if (uiState.value.locationFlag.isEmpty()) "ابتدا یک سرور اضافه کنید"
+                else "کانفیگی با این موقعیت پیدا نشد"
+            )
             return
         }
         val best = servers.filter { it.testDelayMillis > 0L }.minByOrNull { it.testDelayMillis }
@@ -801,9 +817,88 @@ class MainViewModel(
         }
     }
 
+    /** currentServers(), optionally narrowed to the pinned location flag. */
+    private fun currentServersForLocationFilter(): List<ServersCache> {
+        val flag = uiState.value.locationFlag
+        val servers = currentServers()
+        if (flag.isEmpty()) return servers
+        return servers.filter {
+            CountryFlags.extractFlag(it.profile.remarks) == flag
+        }
+    }
+
     private fun requestAutoConnect(guid: String) {
         updateSelectedGuid(guid)
         _uiState.update { it.copy(autoConnectRequest = it.autoConnectRequest + 1) }
+    }
+
+    // ---------- Home "VPN" card: location / connection / subscription ----------
+    private fun setLocationFilter(flag: String) {
+        dataSource.setLocationFlag(flag)
+        _uiState.update { it.copy(locationFlag = flag) }
+    }
+
+    private fun setAutoConnection(auto: Boolean) {
+        dataSource.setAutoConnection(auto)
+        _uiState.update { it.copy(autoConnection = auto) }
+    }
+
+    /** User picked one specific server in the connection picker (image 4/8). */
+    private fun setManualConnection(guid: String) {
+        setAutoConnection(false)
+        updateSelectedGuid(guid)
+        if (uiState.value.isRunning) {
+            _uiState.update { it.copy(autoConnectRequest = it.autoConnectRequest + 1) }
+        }
+    }
+
+    /** "گزینه‌ها" → "تازه‌سازی": refresh one subscription regardless of the active tab. */
+    private fun refreshSubscription(subId: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val item = dataSource.getSubscriptionItem(subId) ?: return@withContext
+                    val result = dataSource.updateConfigViaSub(SubscriptionCache(subId, item))
+                    if (result.successCount > 0) {
+                        toast(dataSource.getString(R.string.title_update_config_count, result.configCount))
+                        cacheMutex.withLock { groupDataCache.remove(subId) }
+                        setupGroupTab(forceRefresh = true)
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to refresh subscription: $subId", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    /** "+ افزودن سابسکریپشن" (image 9): paste a link or raw configs, name optional. */
+    private fun addSubscriptionFromText(name: String, content: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val (count, countSub) = dataSource.createSubscriptionFromText(name, content)
+                    if (count > 0) {
+                        toast(dataSource.getString(R.string.title_import_config_count, count))
+                    } else if (countSub > 0) {
+                        toast("سابسکریپشن اضافه شد")
+                    } else {
+                        toastError(R.string.toast_failure)
+                        return@withContext
+                    }
+                    setupGroupTab(forceRefresh = true)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to add subscription", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
     }
 
     fun triggerLocateSelectedServer() {
@@ -823,6 +918,20 @@ class MainViewModel(
     }
 
     fun getPosition(guid: String): Int = currentServers().indexOfFirst { it.guid == guid }
+
+    /**
+     * Looks up a server by GUID across every currently loaded group — not
+     * just the one being viewed. Used by the home "اتصال" row, since the
+     * manually/auto-selected server can belong to a different subscription
+     * than whichever tab is on screen.
+     */
+    fun findServerCache(guid: String?): ServersCache? {
+        if (guid.isNullOrEmpty()) return null
+        groupPageFlows.values.forEach { flow ->
+            flow.value.firstOrNull { it.guid == guid }?.let { return it }
+        }
+        return null
+    }
 
     private fun consumeLocateTarget(target: LocateTarget) {
         _uiState.update { state ->
