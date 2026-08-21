@@ -244,8 +244,6 @@ fun MainScreen(
                                     onAction(MainAction.ToggleService)
                                 }
                             },
-                            onTest = { onAction(MainAction.TestRealAllServers) },
-                            onAutoConnect = { onAction(MainAction.AutoConnect) },
                         )
 
                         // Only one of these two cards shows at a time: while

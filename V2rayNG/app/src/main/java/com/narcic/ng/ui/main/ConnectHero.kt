@@ -11,19 +11,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -80,8 +76,6 @@ fun ConnectHero(
     isTesting: Boolean,
     statusText: String,
     onToggle: () -> Unit,
-    onTest: () -> Unit,
-    onAutoConnect: () -> Unit,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "hero")
 
@@ -246,65 +240,6 @@ fun ConnectHero(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
-            Spacer(Modifier.height(14.dp))
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Test speed button — dispatches the app's real ping-test action
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(AuroraCyan.copy(alpha = 0.10f))
-                    .border(1.dp, AuroraCyan.copy(alpha = 0.28f), RoundedCornerShape(24.dp))
-                    .clickable(enabled = !isTesting) { onTest() }
-                    .padding(horizontal = 18.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_flash_on_24dp),
-                    contentDescription = null,
-                    tint = AuroraCyan,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = if (isTesting) "در حال تست..." else "تست سرعت",
-                    color = AuroraCyan,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Auto Connect — picks the fastest known server (testing first if
-            // none has been measured yet) and connects with a single tap.
-            if (!isRunning) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(AuroraViolet.copy(alpha = 0.12f))
-                        .border(1.dp, AuroraViolet.copy(alpha = 0.32f), RoundedCornerShape(24.dp))
-                        .clickable(enabled = !isTesting) { onAutoConnect() }
-                        .padding(horizontal = 18.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_autoconnect_24dp),
-                        contentDescription = null,
-                        tint = AuroraViolet,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "اتصال خودکار",
-                        color = AuroraViolet,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
         }
     }
 }
