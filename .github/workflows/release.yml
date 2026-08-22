@@ -55,18 +55,11 @@ jobs:
         run: |
           cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
 
-      - name: Fetch AndroidLibXrayLite tag
-        run: |
-          pushd AndroidLibXrayLite
-          CURRENT_TAG=$(git describe --tags --abbrev=0)
-          echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
-          popd
-
       - name: Download libv2ray
         uses: robinraju/release-downloader@v1.13
         with:
           repository: 'patterniha/AndroidLibXrayLite'
-          tag: ${{ env.CURRENT_TAG }}
+          latest: true
           fileName: 'libv2ray.aar'
           out-file-path: V2rayNG/app/libs/
 
