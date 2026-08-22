@@ -57,7 +57,9 @@ class MainRepository(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
 
-                AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> MainServiceEvent.MeasureConfigSuccess
+                AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> MainServiceEvent.MeasureConfigSuccess(
+                    safeIntent.getStringExtra("content").orEmpty()
+                )
                 AppConfig.MSG_MEASURE_CONFIG_NOTIFY -> MainServiceEvent.MeasureConfigNotify(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
@@ -129,6 +131,13 @@ class MainRepository(
         MmkvManager.encodeSettings(AppConfig.CACHE_HOME_AUTO_CONNECTION, auto)
     }
 
+    override fun getAutoConnectPingLimitMillis(): Long {
+        val enabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_CONNECT_PING_LIMIT_ENABLED, false)
+        if (!enabled) return 0L
+        return MmkvManager.decodeSettingsString(AppConfig.PREF_AUTO_CONNECT_PING_LIMIT_MS, "300")
+            ?.toLongOrNull()?.takeIf { it > 0L } ?: 0L
+    }
+
     override fun getConfirmRemove(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
@@ -188,6 +197,9 @@ class MainRepository(
         } else {
             getServerGuidList(groupId).sumOf(::removeInvalidServerByGuid)
         }
+
+    override fun removeSubscription(groupId: String) =
+        SettingsManager.removeSubscriptionWithDefault(groupId)
 
     override fun clearAllTestDelayResults(guids: List<String>) =
         MmkvManager.clearAllTestDelayResults(guids)

@@ -94,6 +94,9 @@ class MainViewModel(
     private var pendingAutoConnect: Boolean = false
 
     @Volatile
+    private var pendingAutoConnectThresholdMillis: Long = 0L
+
+    @Volatile
     private var testingGroupId: String? = null
 
     private val initialPageReady = CompletableDeferred<Unit>()
@@ -136,7 +139,8 @@ class MainViewModel(
                 _uiState.update { it.copy(statusText = event.content) }
             }
 
-            MainServiceEvent.MeasureConfigSuccess -> {
+            is MainServiceEvent.MeasureConfigSuccess -> {
+                checkAutoConnectEarlyStop(event.guid)
                 viewModelScope.launch(ioDispatcher) {
                     val gid = testingGroupId ?: uiState.value.selectedGroupId
                     cacheMutex.withLock { groupDataCache.remove(gid) }
@@ -190,6 +194,7 @@ class MainViewModel(
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
             MainAction.TestAllServers -> testAllRealPing(true)
             MainAction.TestRealAllServers -> testAllRealPing()
+            is MainAction.TestGroupServers -> testGroupRealPing(action.groupId)
             MainAction.CancelTesting -> cancelAllPing()
             MainAction.RemoveAllServers -> removeAllServerAsync()
             MainAction.RemoveDuplicateServers -> removeDuplicateServerAsync()
@@ -210,6 +215,7 @@ class MainViewModel(
             is MainAction.SetManualConnection -> setManualConnection(action.guid)
             is MainAction.RefreshSubscription -> refreshSubscription(action.subId)
             is MainAction.AddSubscriptionFromText -> addSubscriptionFromText(action.name, action.content)
+            is MainAction.RemoveSubscriptionGroup -> removeSubscriptionGroup(action.groupId)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -752,6 +758,42 @@ class MainViewModel(
         }
     }
 
+    /**
+     * "تست" inside a subscription's connection picker (image 4/8): real-ping
+     * only the configs that belong to [groupId]. Unlike [testAllRealPing],
+     * this always stays scoped to that one subscription — it never spans
+     * every subscription — which is what makes خودکار (AutoConnect) fast on
+     * subscriptions with many configs (see [autoConnect]).
+     */
+    fun testGroupRealPing(groupId: String, onlyTcp: Boolean = false) {
+        dataSource.cancelAllPing()
+        val guids = dataSource.getServerGuidList(groupId)
+        dataSource.clearAllTestDelayResults(guids)
+        if (guids.isEmpty()) {
+            _uiState.update { it.copy(isTesting = false) }
+            pendingAutoConnect = false
+            return
+        }
+        testingGroupId = groupId
+        _uiState.update {
+            it.copy(
+                isTesting = true,
+                statusText = dataSource.getString(R.string.connection_test_testing)
+            )
+        }
+        viewModelScope.launch(ioDispatcher) {
+            cacheMutex.withLock { groupDataCache.remove(groupId) }
+            dataSource.sendMsg2TestService(
+                TestServiceMessage(
+                    key = AppConfig.MSG_MEASURE_CONFIG_START,
+                    subscriptionId = groupId,
+                    serverGuids = guids,
+                    onlyTcp = onlyTcp
+                )
+            )
+        }
+    }
+
     fun testCurrentServerRealPing() {
         _uiState.update {
             it.copy(
@@ -759,6 +801,37 @@ class MainViewModel(
             )
         }
         dataSource.testCurrentServerRealPing()
+    }
+
+    /**
+     * When خودکار (AutoConnect) is running a scoped real-ping test with a
+     * ping limit configured (تنظیم اتصال خودکار), stop testing and connect
+     * the moment any config comes back at/under that limit — instead of
+     * always waiting for every config in the subscription to finish, which
+     * can take a long time on subscriptions with many configs.
+     */
+    private fun checkAutoConnectEarlyStop(guid: String) {
+        if (!pendingAutoConnect) return
+        val thresholdMillis = pendingAutoConnectThresholdMillis
+        if (thresholdMillis <= 0L) return
+        val delayMillis = dataSource.decodeAffiliationInfo(guid)?.testDelayMillis ?: return
+        if (delayMillis !in 1..thresholdMillis) return
+
+        pendingAutoConnect = false
+        dataSource.cancelAllPing()
+        testingGroupId = null
+        val groupId = uiState.value.selectedGroupId
+        viewModelScope.launch(ioDispatcher) {
+            cacheMutex.withLock { groupDataCache.remove(groupId) }
+            updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
+            _uiState.update {
+                it.copy(
+                    isTesting = false,
+                    statusText = if (it.isRunning) connectedText else disconnectedText
+                )
+            }
+            requestAutoConnect(guid)
+        }
     }
 
     private fun onTestsFinished() {
@@ -791,7 +864,13 @@ class MainViewModel(
     /**
      * Picks the fastest already-tested server in the current group and
      * requests a real connect. If nothing has been tested yet, runs a real
-     * ping test first and picks the best result once it finishes.
+     * ping test — scoped only to the current subscription, never every
+     * subscription — and picks the best result once it finishes.
+     *
+     * If a ping limit is configured (تنظیم اتصال خودکار), the test stops
+     * and connects as soon as any config comes back at/under that limit
+     * instead of waiting for the whole subscription to finish testing, so
+     * خودکار stays fast even on subscriptions with many configs.
      *
      * When موقعیت (location) has a country pinned (uiState.locationFlag),
      * only servers whose remarks start with that flag are considered — so
@@ -813,7 +892,8 @@ class MainViewModel(
             requestAutoConnect(best.guid)
         } else {
             pendingAutoConnect = true
-            testAllRealPing()
+            pendingAutoConnectThresholdMillis = dataSource.getAutoConnectPingLimitMillis()
+            testGroupRealPing(uiState.value.selectedGroupId)
         }
     }
 
@@ -862,7 +942,9 @@ class MainViewModel(
                     if (result.successCount > 0) {
                         toast(dataSource.getString(R.string.title_update_config_count, result.configCount))
                         cacheMutex.withLock { groupDataCache.remove(subId) }
-                        setupGroupTab(forceRefresh = true)
+                        // Wait for the group list/state to actually refresh before
+                        // isLoading flips back off, so the UI never looks "stuck".
+                        setupGroupTab(forceRefresh = true).join()
                     } else {
                         toastError(R.string.toast_failure)
                     }
@@ -890,11 +972,35 @@ class MainViewModel(
                         toastError(R.string.toast_failure)
                         return@withContext
                     }
-                    setupGroupTab(forceRefresh = true)
+                    // Awaited on purpose: setupGroupTab launches its own fire-and-forget
+                    // coroutine, so without join() isLoading could flip back to false —
+                    // and the "+ افزودن" dialog close — before uiState.groups actually
+                    // contains the new subscription, making it look like it never showed up.
+                    setupGroupTab(forceRefresh = true).join()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Failed to add subscription", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    /** "سابسکریپشن‌ها" → "گزینه‌ها" → "حذف": delete a subscription and its configs. */
+    private fun removeSubscriptionGroup(groupId: String) {
+        if (groupId.isEmpty()) return // "all configs" filter card — nothing to delete
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    dataSource.removeSubscription(groupId)
+                    cacheMutex.withLock { groupDataCache.clear() }
+                    setupGroupTab(forceRefresh = true).join()
+                    toastSuccess(R.string.toast_success)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to remove subscription: $groupId", e)
                     toastError(R.string.toast_failure)
                 }
             }

@@ -24,6 +24,13 @@ interface MainDataSource : Closeable {
     fun getAutoConnection(): Boolean
     fun setAutoConnection(auto: Boolean)
 
+    /**
+     * "تنظیم اتصال خودکار": the ping (ms) at/under which خودکار (AutoConnect)
+     * should stop testing and connect immediately. 0 means the limit is
+     * disabled — AutoConnect tests every config and picks the fastest one.
+     */
+    fun getAutoConnectPingLimitMillis(): Long
+
     fun getConfirmRemove(): Boolean
     fun getDoubleColumnDisplay(): Boolean
     fun isGroupAllDisplayEnabled(): Boolean
@@ -44,6 +51,9 @@ interface MainDataSource : Closeable {
     fun removeAllServer(): Int
     fun removeInvalidServerByGuid(guid: String): Int
     fun removeInvalidServersInGroup(groupId: String): Int
+
+    /** Deletes a subscription group and every config that belongs to it. */
+    fun removeSubscription(groupId: String)
 
     fun clearAllTestDelayResults(guids: List<String>)
     fun sortByTestResultsForSub(subId: String)

@@ -20,6 +20,8 @@ object SettingsChangeManager {
         AppConfig.PREF_LANGUAGE,
         AppConfig.PREF_UI_MODE_NIGHT,
         AppConfig.PREF_IS_BOOTED,
+        AppConfig.PREF_AUTO_CONNECT_PING_LIMIT_ENABLED,
+        AppConfig.PREF_AUTO_CONNECT_PING_LIMIT_MS,
     )
 
     /**

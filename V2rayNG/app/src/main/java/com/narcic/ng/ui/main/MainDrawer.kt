@@ -47,7 +47,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import com.narcic.ng.R
-import com.narcic.ng.ui.compose.AppDivider
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -170,45 +169,7 @@ fun MainDrawerContent(
                     )
                 }
             }
-
-            AppDivider()
-            DrawerMenuGroup(
-                items = listOf(
-                    DrawerMenuItemData(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings, "per_app_proxy"),
-                    DrawerMenuItemData(R.drawable.ic_file_24dp, R.string.title_user_asset_setting, "user_asset"),
-                    DrawerMenuItemData(R.drawable.ic_settings_24dp, R.string.title_settings, "settings")
-                ),
-                onNavigate = onNavigate
-            )
-            AppDivider()
-            DrawerMenuGroup(
-                items = listOf(
-                    DrawerMenuItemData(R.drawable.ic_check_update_24dp, R.string.update_check_for_update, "check_update"),
-                    DrawerMenuItemData(R.drawable.ic_about_24dp, R.string.title_about, "about")
-                ),
-                onNavigate = onNavigate
-            )
         }
-    }
-}
-
-data class DrawerMenuItemData(
-    val iconRes: Int,
-    val labelRes: Int,
-    val route: String
-)
-
-@Composable
-private fun DrawerMenuGroup(
-    items: List<DrawerMenuItemData>,
-    onNavigate: (String) -> Unit
-) {
-    items.forEach { item ->
-        DrawerMenuItem(
-            icon = painterResource(item.iconRes),
-            label = stringResource(item.labelRes),
-            onClick = { onNavigate(item.route) }
-        )
     }
 }
 

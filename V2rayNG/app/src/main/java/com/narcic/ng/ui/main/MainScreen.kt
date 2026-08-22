@@ -72,6 +72,7 @@ fun MainScreen(
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
+    var showDelSubscriptionConfirm by remember { mutableStateOf<String?>(null) }
 
     // Home "VPN" card + bottom-nav overlay screens.
     var showLocationPicker by remember { mutableStateOf(false) }
@@ -104,7 +105,13 @@ fun MainScreen(
         onConfirmDelInvalid = { showDelInvalidConfirm = false; onAction(MainAction.RemoveInvalidServers) },
         showRemoveConfirm = showRemoveConfirm,
         onDismissRemove = { showRemoveConfirm = null },
-        onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) }
+        onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) },
+        showDelSubscriptionConfirm = showDelSubscriptionConfirm,
+        onDismissDelSubscription = { showDelSubscriptionConfirm = null },
+        onConfirmDelSubscription = { groupId ->
+            showDelSubscriptionConfirm = null
+            onAction(MainAction.RemoveSubscriptionGroup(groupId))
+        }
     )
 
     if (showAddSubscription) {
@@ -149,7 +156,7 @@ fun MainScreen(
                 onAction(MainAction.SetManualConnection(guid))
                 showConnectionPicker = false
             },
-            onRetest = { onAction(MainAction.TestRealAllServers) },
+            onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
             onBack = { showConnectionPicker = false },
         )
@@ -161,6 +168,7 @@ fun MainScreen(
             mainViewModel = mainViewModel,
             groups = groups,
             selectedGroupId = uiState.selectedGroupId,
+            isAdding = isLoading,
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
             onRefresh = { id -> onAction(MainAction.RefreshSubscription(id)) },
             onTest = { id ->
@@ -168,6 +176,7 @@ fun MainScreen(
                 showSubscriptions = false
                 showConnectionPicker = true
             },
+            onDelete = { id -> showDelSubscriptionConfirm = id },
             onAddClick = { showAddSubscription = true },
             onBack = { showSubscriptions = false },
         )

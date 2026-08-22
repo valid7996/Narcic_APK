@@ -40,14 +40,16 @@ fun SubscriptionsScreen(
     mainViewModel: MainViewModel,
     groups: List<GroupMapItem>,
     selectedGroupId: String,
+    isAdding: Boolean,
     onSelectGroup: (String) -> Unit,
     onRefresh: (String) -> Unit,
     onTest: (String) -> Unit,
+    onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
-        topBar = { AppTopBar(title = "سابسکریپشن", onBackClick = onBack) }
+        topBar = { AppTopBar(title = "سابسکریپشن", onBackClick = onBack, isLoading = isAdding) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(
@@ -61,8 +63,8 @@ fun SubscriptionsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(onClick = onAddClick, shape = RoundedCornerShape(14.dp)) {
-                    Text("+ افزودن")
+                OutlinedButton(onClick = onAddClick, enabled = !isAdding, shape = RoundedCornerShape(14.dp)) {
+                    Text(if (isAdding) "در حال افزودن…" else "+ افزودن")
                 }
             }
 
@@ -89,6 +91,7 @@ fun SubscriptionsScreen(
                         onSelect = { onSelectGroup(group.id) },
                         onRefresh = { onRefresh(group.id) },
                         onTest = { onTest(group.id) },
+                        onDelete = { onDelete(group.id) },
                     )
                 }
             }
@@ -104,6 +107,7 @@ private fun SubscriptionCard(
     onSelect: () -> Unit,
     onRefresh: () -> Unit,
     onTest: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val servers by mainViewModel.serversForGroup(group.id).collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
@@ -177,6 +181,17 @@ private fun SubscriptionCard(
                             onRefresh()
                         },
                     )
+                    // The "all configs" filter card (group.id == "") isn't a real
+                    // subscription — there's nothing to delete, only to display.
+                    if (group.id.isNotEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("حذف سابسکریپشن", color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
+                        )
+                    }
                 }
             }
             TextButton(

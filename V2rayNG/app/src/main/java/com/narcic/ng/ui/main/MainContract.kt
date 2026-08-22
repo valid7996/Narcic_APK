@@ -47,6 +47,12 @@ sealed interface MainAction {
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
     data object TestRealAllServers : MainAction
+
+    /**
+     * "تست" inside a subscription's connection picker: real-ping only the
+     * configs that belong to [groupId], not every subscription.
+     */
+    data class TestGroupServers(val groupId: String) : MainAction
     data object CancelTesting : MainAction
     data object RemoveAllServers : MainAction
     data object RemoveDuplicateServers : MainAction
@@ -97,4 +103,7 @@ sealed interface MainAction {
      * remarks when the content isn't itself a link with a #fragment name.
      */
     data class AddSubscriptionFromText(val name: String, val content: String) : MainAction
+
+    /** "سابسکریپشن‌ها" → "گزینه‌ها" → "حذف": delete a subscription and its configs. */
+    data class RemoveSubscriptionGroup(val groupId: String) : MainAction
 }

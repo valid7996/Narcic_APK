@@ -118,6 +118,12 @@
             android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.settings.SettingsHubActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.settings.AutoConnectSettingsActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.perappproxy.PerAppProxyActivity"
             android:exported="false" />
         <activity

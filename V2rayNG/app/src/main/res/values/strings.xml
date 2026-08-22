@@ -166,6 +166,14 @@
 
     <!-- Preferences -->
     <string name="title_settings">Settings</string>
+    <string name="title_settings_hub_settings_subtitle">Core, network, and connection preferences</string>
+    <string name="title_auto_connect_settings">Auto-connect settings</string>
+    <string name="title_auto_connect_settings_subtitle">Decide how long Auto (خودکار) tests before connecting</string>
+    <string name="summary_auto_connect_ping_limit_intro">When you tap خودکار (Auto) on a subscription with no cached results yet, it real-pings the configs in that subscription and connects to one of them. Choose how that works below.</string>
+    <string name="title_auto_connect_ping_limit_enabled">Limit ping for auto-connect</string>
+    <string name="summary_auto_connect_ping_limit_enabled">When on, Auto stops testing and connects as soon as it finds a config at or under the ping below — instead of always testing every config first. Saves time on subscriptions with many configs.</string>
+    <string name="title_auto_connect_ping_limit_ms">Maximum ping (ms)</string>
+    <string name="summary_auto_connect_ping_limit_footer">When off, Auto keeps testing every config in the subscription and connects to the single fastest one, same as before.</string>
     <string name="title_advanced">Advanced Settings</string>
     <string name="title_core_settings">Core Settings</string>
     <string name="title_vpn_settings">VPN Settings</string>

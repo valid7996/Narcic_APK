@@ -25,10 +25,7 @@ import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.handler.SubscriptionUpdater
-import com.narcic.ng.ui.AboutActivity
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
-import com.narcic.ng.ui.checkupdate.CheckUpdateActivity
-import com.narcic.ng.ui.perappproxy.PerAppProxyActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
 import com.narcic.ng.ui.server.ServerCustomConfigActivity
 import com.narcic.ng.ui.server.ServerGroupActivity
@@ -41,8 +38,7 @@ import com.narcic.ng.ui.server.ServerTrojanActivity
 import com.narcic.ng.ui.server.ServerVlessActivity
 import com.narcic.ng.ui.server.ServerVmessActivity
 import com.narcic.ng.ui.server.ServerWireguardActivity
-import com.narcic.ng.ui.settings.SettingsActivity
-import com.narcic.ng.ui.userasset.UserAssetActivity
+import com.narcic.ng.ui.settings.SettingsHubActivity
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -140,12 +136,7 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun navigateTo(destination: String) {
         val intent = when (destination) {
-            "per_app_proxy" -> Intent(this, PerAppProxyActivity::class.java)
-            "user_asset" -> Intent(this, UserAssetActivity::class.java)
-            "settings" -> Intent(this, SettingsActivity::class.java)
-            "check_update" -> Intent(this, CheckUpdateActivity::class.java)
-            "about" -> Intent(this, AboutActivity::class.java)
-
+            "settings" -> Intent(this, SettingsHubActivity::class.java)
             else -> return
         }
         settingsActivityLauncher.launch(intent)

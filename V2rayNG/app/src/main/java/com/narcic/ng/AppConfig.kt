@@ -88,6 +88,16 @@ object AppConfig {
     const val PREF_AUTO_SORT_AFTER_TEST = "pref_auto_sort_after_test"
     const val PREF_REAL_PING_CONCURRENCY = "pref_real_ping_concurrency"
 
+    /**
+     * "تنظیم اتصال خودکار": when enabled, خودکار (AutoConnect) stops testing
+     * and connects as soon as it finds any config at or under this ping
+     * (ms), instead of always testing every config in the subscription
+     * first and picking the single fastest one. Saves a lot of time on
+     * subscriptions with many configs.
+     */
+    const val PREF_AUTO_CONNECT_PING_LIMIT_ENABLED = "pref_auto_connect_ping_limit_enabled"
+    const val PREF_AUTO_CONNECT_PING_LIMIT_MS = "pref_auto_connect_ping_limit_ms"
+
     /** Cache keys. */
     const val CACHE_SUBSCRIPTION_ID = "cache_subscription_id"
 
