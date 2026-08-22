@@ -1,90 +1,93 @@
-# v2rayNG
+# Narcic NG
 
-A V2Ray client for Android, support [Xray core](https://github.com/XTLS/Xray-core) and [v2fly core](https://github.com/v2fly/v2ray-core)
+کلاینت اندرویدی V2Ray/Xray — فورکی از [v2rayNG](https://github.com/2dust/v2rayNG) با برندینگ و بهبودهای اختصاصی «Narcic».
 
 [![API](https://img.shields.io/badge/API-24%2B-yellow.svg?style=flat)](https://developer.android.com/about/versions/lollipop)
 [![Kotlin Version](https://img.shields.io/badge/Kotlin-2.4.0-blue.svg)](https://kotlinlang.org)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/2dust/v2rayNG)](https://github.com/2dust/v2rayNG/commits/master)
-[![CodeFactor](https://www.codefactor.io/repository/github/2dust/v2rayng/badge)](https://www.codefactor.io/repository/github/2dust/v2rayng)
-[![GitHub Releases](https://img.shields.io/github/downloads/2dust/v2rayNG/latest/total?logo=github)](https://github.com/2dust/v2rayNG/releases)
-[![Chat on Telegram](https://img.shields.io/badge/Chat%20on-Telegram-brightgreen.svg)](https://t.me/v2rayn)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Chat on Telegram](https://img.shields.io/badge/Chat%20on-Telegram-brightgreen.svg)](https://t.me/Narcic_Support)
 
 ---
 
-## Download / 下载
+## دانلود
 
-Download the latest release here:
+آخرین نسخه از بخش [Releases](../../releases) این ریپازیتوری قابل دریافته. سه نسخه‌ی APK منتشر می‌شه:
 
-在这里下载最新版本：
+| فایل | مناسب برای |
+|------|-------------|
+| `NarcicNG-arm64.apk` | اکثر گوشی‌های جدید (پیشنهادی) |
+| `NarcicNG-armeabi.apk` | گوشی‌های قدیمی‌تر (armeabi-v7a) |
+| `NarcicNG-universal.apk` | همه‌ی معماری‌ها (حجم بیشتر) |
 
-[https://github.com/2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases)
-
-> [!TIP]
-> v2rayNG is the mobile version. For the desktop version, please visit the v2rayN \
-> v2rayNG 是手机版，电脑版请访问 v2rayN
->
-> https://github.com/2dust/v2rayN
+> پشتیبانی و اعلان‌ها: کانال تلگرام [@Narcic_Support](https://t.me/Narcic_Support)
 
 ---
 
-### Geoip and Geosite
+## درباره‌ی پروژه
 
-- geoip.dat and geosite.dat files are in `Android/data/com.v2ray.ang/files/assets` (path may differ on some Android device)
-- download feature will get enhanced version in this [repo](https://github.com/Loyalsoldier/v2ray-rules-dat) (note: it needs a working proxy)
-- latest official [domain list](https://github.com/Loyalsoldier/v2ray-rules-dat) and [ip list](https://github.com/Loyalsoldier/geoip) can be imported manually
-- possible to use a third-party dat file in the same folder, like [h2y](https://guide.v2fly.org/routing/sitedata.html#%E5%A4%96%E7%BD%AE%E7%9A%84%E5%9F%9F%E5%90%8D%E6%96%87%E4%BB%B6)
+Narcic NG یک کلاینت V2Ray/Xray برای اندروید است که هسته‌ی [Xray-core](https://github.com/XTLS/Xray-core) و [v2fly core](https://github.com/v2fly/v2ray-core) رو پشتیبانی می‌کنه. این پروژه بر پایه‌ی کد v2rayNG ساخته شده و موارد زیر رو داره:
 
-More in our [wiki](https://github.com/2dust/v2rayNG/wiki)
-
-### Geoip 与 Geosite
-
-- geoip.dat 和 geosite.dat 文件位于 `Android/data/com.v2ray.ang/files/assets`（部分设备路径可能不同）
-- 下载功能将获取该 [仓库](https://github.com/Loyalsoldier/v2ray-rules-dat) 中的增强版本（注意：此功能需要一个可用的代理）
-- 最新官方 [域名列表](https://github.com/Loyalsoldier/v2ray-rules-dat) 和 [IP 列表](https://github.com/Loyalsoldier/geoip) 可手动导入
-- 也可在同一文件夹中使用第三方 dat 文件，例如 [h2y](https://guide.v2fly.org/routing/sitedata.html#%E5%A4%96%E7%BD%AE%E7%9A%84%E5%9F%9F%E5%90%8D%E6%96%87%E4%BB%B6)
-
-更多内容请见我们的 [wiki](https://github.com/2dust/v2rayNG/wiki)
+- **Package name:** `com.narcic.ng`
+- **حداقل نسخه‌ی اندروید:** API 24 (Android 7.0)
+- **هسته‌ی Xray:** از فورک [`patterniha/AndroidLibXrayLite`](https://github.com/patterniha/AndroidLibXrayLite) به‌صورت خودکار در هر ریلیز دانلود می‌شه
+- **تانل هوی سوکس5:** پشتیبانی از [`hev-socks5-tunnel`](https://github.com/heiher/hev-socks5-tunnel) به‌عنوان ساب‌ماژول
+- **دو حالت اجرا:** VPN کامل یا فقط پراکسی (بدون نیاز به مجوز VPN)
+- **دو Flavor بیلد:** `playstore` و `fdroid`
 
 ---
 
-## Development guide / 开发指南
+## ساخت پروژه (Build)
 
-### Note
+```sh
+cd V2rayNG
+./gradlew assemblePlaystoreDebug   # یا assembleFdroidDebug
+```
 
-- Android project under the V2rayNG folder can be compiled directly in Android Studio, or using the Gradle wrapper. But the v2ray core inside the aar is (probably) outdated.
-- The aar can be compiled from the Golang project [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) or [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite). For a quick start, read the guides for [Go Mobile](https://github.com/golang/go/wiki/Mobile) and [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/).
-- v2rayNG can run on Android Emulators. For WSA, VPN permission needs to be granted via `appops set [package name] ACTIVATE_VPN allow`.
+نیازمندی‌ها: Kotlin 2.4.0، AGP 9.2.1، Android SDK 37، NDK (برای کامپایل `hev-socks5-tunnel`).
 
-### 提示
+فایل AAR هسته‌ی v2ray/xray به‌صورت خودکار توسط ورک‌فلوی گیت‌هاب اکشنز از آخرین ریلیز `patterniha/AndroidLibXrayLite` دانلود و در `V2rayNG/app/libs/` قرار می‌گیره؛ نیازی به کامپایل دستی نیست مگر بخواید نسخه‌ی خودتون رو بسازید.
 
-- V2rayNG 文件夹下的 Android 项目可直接在 Android Studio 中编译，或使用 Gradle wrapper 编译。但 aar 内置的 v2ray core（可能）已过时。
-- aar 可由 Golang 项目 [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) 或 [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) 编译而成。快速入门可参考 [Go Mobile](https://github.com/golang/go/wiki/Mobile) 指南和 [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/)。
-- v2rayNG 可在 Android 模拟器上运行。对于 WSA，需要通过 `appops set [package name] ACTIVATE_VPN allow` 授予 VPN 权限。
+### تست
 
----
-
-
-## GPG Verification / GPG 签名校验
-
-Release files are signed with GPG to verify authenticity and integrity, helping prevent mirror, ISP, or CDN hijacking.
-
-发布文件已使用 GPG 签名，可用于校验文件真实性与完整性，预防镜像站、运营商或 CDN 劫持。
-
-### Fingerprint / 公钥指纹
-
-```text
-7694 5E9F 3E9A 168F 8070 F195 805D 661C
-134D FAF6 8903 C199 463C 31E5 AE90 3AE0
+```sh
+cd V2rayNG && ./gradlew test
 ```
 
 ---
 
-## Community / 社区
+## انتشار نسخه‌ی جدید (Release)
 
-Telegram Group / Telegram 群组：
+انتشار از طریق ورک‌فلوی گیت‌هاب اکشنز (`.github/workflows/release.yml`) و با پوش کردن یک تگ به فرمت `v*` انجام می‌شه:
 
-[https://t.me/v2rayN](https://t.me/v2rayN)
+```sh
+git tag v2.3.3
+git push origin v2.3.3
+```
 
-Telegram Channel / Telegram 频道：
+این کار به‌صورت خودکار: کد رو چک‌اوت می‌کنه، `libhevtun` و `libv2ray.aar` رو می‌سازه/دانلود می‌کنه، APK امضاشده رو با نام نسخه‌ی تگ می‌سازه و در بخش Releases منتشر می‌کنه.
 
-[https://t.me/github_2dust](https://t.me/github_2dust)
+---
+
+## Geoip و Geosite
+
+- فایل‌های `geoip.dat` و `geosite.dat` در مسیر `Android/data/com.narcic.ng/files/assets` قرار دارن (مسیر ممکنه در برخی گوشی‌ها متفاوت باشه)
+- نسخه‌ی تقویت‌شده از طریق قابلیت دانلود داخل اپ و از [این ریپازیتوری](https://github.com/Loyalsoldier/v2ray-rules-dat) دریافت می‌شه (نیاز به پراکسی فعال داره)
+- امکان وارد کردن دستی [لیست دامنه‌ها](https://github.com/v2fly/domain-list-community) و [لیست IP](https://github.com/v2fly/geoip) هم وجود داره
+
+---
+
+## حریم خصوصی
+
+سیاست حریم خصوصی این پروژه در فایل [`CR.md`](CR.md) موجوده.
+
+---
+
+## مجوز
+
+این پروژه تحت مجوز [GPLv3](LICENSE) منتشر شده است.
+
+---
+
+## جامعه و پشتیبانی
+
+کانال تلگرام: [@Narcic_Support](https://t.me/Narcic_Support)
