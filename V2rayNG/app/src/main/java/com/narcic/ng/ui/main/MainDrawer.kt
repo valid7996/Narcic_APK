@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import com.narcic.ng.R
+import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -206,4 +209,114 @@ fun DrawerMenuItem(
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+/**
+ * Contents of the "Import config" dropdown: quick imports (QR / clipboard /
+ * local file) plus manual entry for every supported protocol.
+ */
+@Composable
+fun ImportMenuContent(
+    onAction: (MainAction) -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_qrcode)) },
+        onClick = { onAction(MainAction.ImportQRcode) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_clipboard)) },
+        onClick = { onAction(MainAction.ImportClipboard) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_local)) },
+        onClick = { onAction(MainAction.ImportConfigLocal) }
+    )
+    HorizontalDivider()
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_policy_group)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.POLICYGROUP.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_proxy_chain)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.PROXYCHAIN.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_vmess)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.VMESS.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_vless)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.VLESS.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_ss)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.SHADOWSOCKS.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_socks)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.SOCKS.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_http)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.HTTP.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_trojan)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.TROJAN.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_wireguard)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.WIREGUARD.value)) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_manually_hysteria2)) },
+        onClick = { onAction(MainAction.ImportManually(EConfigType.HYSTERIA2.value)) }
+    )
+}
+
+/**
+ * Contents of the "Manage configs" dropdown: bulk test/sort/export actions
+ * plus the three destructive delete actions, which are surfaced through the
+ * dedicated callbacks so the caller can show a confirmation dialog first.
+ */
+@Composable
+fun MoreMenuContent(
+    onAction: (MainAction) -> Unit,
+    onDelAllConfig: () -> Unit,
+    onDelDuplicateConfig: () -> Unit,
+    onDelInvalidConfig: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_ping_all_server)) },
+        onClick = { onAction(MainAction.TestAllServers) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_real_ping_all_server)) },
+        onClick = { onAction(MainAction.TestRealAllServers) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_sort_by_test_results)) },
+        onClick = { onAction(MainAction.SortByTestResults) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_sub_update)) },
+        onClick = { onAction(MainAction.UpdateSubscriptions) }
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_export_all)) },
+        onClick = { onAction(MainAction.ExportAll) }
+    )
+    HorizontalDivider()
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_del_duplicate_config)) },
+        onClick = onDelDuplicateConfig
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_del_invalid_config)) },
+        onClick = onDelInvalidConfig
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.title_del_all_config)) },
+        onClick = onDelAllConfig
+    )
 }
