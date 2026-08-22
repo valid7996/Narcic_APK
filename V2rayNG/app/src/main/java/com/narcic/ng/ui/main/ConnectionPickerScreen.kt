@@ -18,6 +18,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,9 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.narcic.ng.R
 import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.entities.ServersCache
 import com.narcic.ng.extension.displayLabel
@@ -55,6 +60,7 @@ fun ConnectionPickerScreen(
     onSelectServer: (String) -> Unit,
     onRetest: () -> Unit,
     onSelectGroup: (String) -> Unit,
+    onDelete: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     var typeFilter by remember { mutableStateOf(FILTER_ALL) }
@@ -156,6 +162,7 @@ fun ConnectionPickerScreen(
                         server = server,
                         selected = !autoConnection && server.guid == selectedGuid,
                         onClick = { onSelectServer(server.guid) },
+                        onDelete = { onDelete(server.guid) },
                     )
                 }
             }
@@ -263,7 +270,7 @@ private fun AutoConnectionRow(selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ConnectionRow(server: ServersCache, selected: Boolean, onClick: () -> Unit) {
+private fun ConnectionRow(server: ServersCache, selected: Boolean, onClick: () -> Unit, onDelete: () -> Unit) {
     val pingColor = when {
         server.testDelayMillis <= 0L -> MaterialTheme.colorScheme.onSurfaceVariant
         server.testDelayMillis in 1..2000 -> colorPing
@@ -299,6 +306,13 @@ private fun ConnectionRow(server: ServersCache, selected: Boolean, onClick: () -
                 modifier = Modifier.weight(1f).padding(start = 12.dp),
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete_24dp),
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
         Text(
             text = server.profile.configType.displayLabel(),

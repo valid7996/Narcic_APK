@@ -1,5 +1,6 @@
 package com.narcic.ng.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -10,18 +11,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -33,19 +30,19 @@ import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.SpiderWebCorners
-import kotlinx.coroutines.launch
 
 /**
  * Simplified connection screen:
- *  - Top bar: just the drawer menu + fetch-subscriptions action (search, manual
- *    import, and the config-management menu now live in the drawer).
+ *  - Top bar: just the title + fetch-subscriptions action. There is no
+ *    drawer/menu button — Import config / Manage configs have been removed.
  *  - ConnectHero: big connect circle + a "Test" button for a real/precise
  *    delay test of every config.
  *  - HomeVpnCard: the tappable موقعیت / اتصال / سابسکریپشن card. Each row
  *    opens its own full-screen picker (see the `show*` overlays below).
- *  - Suggested servers: the fastest-tested configs, tap to select.
- *  - AllServersList: a clean, flat, tap-to-select list of every received
- *    server — no tabs, no swipe-to-reveal delete/play icons.
+ *  - Every full-screen overlay (location/connection picker, subscriptions)
+ *    registers a BackHandler so the hardware/gesture back button closes the
+ *    overlay and returns to this screen instead of exiting the app.
+ *  - ConnectionPickerScreen lists every config with a delete icon per row.
  *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / تنظیمات. Only the VPN tab renders
  *    this Scaffold; the other two either open a full-screen overlay or
  *    launch SettingsActivity, matching the reference screenshots (none of
@@ -66,11 +63,6 @@ fun MainScreen(
     val selectedGuid = uiState.selectedGuid
     val confirmRemove = uiState.confirmRemove
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    var showDelAllConfirm by remember { mutableStateOf(false) }
-    var showDelDuplicateConfirm by remember { mutableStateOf(false) }
-    var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
     var showDelSubscriptionConfirm by remember { mutableStateOf<String?>(null) }
 
@@ -94,15 +86,6 @@ fun MainScreen(
     }
 
     MainDialogs(
-        showDelAllConfirm = showDelAllConfirm,
-        onDismissDelAll = { showDelAllConfirm = false },
-        onConfirmDelAll = { showDelAllConfirm = false; onAction(MainAction.RemoveAllServers) },
-        showDelDuplicateConfirm = showDelDuplicateConfirm,
-        onDismissDelDuplicate = { showDelDuplicateConfirm = false },
-        onConfirmDelDuplicate = { showDelDuplicateConfirm = false; onAction(MainAction.RemoveDuplicateServers) },
-        showDelInvalidConfirm = showDelInvalidConfirm,
-        onDismissDelInvalid = { showDelInvalidConfirm = false },
-        onConfirmDelInvalid = { showDelInvalidConfirm = false; onAction(MainAction.RemoveInvalidServers) },
         showRemoveConfirm = showRemoveConfirm,
         onDismissRemove = { showRemoveConfirm = null },
         onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) },
@@ -126,6 +109,7 @@ fun MainScreen(
 
     // ---- Full-screen overlays (image 3 / image 4-8 / image 5-7) ----
     if (showLocationPicker) {
+        BackHandler { showLocationPicker = false }
         val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
         LocationPickerScreen(
             servers = servers,
@@ -140,6 +124,7 @@ fun MainScreen(
     }
 
     if (showConnectionPicker) {
+        BackHandler { showConnectionPicker = false }
         val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
         ConnectionPickerScreen(
             servers = servers,
@@ -158,12 +143,14 @@ fun MainScreen(
             },
             onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
+            onDelete = removeServer,
             onBack = { showConnectionPicker = false },
         )
         return
     }
 
     if (showSubscriptions) {
+        BackHandler { showSubscriptions = false }
         SubscriptionsScreen(
             mainViewModel = mainViewModel,
             groups = groups,
@@ -183,111 +170,94 @@ fun MainScreen(
         return
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            MainDrawerContent(
-                onNavigate = { route ->
-                    scope.launch { drawerState.close() }
-                    onNavigate(route)
-                },
-                onAction = onAction,
-                onDelAllConfig = { showDelAllConfirm = true },
-                onDelDuplicateConfig = { showDelDuplicateConfirm = true },
-                onDelInvalidConfig = { showDelInvalidConfirm = true },
+    val isDark = LocalDarkTheme.current
+    val backdrop = remember(isDark) {
+        if (isDark) {
+            Brush.radialGradient(
+                colors = listOf(AuroraIndigo.copy(alpha = 0.16f), AuroraCyan.copy(alpha = 0.06f), AuroraDeep),
+                radius = 900f,
             )
+        } else {
+            Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
         }
-    ) {
-        val isDark = LocalDarkTheme.current
-        val backdrop = remember(isDark) {
-            if (isDark) {
-                Brush.radialGradient(
-                    colors = listOf(AuroraIndigo.copy(alpha = 0.16f), AuroraCyan.copy(alpha = 0.06f), AuroraDeep),
-                    radius = 900f,
+    }
+    Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
+        if (isDark) {
+            // Decorative animated spiderweb in the four corners, echoing the
+            // launcher icon. Sits behind all real UI and never intercepts touch.
+            SpiderWebCorners(modifier = Modifier.fillMaxSize())
+        }
+        Scaffold(
+            contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
+            containerColor = Color.Transparent,
+            topBar = {
+                MainTopBar(
+                    isLoading = isLoading,
+                    onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
                 )
-            } else {
-                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-            }
-        }
-        Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
-            if (isDark) {
-                // Decorative animated spiderweb in the four corners, echoing the
-                // launcher icon. Sits behind all real UI and never intercepts touch.
-                SpiderWebCorners(modifier = Modifier.fillMaxSize())
-            }
-            Scaffold(
-                contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
-                containerColor = Color.Transparent,
-                topBar = {
-                    MainTopBar(
-                        isLoading = isLoading,
-                        onMenuClick = { scope.launch { drawerState.open() } },
-                        onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
-                    )
-                },
-                bottomBar = {
-                    MainVpnBottomNav(
-                        selectedTab = MainHomeTab.VPN,
-                        onSelectTab = { tab ->
-                            if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
+            },
+            bottomBar = {
+                MainVpnBottomNav(
+                    selectedTab = MainHomeTab.VPN,
+                    onSelectTab = { tab ->
+                        if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
+                    },
+                    onSettingsClick = { onNavigate("settings") },
+                )
+            },
+        ) { innerPadding ->
+            if (groups.isNotEmpty()) {
+                val connectedServer = mainViewModel.findServerCache(selectedGuid)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    ConnectHero(
+                        isRunning = isRunning,
+                        isTesting = uiState.isTesting,
+                        statusText = displayText,
+                        onToggle = {
+                            if (!isRunning && uiState.autoConnection) {
+                                onAction(MainAction.AutoConnect)
+                            } else {
+                                onAction(MainAction.ToggleService)
+                            }
                         },
-                        onSettingsClick = { onNavigate("settings") },
                     )
-                },
-            ) { innerPadding ->
-                if (groups.isNotEmpty()) {
-                    val connectedServer = mainViewModel.findServerCache(selectedGuid)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
+
+                    // Only one of these two cards shows at a time: while
+                    // disconnected the user picks موقعیت/اتصال/سابسکریپشن
+                    // here; once connected this makes way for the live
+                    // ping/speed/country panel below.
+                    AnimatedVisibility(
+                        visible = !isRunning,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
                     ) {
-                        ConnectHero(
+                        HomeVpnCard(
                             isRunning = isRunning,
-                            isTesting = uiState.isTesting,
-                            statusText = displayText,
-                            onToggle = {
-                                if (!isRunning && uiState.autoConnection) {
-                                    onAction(MainAction.AutoConnect)
-                                } else {
-                                    onAction(MainAction.ToggleService)
-                                }
-                            },
-                        )
-
-                        // Only one of these two cards shows at a time: while
-                        // disconnected the user picks موقعیت/اتصال/سابسکریپشن
-                        // here; once connected this makes way for the live
-                        // ping/speed/country panel below.
-                        AnimatedVisibility(
-                            visible = !isRunning,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically(),
-                        ) {
-                            HomeVpnCard(
-                                isRunning = isRunning,
-                                locationFlag = uiState.locationFlag,
-                                autoConnection = uiState.autoConnection,
-                                connectedServer = connectedServer,
-                                subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
-                                onOpenLocation = { showLocationPicker = true },
-                                onOpenConnection = { showConnectionPicker = true },
-                                onOpenSubscriptions = { showSubscriptions = true },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            )
-                        }
-
-                        ConnectionStatsPanel(
-                            isRunning = isRunning,
-                            pingText = connectedServer?.testDelayString.orEmpty(),
-                            downloadSpeedText = uiState.downloadSpeedText,
-                            uploadSpeedText = uiState.uploadSpeedText,
-                            connectionDurationText = uiState.connectionDurationText,
-                            remoteIp = uiState.remoteIp,
-                            remoteCountryName = uiState.remoteCountryName,
-                            remoteCountryCode = uiState.remoteCountryCode,
+                            locationFlag = uiState.locationFlag,
+                            autoConnection = uiState.autoConnection,
+                            connectedServer = connectedServer,
+                            subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
+                            onOpenLocation = { showLocationPicker = true },
+                            onOpenConnection = { showConnectionPicker = true },
+                            onOpenSubscriptions = { showSubscriptions = true },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         )
                     }
+
+                    ConnectionStatsPanel(
+                        isRunning = isRunning,
+                        pingText = connectedServer?.testDelayString.orEmpty(),
+                        downloadSpeedText = uiState.downloadSpeedText,
+                        uploadSpeedText = uiState.uploadSpeedText,
+                        connectionDurationText = uiState.connectionDurationText,
+                        remoteIp = uiState.remoteIp,
+                        remoteCountryName = uiState.remoteCountryName,
+                        remoteCountryCode = uiState.remoteCountryCode,
+                    )
                 }
             }
         }

@@ -10,27 +10,21 @@ import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AppTopBar
 
 /**
- * Simplified top bar for the connection screen: just the drawer menu and the
- * "fetch/update subscriptions" action. Search, manual import, and the config
- * management menu have moved into the drawer (see MainDrawerContent) to keep
- * this screen uncluttered.
+ * Simplified top bar for the connection screen: just the title and the
+ * "fetch/update subscriptions" action. There is no drawer/menu button — the
+ * connection screen is the app's root screen, so no navigation icon is shown.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainTopBar(
     isLoading: Boolean,
-    onMenuClick: () -> Unit,
     onFetchConfig: () -> Unit,
 ) {
     AppTopBar(
         title = stringResource(R.string.title_server),
         onBackClick = {},
         isLoading = isLoading,
-        navigationIcon = {
-            IconButton(onClick = onMenuClick) {
-                Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = "Menu")
-            }
-        },
+        navigationIcon = {},
         actions = {
             IconButton(onClick = onFetchConfig) {
                 Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = "Get configs")
