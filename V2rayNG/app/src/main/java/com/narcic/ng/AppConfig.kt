@@ -154,7 +154,7 @@ object AppConfig {
      * re-enabled if the user disabled it.
      */
     val DEFAULT_SUBSCRIPTIONS: List<Pair<String, String>> = listOf(
-        "Narcic NG" to DEFAULT_SUBSCRIPTION_URL,
+        "Narcic Irancell" to DEFAULT_SUBSCRIPTION_URL,
         "Narcic NG - JSON" to "$GITHUB_RAW_URL/validbv7996/Narcic_APK/refs/heads/main/json.txt",
         "Narcic NG - WireGuard" to "$GITHUB_RAW_URL/validbv7996/Narcic_APK/refs/heads/main/wirguard.txt",
     )

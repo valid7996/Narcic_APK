@@ -34,6 +34,7 @@ object DefaultConfigSource {
                 if (!existing.subscription.enabled) {
                     needsFetch = true
                 }
+                existing.subscription.remarks = label
                 existing.subscription.url = fetchUrl
                 existing.subscription.enabled = true
                 existing.subscription.autoUpdate = true
