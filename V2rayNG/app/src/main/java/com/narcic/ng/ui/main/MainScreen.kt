@@ -41,7 +41,9 @@ import com.narcic.ng.ui.compose.SpiderWebCorners
  *    opens its own full-screen picker (see the `show*` overlays below).
  *  - Every full-screen overlay (location/connection picker, subscriptions)
  *    registers a BackHandler so the hardware/gesture back button closes the
- *    overlay and returns to this screen instead of exiting the app.
+ *    overlay and returns to this screen instead of exiting the app. Once no
+ *    overlay is showing, a root-level BackHandler takes over and minimizes
+ *    the app (onMinimize) instead of finishing the activity.
  *  - ConnectionPickerScreen lists every config with a delete icon per row.
  *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / تنظیمات. Only the VPN tab renders
  *    this Scaffold; the other two either open a full-screen overlay or
@@ -54,6 +56,7 @@ fun MainScreen(
     mainViewModel: MainViewModel,
     onAction: (MainAction) -> Unit,
     onNavigate: (String) -> Unit,
+    onMinimize: () -> Unit,
 ) {
     val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val groups = uiState.groups
@@ -169,6 +172,12 @@ fun MainScreen(
         )
         return
     }
+
+    // No overlay is showing (all branches above return early), so this is
+    // the root connection screen: back should minimize the app instead of
+    // finishing the activity, matching the "don't exit on back" behavior
+    // the app wants everywhere except from an overlay.
+    BackHandler { onMinimize() }
 
     val isDark = LocalDarkTheme.current
     val backdrop = remember(isDark) {
