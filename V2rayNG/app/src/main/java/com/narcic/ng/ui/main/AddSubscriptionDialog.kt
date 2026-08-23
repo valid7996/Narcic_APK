@@ -1,5 +1,10 @@
 package com.narcic.ng.ui.main
 
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.narcic.ng.R
 import com.narcic.ng.extension.toast
+import com.narcic.ng.ui.ScannerActivity
 import com.narcic.ng.util.Utils
 
 /**
@@ -36,6 +42,22 @@ fun AddSubscriptionDialog(
     var name by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    // Scans a subscription/config QR code via ScannerActivity (same scanner
+    // used for "Import config"), dropping the decoded text straight into the
+    // content field — same idea as the "paste from clipboard" button below.
+    val qrScanLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanResult = result.data?.getStringExtra("SCAN_RESULT")
+            if (!scanResult.isNullOrBlank()) {
+                content = scanResult
+            } else {
+                context.toast(R.string.toast_decoding_failed)
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,6 +78,7 @@ fun AddSubscriptionDialog(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedButton(
                         onClick = {
@@ -68,6 +91,13 @@ fun AddSubscriptionDialog(
                         },
                     ) {
                         Text("چسباندن از کلیپ‌بورد")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            qrScanLauncher.launch(Intent(context, ScannerActivity::class.java))
+                        },
+                    ) {
+                        Text("اسکن QR")
                     }
                 }
                 OutlinedTextField(
