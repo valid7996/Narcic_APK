@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -242,9 +243,21 @@ fun ConnectHero(
                 text = statusText,
                 color = if (isRunning) AuroraCyan else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
-                maxLines = 1,
+                textAlign = TextAlign.Center,
+                // 2 lines: the live ping check replaces the idle "tap to
+                // check connection" hint with a 2-line result — delay in
+                // ms on the first line, exit IP/country on the second
+                // (see "$result\n$ip" in CoreServiceManager.measureV2rayDelay).
+                // maxLines = 1 was cutting that second line off entirely.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
+                    // fillMaxWidth so this box is always the same width,
+                    // whether it holds the short idle hint or the longer
+                    // ping/IP result — otherwise the text (and its tap
+                    // target) visibly resized/shifted every time the
+                    // content changed length.
+                    .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .clickable(enabled = isRunning, onClick = onCheckConnection)
             )
