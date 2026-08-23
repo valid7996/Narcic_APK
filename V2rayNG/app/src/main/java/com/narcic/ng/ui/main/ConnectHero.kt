@@ -69,6 +69,11 @@ private val HeroCoreShape = RoundedPolygonShape(sides = 6, cornerRadius = 26.dp)
  * state and actions only (isRunning, isTesting, statusText, ToggleService,
  * TestRealAllServers, AutoConnect). No mock data, no simulated timers —
  * everything here reflects the actual VPN service state.
+ *
+ * While connected, statusText reads "Connected, tap to check connection"
+ * (R.string.connection_connected) and is itself tappable, triggering
+ * onCheckConnection (MainAction.TestCurrentServer) to re-run a real ping
+ * against the current server.
  */
 @Composable
 fun ConnectHero(
@@ -76,6 +81,7 @@ fun ConnectHero(
     isTesting: Boolean,
     statusText: String,
     onToggle: () -> Unit,
+    onCheckConnection: () -> Unit,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "hero")
 
@@ -238,7 +244,9 @@ fun ConnectHero(
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 24.dp)
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .clickable(enabled = isRunning, onClick = onCheckConnection)
             )
         }
     }

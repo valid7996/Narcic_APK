@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +43,7 @@ import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.entities.ServersCache
 import com.narcic.ng.extension.displayLabel
 import com.narcic.ng.ui.compose.AppTopBar
+import com.narcic.ng.ui.compose.DeleteConfirmDialog
 import com.narcic.ng.ui.compose.SelectListDialog
 import com.narcic.ng.ui.compose.colorPing
 import com.narcic.ng.ui.compose.colorPingRed
@@ -61,11 +64,15 @@ fun ConnectionPickerScreen(
     onRetest: () -> Unit,
     onSelectGroup: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onSortByTest: () -> Unit,
+    onRemoveInvalid: () -> Unit,
     onBack: () -> Unit,
 ) {
     var typeFilter by remember { mutableStateOf(FILTER_ALL) }
     var countryFilter by remember { mutableStateOf(FILTER_ALL) }
     var openDialog by remember { mutableStateOf<FilterKind?>(null) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var showRemoveInvalidConfirm by remember { mutableStateOf(false) }
 
     val types = remember(servers) {
         servers.map { it.profile.configType.displayLabel() }.distinct().sorted()
@@ -87,7 +94,47 @@ fun ConnectionPickerScreen(
     }
 
     Scaffold(
-        topBar = { AppTopBar(title = "آزمایش اتصال‌ها", onBackClick = onBack) }
+        topBar = {
+            AppTopBar(
+                title = "آزمایش اتصال‌ها",
+                onBackClick = onBack,
+                actions = {
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_more_vert_24dp),
+                                contentDescription = null,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.title_sort_by_test_results)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onSortByTest()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.title_del_invalid_config),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showRemoveInvalidConfirm = true
+                                },
+                            )
+                        }
+                    }
+                },
+            )
+        }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Text(
@@ -203,6 +250,17 @@ fun ConnectionPickerScreen(
         )
 
         null -> Unit
+    }
+
+    if (showRemoveInvalidConfirm) {
+        DeleteConfirmDialog(
+            message = stringResource(R.string.confirm_delete_invalid_profiles),
+            onConfirm = {
+                showRemoveInvalidConfirm = false
+                onRemoveInvalid()
+            },
+            onDismiss = { showRemoveInvalidConfirm = false },
+        )
     }
 }
 

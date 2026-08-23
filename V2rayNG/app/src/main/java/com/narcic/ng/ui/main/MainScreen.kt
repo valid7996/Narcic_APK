@@ -147,6 +147,8 @@ fun MainScreen(
             onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
             onDelete = removeServer,
+            onSortByTest = { onAction(MainAction.SortByTestResults) },
+            onRemoveInvalid = { onAction(MainAction.RemoveInvalidServers) },
             onBack = { showConnectionPicker = false },
         )
         return
@@ -233,6 +235,7 @@ fun MainScreen(
                                 onAction(MainAction.ToggleService)
                             }
                         },
+                        onCheckConnection = { onAction(MainAction.TestCurrentServer) },
                     )
 
                     // Only one of these two cards shows at a time: while
