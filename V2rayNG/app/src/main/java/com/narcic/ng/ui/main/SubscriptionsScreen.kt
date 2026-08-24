@@ -1,5 +1,8 @@
 package com.narcic.ng.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,8 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -32,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.narcic.ng.AppConfig
 import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.ui.compose.AppTopBar
 
@@ -52,8 +61,11 @@ fun SubscriptionsScreen(
         topBar = { AppTopBar(title = "سابسکریپشن", onBackClick = onBack, isLoading = isAdding) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // ── هدر + دکمه افزودن ──────────────────────────────────────
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
@@ -63,7 +75,11 @@ fun SubscriptionsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(onClick = onAddClick, enabled = !isAdding, shape = RoundedCornerShape(14.dp)) {
+                OutlinedButton(
+                    onClick = onAddClick,
+                    enabled = !isAdding,
+                    shape = RoundedCornerShape(14.dp),
+                ) {
                     Text(if (isAdding) "در حال افزودن…" else "+ افزودن")
                 }
             }
@@ -83,6 +99,7 @@ fun SubscriptionsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // ── مخازن اضافه‌شده توسط کاربر ──────────────────────────
                 items(groups, key = { it.id }) { group ->
                     SubscriptionCard(
                         mainViewModel = mainViewModel,
@@ -94,11 +111,116 @@ fun SubscriptionsScreen(
                         onDelete = { onDelete(group.id) },
                     )
                 }
+
+                // ── مخازن پیش‌فرض Narcic (جمع‌وجور، قابل باز/بسته شدن) ─
+                item(key = "__presets__") {
+                    DefaultSubscriptionsSection(
+                        onAddPreset = { name, url ->
+                            /* AddSubscriptionDialog already handles adding;
+                               اینجا فقط برای نمایش اطلاعاته — دکمه «+ افزودن»
+                               همان onAddClick صفحه رو فراخوانی می‌کند */
+                        },
+                    )
+                }
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// بخش مخازن پیش‌فرض — یک کارت جمع‌وجور با آیتم‌های قابل باز/بسته شدن
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun DefaultSubscriptionsSection(
+    onAddPreset: (name: String, url: String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(18.dp),
+            ),
+    ) {
+        // ── سربرگ قابل کلیک ────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Text(
+                    text = "مخازن موجود Narcic",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "${AppConfig.DEFAULT_SUBSCRIPTIONS.size} مخزن پیش‌فرض",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowUp
+                              else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "بستن" else "باز کردن",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // ── لیست آیتم‌ها (فقط وقتی expanded = true) ────────────────────
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column {
+                Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                AppConfig.DEFAULT_SUBSCRIPTIONS.forEachIndexed { index, (remarks, url) ->
+                    if (index > 0) {
+                        Divider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(horizontal = 18.dp),
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = remarks,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = url.take(52) + if (url.length > 52) "…" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// کارت هر سابسکریپشن اضافه‌شده
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SubscriptionCard(
     mainViewModel: MainViewModel,
@@ -119,7 +241,8 @@ private fun SubscriptionCard(
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .border(
                 width = 1.dp,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(18.dp),
             )
             .clickable(onClick = onSelect)
@@ -162,7 +285,9 @@ private fun SubscriptionCard(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(modifier = Modifier.weight(1f)) {
@@ -176,20 +301,17 @@ private fun SubscriptionCard(
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
                         text = { Text("تازه‌سازی") },
-                        onClick = {
-                            menuOpen = false
-                            onRefresh()
-                        },
+                        onClick = { menuOpen = false; onRefresh() },
                     )
-                    // The "all configs" filter card (group.id == "") isn't a real
-                    // subscription — there's nothing to delete, only to display.
                     if (group.id.isNotEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("حذف سابسکریپشن", color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                menuOpen = false
-                                onDelete()
+                            text = {
+                                Text(
+                                    "حذف سابسکریپشن",
+                                    color = MaterialTheme.colorScheme.error,
+                                )
                             },
+                            onClick = { menuOpen = false; onDelete() },
                         )
                     }
                 }
@@ -201,7 +323,11 @@ private fun SubscriptionCard(
                     .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp)),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("تست  ⏱", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(
+                    "تست  ⏱",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }
