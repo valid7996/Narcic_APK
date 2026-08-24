@@ -17,6 +17,7 @@ fun MainVpnBottomNav(
     selectedTab: MainHomeTab,
     onSelectTab: (MainHomeTab) -> Unit,
     onSettingsClick: () -> Unit,
+    onStatisticsClick: () -> Unit,
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -34,6 +35,13 @@ fun MainVpnBottomNav(
             onClick = { onSelectTab(MainHomeTab.VPN) },
             icon = { Icon(painterResource(R.drawable.ic_power_24dp), contentDescription = null) },
             label = { Text("وی‌پی‌ان") },
+            colors = navColors(),
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = onStatisticsClick,
+            icon = { Icon(painterResource(R.drawable.ic_stats_24dp), contentDescription = null) },
+            label = { Text("آمار") },
             colors = navColors(),
         )
         NavigationBarItem(

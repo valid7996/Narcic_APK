@@ -38,6 +38,7 @@ import com.narcic.ng.ui.server.ServerVlessActivity
 import com.narcic.ng.ui.server.ServerVmessActivity
 import com.narcic.ng.ui.server.ServerWireguardActivity
 import com.narcic.ng.ui.settings.SettingsHubActivity
+import com.narcic.ng.ui.statistics.StatisticsActivity
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -135,11 +136,10 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: String) {
-        val intent = when (destination) {
-            "settings" -> Intent(this, SettingsHubActivity::class.java)
-            else -> return
+        when (destination) {
+            "settings" -> settingsActivityLauncher.launch(Intent(this, SettingsHubActivity::class.java))
+            "statistics" -> startActivity(Intent(this, StatisticsActivity::class.java))
         }
-        settingsActivityLauncher.launch(intent)
     }
 
     private fun handleFabAction() {

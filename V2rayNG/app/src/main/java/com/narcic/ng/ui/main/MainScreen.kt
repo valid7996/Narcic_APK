@@ -45,10 +45,11 @@ import com.narcic.ng.ui.compose.SpiderWebCorners
  *    overlay is showing, a root-level BackHandler takes over and minimizes
  *    the app (onMinimize) instead of finishing the activity.
  *  - ConnectionPickerScreen lists every config with a delete icon per row.
- *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / تنظیمات. Only the VPN tab renders
- *    this Scaffold; the other two either open a full-screen overlay or
- *    launch SettingsActivity, matching the reference screenshots (none of
- *    the sub-screens keep the bottom bar visible).
+ *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / آمار / تنظیمات. Only the VPN tab
+ *    renders this Scaffold; the other three either open a full-screen
+ *    overlay or launch their own Activity (Statistics, Settings), matching
+ *    the reference screenshots (none of the sub-screens keep the bottom bar
+ *    visible).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,6 +215,7 @@ fun MainScreen(
                         if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
                     },
                     onSettingsClick = { onNavigate("settings") },
+                    onStatisticsClick = { onNavigate("statistics") },
                 )
             },
         ) { innerPadding ->

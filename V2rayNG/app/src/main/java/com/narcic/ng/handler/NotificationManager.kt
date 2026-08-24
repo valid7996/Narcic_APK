@@ -33,27 +33,41 @@ object NotificationManager {
     private const val NOTIFICATION_PENDING_INTENT_STOP_V2RAY = 1
     private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
-    private const val QUERY_INTERVAL_MS = 3000L
+
+    // While the screen is on, poll every 3s for a responsive live-speed display.
+    // While it's off, nobody can see the notification or the in-app UI, so we
+    // back off to once a minute - just often enough that the daily/weekly
+    // Statistics totals (TrafficStatsManager) stay accurate and don't lump a
+    // whole night's usage into a single burst whenever the screen comes back on.
+    private const val QUERY_INTERVAL_ACTIVE_MS = 3000L
+    private const val QUERY_INTERVAL_IDLE_MS = 60_000L
+    private const val MIN_QUERY_INTERVAL_MS = 500L
 
     private var lastQueryTime = 0L
     private var mBuilder: NotificationCompat.Builder? = null
     private var speedNotificationJob: Job? = null
     private var mNotificationManager: NotificationManager? = null
 
+    @Volatile
+    private var isScreenOn = true
+
     /**
-     * Starts the speed notification.
-     * @param currentConfig The current profile configuration.
+     * Starts the background traffic-polling loop for the current VPN session.
+     * Runs for as long as the VPN is connected: it drives the live speed
+     * notification/UI (when the user has that enabled and the screen is on)
+     * and always feeds TrafficStatsManager so daily/weekly usage stays
+     * accurate even if the speed display itself is off.
      */
     fun startSpeedNotification() {
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true) != true) return
         if (speedNotificationJob != null || CoreServiceManager.isRunning() == false) return
 
+        isScreenOn = true
         var lastZeroSpeed = false
 
         speedNotificationJob = CoroutineScope(Dispatchers.IO).launch {
             while (isActive) {
                 lastZeroSpeed = updateSpeedNotificationOnce(lastZeroSpeed)
-                delay(QUERY_INTERVAL_MS)
+                delay(if (isScreenOn) QUERY_INTERVAL_ACTIVE_MS else QUERY_INTERVAL_IDLE_MS)
             }
         }
     }
@@ -141,16 +155,25 @@ object NotificationManager {
     }
 
     /**
-     * Stops the speed notification.
+     * Called when the screen turns back on. Switches the polling loop back
+     * to its fast, responsive cadence and resumes live notification/UI updates.
      */
-    fun stopSpeedNotification() {
-        speedNotificationJob?.let {
-            it.cancel()
-            speedNotificationJob = null
-            updateNotification("", 0, 0)
-            getService()?.let { service ->
-                MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_TRAFFIC_UPDATE, "0|0")
-            }
+    fun onScreenOn() {
+        isScreenOn = true
+    }
+
+    /**
+     * Called when the screen turns off. The polling loop is NOT stopped -
+     * unlike before, it keeps running so traffic-stats accounting (the
+     * Statistics screen) stays accurate - but it drops to a much slower
+     * cadence and stops repainting the notification/UI, since neither is
+     * visible while the screen is off anyway.
+     */
+    fun onScreenOff() {
+        isScreenOn = false
+        updateNotification("", 0, 0)
+        getService()?.let { service ->
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_TRAFFIC_UPDATE, "0|0")
         }
     }
 
@@ -231,7 +254,7 @@ object NotificationManager {
         val sinceLastQueryIn = (queryTime - lastQueryTime)
 
         // If the query interval is too short, skip this round to avoid excessive CPU usage
-        if (sinceLastQueryIn < QUERY_INTERVAL_MS) {
+        if (sinceLastQueryIn < MIN_QUERY_INTERVAL_MS) {
             LogUtil.w(AppConfig.TAG, "Query interval too short: ${sinceLastQueryIn}ms, skipping")
             lastQueryTime = queryTime
             return lastZeroSpeed
@@ -264,6 +287,27 @@ object NotificationManager {
         val proxyTotal = proxyUplink + proxyDownlink
         val directTotal = directUplink + directDownlink
         val zeroSpeed = proxyTotal + directTotal == 0L
+
+        // Persist this interval's usage for the Statistics screen. This must
+        // happen unconditionally, on every poll, regardless of screen state
+        // or the speed-notification preference below - this is the only
+        // place that reads (and thereby resets) the core's traffic counters,
+        // so it's also the only place that can record usage without losing data.
+        TrafficStatsManager.recordUsage(
+            downloadBytes = proxyDownlink + directDownlink,
+            uploadBytes = proxyUplink + directUplink,
+            connectedMillis = sinceLastQueryIn,
+        )
+
+        // Nothing is visible while the screen is off, and the user may have
+        // turned the live speed display off entirely - either way, skip the
+        // notification/UI work below, but keep the loop (and stats recording
+        // above) running for the rest of the session.
+        val showLiveSpeed = isScreenOn && MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true)
+        if (!showLiveSpeed) {
+            lastQueryTime = queryTime
+            return zeroSpeed
+        }
 
         // Push the same measurement to the in-app UI on every poll (not just
         // when the notification text changes) so the main screen's live

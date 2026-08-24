@@ -12,6 +12,7 @@ import com.narcic.ng.AppConfig.PREF_IS_BOOTED
 import com.narcic.ng.AppConfig.PREF_ROUTING_RULESET
 import com.narcic.ng.dto.entities.AssetUrlCache
 import com.narcic.ng.dto.entities.AssetUrlItem
+import com.narcic.ng.dto.entities.DailyTrafficStat
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.RulesetItem
 import com.narcic.ng.dto.entities.ServerAffiliationInfo
@@ -35,6 +36,7 @@ object MmkvManager {
     private const val ID_SUB = "SUB"
     private const val ID_ASSET = "ASSET"
     private const val ID_SETTING = "SETTING"
+    private const val ID_TRAFFIC_STATS = "TRAFFIC_STATS"
     private const val KEY_SELECTED_SERVER = "SELECTED_SERVER"
     private const val KEY_ANG_CONFIGS = "ANG_CONFIGS"
     private const val KEY_SUB_SERVER_PREFIX = "SUB_SERVERS_"
@@ -48,6 +50,7 @@ object MmkvManager {
     private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
     private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
+    private val trafficStatsStorage by lazy { MMKV.mmkvWithID(ID_TRAFFIC_STATS, MMKV.MULTI_PROCESS_MODE) }
 
     //endregion
 
@@ -805,6 +808,29 @@ object MmkvManager {
                 }
         }
         return state
+    }
+
+    //endregion
+
+    //region Traffic stats
+
+    /**
+     * Reads the accumulated traffic/connected-time totals for one calendar
+     * day ("yyyyMMdd"). Returns a zeroed [DailyTrafficStat] for that key if
+     * nothing has been recorded yet, never null, so callers can sum results
+     * for a date range without null-checking each day.
+     */
+    fun decodeDailyTrafficStat(dateKey: String): DailyTrafficStat {
+        val json = trafficStatsStorage.decodeString(dateKey) ?: return DailyTrafficStat(dateKey = dateKey)
+        return JsonUtil.fromJsonSafe(json, DailyTrafficStat::class.java) ?: DailyTrafficStat(dateKey = dateKey)
+    }
+
+    /**
+     * Persists the totals for one calendar day, keyed by [DailyTrafficStat.dateKey].
+     */
+    fun encodeDailyTrafficStat(stat: DailyTrafficStat): Boolean {
+        if (stat.dateKey.isBlank()) return false
+        return trafficStatsStorage.encode(stat.dateKey, JsonUtil.toJson(stat))
     }
 
     //endregion
