@@ -102,10 +102,6 @@ class SubEditActivity : BaseComponentActivity() {
 
         MmkvManager.encodeSubscription(editSubId, subItem)
         SubscriptionUpdater.syncOne(subId = editSubId)
-        // Now that the customer has a subscription of their own, activate
-        // the 12h periodic auto-update for the whole list (including the
-        // bundled default Narcic repos) instead of waiting for next launch.
-        SubscriptionUpdater.sync()
         SettingsChangeManager.makeSetupGroupTab()
         toastSuccess(R.string.toast_success)
         finish()

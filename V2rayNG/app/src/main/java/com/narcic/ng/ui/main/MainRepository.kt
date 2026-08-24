@@ -228,6 +228,29 @@ class MainRepository(
         if (allLinks) {
             var subCount = 0
             lines.distinct().forEach { url ->
+                // If this is one of the bundled Narcic default repos, "using"
+                // it means activating its existing entry — turn on its 12h
+                // auto-update and fetch it now — instead of creating a second,
+                // duplicate subscription for the same repo.
+                val defaultMatch = MmkvManager.decodeSubscriptions().firstOrNull {
+                    AppConfig.isDefaultSubscriptionUrl(it.subscription.url) &&
+                        it.subscription.url.substringBefore("?") == url.substringBefore("?")
+                }
+                if (defaultMatch != null) {
+                    if (!defaultMatch.subscription.autoUpdate) {
+                        defaultMatch.subscription.autoUpdate = true
+                        defaultMatch.subscription.enabled = true
+                        MmkvManager.encodeSubscription(defaultMatch.guid, defaultMatch.subscription)
+                    }
+                    runCatching {
+                        AngConfigManager.updateConfigViaSub(
+                            SubscriptionCache(defaultMatch.guid, defaultMatch.subscription)
+                        )
+                    }
+                    subCount++
+                    return@forEach
+                }
+
                 val alreadyExists = MmkvManager.decodeSubscriptions().any { it.subscription.url == url }
                 if (!alreadyExists) {
                     val newId = Utils.getUuid()

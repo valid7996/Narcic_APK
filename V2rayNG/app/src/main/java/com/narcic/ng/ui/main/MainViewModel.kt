@@ -972,6 +972,9 @@ class MainViewModel(
                         toastError(R.string.toast_failure)
                         return@withContext
                     }
+                    // Schedules the 12h auto-update task — needed immediately when
+                    // this activated one of the default Narcic repos (autoUpdate
+                    // just flipped true) or created a new customer subscription.
                     dataSource.syncSubscriptions()
                     // Awaited on purpose: setupGroupTab launches its own fire-and-forget
                     // coroutine, so without join() isLoading could flip back to false —
