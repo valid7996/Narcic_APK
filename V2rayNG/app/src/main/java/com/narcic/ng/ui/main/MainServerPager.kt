@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
@@ -246,6 +247,7 @@ private fun ServerItemRow(
             ?.toString() ?: ""
     } else ""
 
+    val isDefault = isDefaultConfig(profile)
     ServerListItem(
         remarks = profile.remarks,
         statistics = profile.description.nullIfBlank()
@@ -257,10 +259,10 @@ private fun ServerItemRow(
         subscriptionRemarks = subRemarks,
         doubleColumnDisplay = false,
         onClick = { onSelectServer(serverCache.guid) },
-        onShare = { onShareServer(serverCache.guid, profile) },
-        onEdit = { onEditServer(serverCache.guid, profile) },
+        onShare = if (isDefault) null else { { onShareServer(serverCache.guid, profile) } },
+        onEdit = if (isDefault) null else { { onEditServer(serverCache.guid, profile) } },
         onRemove = { onRemoveServer(serverCache.guid) },
-        onMore = { onMoreServer(serverCache.guid, profile) }
+        onMore = if (isDefault) null else { { onMoreServer(serverCache.guid, profile) } }
     )
 }
 
@@ -280,6 +282,7 @@ private fun ServerItemColumn(
     val subRemarks = if (subscriptionId.isEmpty()) {
         MmkvManager.decodeSubscription(profile.subscriptionId)?.remarks?.firstOrNull()?.toString() ?: ""
     } else ""
+    val isDefault = isDefaultConfig(profile)
     Column {
         ServerListItem(
             remarks = profile.remarks,
@@ -291,10 +294,10 @@ private fun ServerItemColumn(
             subscriptionRemarks = subRemarks,
             doubleColumnDisplay = doubleColumnDisplay,
             onClick = { onSelectServer(serverCache.guid) },
-            onEdit = { onEditServer(serverCache.guid, profile) },
-            onShare = { onShareServer(serverCache.guid, profile) },
+            onEdit = if (isDefault) null else { { onEditServer(serverCache.guid, profile) } },
+            onShare = if (isDefault) null else { { onShareServer(serverCache.guid, profile) } },
             onRemove = { onRemoveServer(serverCache.guid) },
-            onMore = { onMoreServer(serverCache.guid, profile) }
+            onMore = if (isDefault) null else { { onMoreServer(serverCache.guid, profile) } }
         )
         ItemDivider()
     }
@@ -311,10 +314,13 @@ fun ServerListItem(
     subscriptionRemarks: String,
     doubleColumnDisplay: Boolean,
     onClick: () -> Unit,
-    onEdit: () -> Unit,
-    onShare: () -> Unit,
+    /** null = کانفیگ دیفالت — آیکون ویرایش نشان داده نمی‌شود */
+    onEdit: (() -> Unit)?,
+    /** null = کانفیگ دیفالت — آیکون اشتراک‌گذاری نشان داده نمی‌شود */
+    onShare: (() -> Unit)?,
     onRemove: () -> Unit,
-    onMore: () -> Unit,
+    /** null = کانفیگ دیفالت — منوی بیشتر نشان داده نمی‌شود */
+    onMore: (() -> Unit)?,
     modifier: Modifier = Modifier,
     dragModifier: Modifier = Modifier
 ) {
@@ -350,8 +356,28 @@ fun ServerListItem(
                 .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                IconButton(onClick = onRemove, Modifier.size(36.dp)) { Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(24.dp)) }
+                Text(
+                    remarks,
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                // ویرایش و اشتراک‌گذاری فقط برای کانفیگ‌های غیر‌دیفالت
+                if (onShare != null) {
+                    IconButton(onClick = onShare, Modifier.size(36.dp)) {
+                        Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(20.dp))
+                    }
+                }
+                if (onEdit != null) {
+                    IconButton(onClick = onEdit, Modifier.size(36.dp)) {
+                        Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(20.dp))
+                    }
+                }
+                // حذف برای همه کانفیگ‌ها مجاز است
+                IconButton(onClick = onRemove, Modifier.size(36.dp)) {
+                    Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(24.dp))
+                }
             }
             Spacer(modifier = Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -372,6 +398,15 @@ fun ServerListItem(
             }
         }
     }
+}
+
+/**
+ * Returns true if this profile belongs to one of the built-in Narcic subscriptions.
+ * Configs from default subscriptions must NOT be editable or shareable.
+ */
+private fun isDefaultConfig(profile: ProfileItem): Boolean {
+    val subUrl = MmkvManager.decodeSubscription(profile.subscriptionId)?.url ?: return false
+    return AppConfig.isDefaultSubscriptionUrl(subUrl)
 }
 
 private fun getProtocolDescription(profile: ProfileItem): String {

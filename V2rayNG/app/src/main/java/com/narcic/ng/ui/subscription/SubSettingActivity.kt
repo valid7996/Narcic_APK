@@ -193,8 +193,9 @@ fun SubSettingScreen(
                                 horizontalAlignment = Alignment.End,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
+                                val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
                                 Row {
-                                    if (subCache.subscription.url.isNotEmpty()) {
+                                    if (!isDefault && subCache.subscription.url.isNotEmpty()) {
                                         IconButton(onClick = {
                                             shareTarget = Pair(subCache.guid, subCache.subscription.url)
                                         }) {
@@ -204,20 +205,24 @@ fun SubSettingScreen(
                                             )
                                         }
                                     }
-                                    IconButton(onClick = { onEditSub(subCache.guid) }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_edit_24dp),
-                                            contentDescription = "Edit"
-                                        )
+                                    if (!isDefault) {
+                                        IconButton(onClick = { onEditSub(subCache.guid) }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_edit_24dp),
+                                                contentDescription = "Edit"
+                                            )
+                                        }
                                     }
-                                    IconButton(onClick = {
-                                        if (confirmRemove) removeTarget = subCache.guid
-                                        else onRemoveSub(subCache.guid)
-                                    }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_delete_24dp),
-                                            contentDescription = "Delete"
-                                        )
+                                    if (!isDefault) {
+                                        IconButton(onClick = {
+                                            if (confirmRemove) removeTarget = subCache.guid
+                                            else onRemoveSub(subCache.guid)
+                                        }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_delete_24dp),
+                                                contentDescription = "Delete"
+                                            )
+                                        }
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))

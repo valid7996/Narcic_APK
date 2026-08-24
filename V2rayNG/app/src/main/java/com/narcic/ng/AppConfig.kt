@@ -159,6 +159,17 @@ object AppConfig {
         "Narcic NG - WireGuard" to "$GITHUB_RAW_URL/validbv7996/Narcic_APK/refs/heads/main/wirguard.txt",
     )
 
+    /** Set of base URLs (without query params) that belong to built-in Narcic subscriptions. */
+    val DEFAULT_SUBSCRIPTION_URLS: Set<String> = DEFAULT_SUBSCRIPTIONS.map { it.second }.toSet()
+
+    /**
+     * Returns true if the subscription URL (with or without cache-buster query param)
+     * matches one of the built-in Narcic subscriptions.
+     * Use this to decide whether to hide Edit / Share / Delete actions.
+     */
+    fun isDefaultSubscriptionUrl(url: String): Boolean =
+        DEFAULT_SUBSCRIPTION_URLS.any { base -> url.substringBefore("?") == base }
+
     const val APP_API_URL = "https://api.github.com/repos/valid7996/NarcicNG/releases"
     const val APP_ISSUES_URL = "$APP_URL/issues"
     const val APP_WIKI_MODE = "$APP_URL/wiki/Mode"
