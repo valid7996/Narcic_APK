@@ -185,7 +185,7 @@ private fun DefaultSubscriptionsSection(
         ) {
             Column {
                 Divider(color = MaterialTheme.colorScheme.outlineVariant)
-                AppConfig.DEFAULT_SUBSCRIPTIONS.forEachIndexed { index, (remarks, url) ->
+                AppConfig.DEFAULT_SUBSCRIPTIONS.forEachIndexed { index, (remarks, _) ->
                     if (index > 0) {
                         Divider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
@@ -204,11 +204,6 @@ private fun DefaultSubscriptionsSection(
                                 text = remarks,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = url.take(52) + if (url.length > 52) "…" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

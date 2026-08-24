@@ -155,11 +155,6 @@ private fun PresetDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
-                            Text(
-                                text = url.take(48) + if (url.length > 48) "…" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
                         Text(
                             text = "+ افزودن",

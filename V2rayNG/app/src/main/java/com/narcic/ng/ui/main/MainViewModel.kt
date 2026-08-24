@@ -972,6 +972,7 @@ class MainViewModel(
                         toastError(R.string.toast_failure)
                         return@withContext
                     }
+                    dataSource.syncSubscriptions()
                     // Awaited on purpose: setupGroupTab launches its own fire-and-forget
                     // coroutine, so without join() isLoading could flip back to false —
                     // and the "+ افزودن" dialog close — before uiState.groups actually

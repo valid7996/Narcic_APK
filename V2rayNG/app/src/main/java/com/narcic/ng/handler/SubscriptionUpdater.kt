@@ -35,6 +35,26 @@ object SubscriptionUpdater {
         context: Context = AngApplication.application,
         forceReschedule: Boolean = false
     ) {
+        val subscriptions = MmkvManager.decodeSubscriptions()
+
+        // The periodic 12h auto-update pipeline only runs once the customer
+        // has added a subscription of their own. The bundled Narcic
+        // subscriptions must not trigger background updates by themselves —
+        // once a customer subscription exists, the whole list (including the
+        // default ones) updates on schedule as before.
+        val hasCustomerSubscription = subscriptions.any { sub ->
+            sub.subscription.url.isNotEmpty() &&
+                !AppConfig.isDefaultSubscriptionUrl(sub.subscription.url)
+        }
+
+        if (!hasCustomerSubscription) {
+            // Make sure nothing is left scheduled (e.g. the customer removed
+            // their last subscription) so the default ones stay quiet again.
+            subscriptions.forEach { sub -> cancelOne(context, sub.guid) }
+            LogUtil.i(AppConfig.TAG, "SubscriptionUpdater: sync skipped, no customer subscription yet")
+            return
+        }
+
         val existingWorkPolicy =
             if (forceReschedule) {
                 ExistingPeriodicWorkPolicy.REPLACE
@@ -42,7 +62,7 @@ object SubscriptionUpdater {
                 ExistingPeriodicWorkPolicy.KEEP
             }
 
-        MmkvManager.decodeSubscriptions()
+        subscriptions
             .filter { it.subscription.autoUpdate && it.subscription.url.isNotEmpty() }
             .forEach { sub ->
                 scheduleOne(

@@ -23,7 +23,6 @@ import com.narcic.ng.handler.DefaultConfigSource
 import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
-import com.narcic.ng.handler.SubscriptionUpdater
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
 import com.narcic.ng.ui.server.ServerCustomConfigActivity
@@ -86,12 +85,13 @@ class MainActivity : HelperBaseComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val justCreated = DefaultConfigSource.ensureSubscriptionExists()
+        // Keep the bundled Narcic subscription entries in place, but do NOT
+        // auto-fetch/import them on first install. Importing configs and the
+        // periodic 12h auto-update are handled by SubscriptionUpdater.sync()
+        // (invoked below via MainAction.Initialize), which only activates
+        // once the customer has added a subscription of their own.
+        DefaultConfigSource.ensureSubscriptionExists()
         mainViewModel.onAction(MainAction.Initialize)
-        if (justCreated) {
-            mainViewModel.onAction(MainAction.UpdateAllSubscriptions)
-        }
-        SubscriptionUpdater.sync(forceReschedule = justCreated)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }

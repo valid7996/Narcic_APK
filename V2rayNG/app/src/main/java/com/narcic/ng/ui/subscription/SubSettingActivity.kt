@@ -164,6 +164,7 @@ fun SubSettingScreen(
                                 .padding(horizontal = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = subCache.subscription.remarks,
@@ -171,7 +172,7 @@ fun SubSettingScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                if (subCache.subscription.url.isNotEmpty()) {
+                                if (!isDefault && subCache.subscription.url.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = subCache.subscription.url,
@@ -193,7 +194,6 @@ fun SubSettingScreen(
                                 horizontalAlignment = Alignment.End,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
-                                val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
                                 Row {
                                     if (!isDefault && subCache.subscription.url.isNotEmpty()) {
                                         IconButton(onClick = {

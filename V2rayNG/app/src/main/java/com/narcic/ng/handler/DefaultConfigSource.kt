@@ -6,16 +6,18 @@ import com.narcic.ng.dto.entities.SubscriptionItem
 /**
  * Ensures the app always has subscriptions pointing to the Narcic NG
  * GitHub config repository (see [AppConfig.DEFAULT_SUBSCRIPTIONS]). Only
- * creates/updates the subscription entries — the actual fetch is left to
- * the app's own standard, already-tested subscription update pipeline
- * (MainAction.UpdateAllSubscriptions), so there is only ever ONE code
- * path that fetches and refreshes the server list.
+ * creates/updates the subscription entries — it never fetches anything
+ * itself. Nothing is auto-imported on first install: fetching (manual or
+ * periodic) is entirely handled by [SubscriptionUpdater], whose periodic
+ * pipeline only activates once the customer has added a subscription of
+ * their own.
  */
 object DefaultConfigSource {
 
     /**
-     * @return true if a fetch should be triggered afterwards (at least one
-     * subscription was just created, or was disabled and got re-enabled).
+     * @return true if at least one subscription was just created, or was
+     * disabled and got re-enabled. Callers are not required to act on this —
+     * kept for callers that want to know whether the default list changed.
      */
     fun ensureSubscriptionExists(): Boolean {
         var needsFetch = false
