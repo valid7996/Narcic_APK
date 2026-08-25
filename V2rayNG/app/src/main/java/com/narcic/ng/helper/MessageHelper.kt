@@ -39,6 +39,26 @@ object MessageHelper {
     }
 
     /**
+     * Sends a delay-measurement result to the UI, carrying both the
+     * localized display string AND the raw measured delay in milliseconds
+     * (-1 if the measurement failed), so the UI can sync its live ping
+     * indicator instead of only showing formatted text.
+     */
+    fun sendMeasureDelayResult(ctx: Context, content: String, delayMillis: Long) {
+        try {
+            val intent = Intent()
+            intent.action = AppConfig.BROADCAST_ACTION_ACTIVITY
+            intent.`package` = AppConfig.ANG_PACKAGE
+            intent.putExtra("key", AppConfig.MSG_MEASURE_DELAY_SUCCESS)
+            intent.putExtra("content", content)
+            intent.putExtra("delayMillis", delayMillis)
+            ctx.sendBroadcast(intent)
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to send measure delay result", e)
+        }
+    }
+
+    /**
      * Sends a message to the test service.
      *
      * @param ctx The context.

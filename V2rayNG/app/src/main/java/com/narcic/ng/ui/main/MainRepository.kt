@@ -54,7 +54,8 @@ class MainRepository(
 
                 AppConfig.MSG_STATE_STOP_SUCCESS -> MainServiceEvent.StateStopSuccess
                 AppConfig.MSG_MEASURE_DELAY_SUCCESS -> MainServiceEvent.MeasureDelaySuccess(
-                    safeIntent.getStringExtra("content").orEmpty()
+                    safeIntent.getStringExtra("content").orEmpty(),
+                    safeIntent.getLongExtra("delayMillis", -1L)
                 )
 
                 AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> MainServiceEvent.MeasureConfigSuccess(

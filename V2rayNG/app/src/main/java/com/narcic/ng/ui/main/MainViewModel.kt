@@ -136,7 +136,12 @@ class MainViewModel(
 
             MainServiceEvent.StateStopSuccess -> updateRunningState(false)
             is MainServiceEvent.MeasureDelaySuccess -> {
-                _uiState.update { it.copy(statusText = event.content) }
+                _uiState.update {
+                    it.copy(
+                        statusText = event.content,
+                        livePingMillis = if (event.delayMillis >= 0) event.delayMillis else it.livePingMillis
+                    )
+                }
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
@@ -670,7 +675,7 @@ class MainViewModel(
 
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
-        _uiState.update { it.copy(selectedGuid = guid) }
+        _uiState.update { it.copy(selectedGuid = guid, livePingMillis = null) }
     }
 
     fun refreshSelectedGuid() {
@@ -1055,7 +1060,8 @@ class MainViewModel(
             state.copy(
                 isRunning = running,
                 statusText = if (!clearTestingText && state.isTesting) state.statusText
-                else if (running) connectedText else disconnectedText
+                else if (running) connectedText else disconnectedText,
+                livePingMillis = null
             )
         }
         if (running) {

@@ -264,7 +264,8 @@ fun MainScreen(
 
                     ConnectionStatsPanel(
                         isRunning = isRunning,
-                        pingText = connectedServer?.testDelayString.orEmpty(),
+                        pingText = uiState.livePingMillis?.let { "${it}ms" }
+                            ?: connectedServer?.testDelayString.orEmpty(),
                         downloadSpeedText = uiState.downloadSpeedText,
                         uploadSpeedText = uiState.uploadSpeedText,
                         connectionDurationText = uiState.connectionDurationText,
