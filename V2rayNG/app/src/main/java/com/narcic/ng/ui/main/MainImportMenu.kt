@@ -4,9 +4,11 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.narcic.ng.R
+import com.narcic.ng.AppConfig
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.extension.isComplexType
 import com.narcic.ng.handler.MmkvManager
+import com.narcic.ng.ui.compose.SelectListDialog
 import com.narcic.ng.util.Utils
 import com.narcic.ng.enums.EConfigType
 
@@ -54,7 +56,7 @@ fun ShareMethodDialog(
     )
     SelectListDialog(
         options = menuActions.map { stringResource(it.labelRes) },
-        onSelected = { index, _ ->
+        onSelected = { index: Int, _ ->  
             onDismiss()
             when (menuActions[index]) {
                 ServerMenuAction.ShareQRCode -> onAction(MainAction.ShareQRCode(guid))

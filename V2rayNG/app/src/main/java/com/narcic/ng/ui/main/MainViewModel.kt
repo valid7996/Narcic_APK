@@ -240,7 +240,7 @@ class MainViewModel(
             MainAction.LocateSelectedServer,
             is MainAction.EditServer,
             is MainAction.ShareClipboard,
-            is MainAction.ShareFullContent -> {
+            is MainAction.ShareFullContent, is MainAction.ShareLink -> {
                 // Handled by Activity via its onAction lambda
             }
         }

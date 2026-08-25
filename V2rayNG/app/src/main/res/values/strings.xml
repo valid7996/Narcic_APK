@@ -446,6 +446,8 @@
     <string name="title_webdav_pass">Password</string>
     <string name="title_webdav_remote_path">Remote directory (optional)</string>
 
+    <string name="toast_link_copied">Link copied to clipboard</string>
+    <string name="toast_invalid_link">Invalid share link</string>
     <string name="share_method_qrcode">QRcode</string>
     <string name="share_method_clipboard">Export to clipboard</string>
     <string name="share_method_full_content">Export full config to clipboard</string>
