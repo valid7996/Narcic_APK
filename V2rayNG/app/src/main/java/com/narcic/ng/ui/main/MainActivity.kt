@@ -115,6 +115,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     is MainAction.EditServer -> editServer(action.guid, action.profile)
                     is MainAction.ShareClipboard -> shareToClipboard(action.guid)
                     is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
+                    is MainAction.ShareLink -> shareLink(action.guid)
                     else -> mainViewModel.onAction(action)
                 }
             },
@@ -124,6 +125,23 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun shareToClipboard(guid: String): Boolean =
         AngConfigManager.share2Clipboard(this, guid) == 0
+
+    private fun shareLink(guid: String) {
+        try {
+            val configString = AngConfigManager.shareConfig(guid)
+            val link = generateShareLink(configString)
+            Utils.setClipboard(this, link)
+            toast(R.string.toast_link_copied)
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to share config as link", e)
+            toastError(R.string.toast_failure)
+        }
+    }
+
+    private fun generateShareLink(configString: String): String {
+        val encoded = java.net.URLEncoder.encode(configString, "UTF-8")
+        return "narcic://config/$encoded"
+    }
 
     private fun shareFullContentAsync(guid: String) {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -235,6 +253,33 @@ class MainActivity : HelperBaseComponentActivity() {
                 LogUtil.e(AppConfig.TAG, "Failed to read content from URI", e)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action
+        if (action != android.content.Intent.ACTION_VIEW) return
+        
+        val data = intent.data
+        if (data == null || !data.scheme.equals("narcic", ignoreCase = true)) return
+        
+        val encodedConfig = data.path ?: return
+        if (!encodedConfig.startsWith("/config/")) return
+        
+        val configString = encodedConfig.substring("/config/".length)
+        val decodedConfig = try {
+            java.net.URLDecoder.decode(configString, "UTF-8")
+        } catch (e: Exception) {
+            toastError(R.string.toast_invalid_link)
+            return
+        }
+        
+        mainViewModel.onAction(MainAction.ImportBatchConfig(decodedConfig))
     }
 
     private fun editServer(guid: String, profile: ProfileItem) {

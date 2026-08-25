@@ -449,6 +449,7 @@
     <string name="share_method_qrcode">QRcode</string>
     <string name="share_method_clipboard">Export to clipboard</string>
     <string name="share_method_full_content">Export full config to clipboard</string>
+    <string name="share_method_link">Share link</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
     <string name="action_close">Close</string>

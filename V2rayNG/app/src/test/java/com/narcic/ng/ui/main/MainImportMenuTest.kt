@@ -40,4 +40,59 @@ class MainImportMenuTest {
         )
         assertEquals(expected, serverMenuActions(isComplexProfile = true, includeManagementActions = true))
     }
+
+    @Test
+    fun shareMenuExcludesActionsForDefaultSubscription() {
+        val profile = ProfileItem().apply {
+            configType = EConfigType.VMESS
+            subscriptionId = "__default_subscription__"
+        }
+        assertEquals(
+            emptyList(),
+            serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = true)
+        )
+    }
+
+    @Test
+    fun shareMenuIncludesActionsForManualConfig() {
+        val profile = ProfileItem().apply {
+            configType = EConfigType.VMESS
+            subscriptionId = ""
+        }
+        assertEquals(
+            listOf(
+                ServerMenuAction.ShareQRCode,
+                ServerMenuAction.ShareClipboard,
+                ServerMenuAction.ShareFullContent,
+                ServerMenuAction.ShareLink,
+                ServerMenuAction.Edit,
+                ServerMenuAction.Delete,
+            ),
+            serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = false)
+        )
+    }
+
+    @Test
+    fun shareMenuExcludesEditAndShareForDefaultSubEvenWithManagement() {
+        val profile = ProfileItem().apply {
+            configType = EConfigType.VMESS
+            subscriptionId = "__default_subscription__"
+        }
+        assertEquals(
+            listOf(ServerMenuAction.Delete),
+            serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = true)
+        )
+    }
+
+    @Test
+    fun shareMenuStillFiltersComplexProfiles() {
+        val profile = ProfileItem().apply {
+            configType = EConfigType.POLICYGROUP
+            subscriptionId = ""
+        }
+        assertEquals(
+            listOf(ServerMenuAction.ShareFullContent),
+            serverMenuActions(isComplexProfile = true, includeManagementActions = false, isFromDefaultSubscription = false)
+        )
+    }
 }
