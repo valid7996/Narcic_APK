@@ -78,6 +78,14 @@ interface MainDataSource : Closeable {
      */
     suspend fun createSubscriptionFromText(name: String, content: String): Pair<Int, Int>
 
+    /** Strict subscription-only import: only accepts subscription URLs (https). Rejects ordinary VPN configs. */
+    suspend fun createSubscriptionOnly(name: String, content: String): Pair<Int, Int>
+
+    /** Import VPN config as manual: always subscriptionId = "" */
+    suspend fun importManualVpnConfig(configText: String): Pair<Int, Int>
+
+    fun getManualServerGuids(): List<String>
+
     fun updateConfigViaSubAll(): SubscriptionUpdateResult
     fun updateConfigViaSub(subscriptionCache: SubscriptionCache): SubscriptionUpdateResult
 

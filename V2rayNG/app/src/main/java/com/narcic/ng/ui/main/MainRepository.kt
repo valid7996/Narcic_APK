@@ -288,6 +288,32 @@ class MainRepository(
         return count to (if (count > 0) 1 else 0)
     }
 
+    override suspend fun createSubscriptionOnly(name: String, content: String): Pair<Int, Int> {
+        val trimmed = content.trim()
+        if (trimmed.isEmpty()) return 0 to 0
+        val lines = trimmed.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.isEmpty()) return 0 to 0
+        // Strict subscription-only: every line must be a valid subscription URL.
+        // Reject ordinary VPN configs (vmess/vless/ss/trojan/wireguard/hy2 etc.)
+        if (!lines.all { Utils.isValidSubUrl(it) }) return 0 to 0
+        return createSubscriptionFromText(name, content)
+    }
+
+    override suspend fun importManualVpnConfig(configText: String): Pair<Int, Int> {
+        val trimmed = configText.trim()
+        if (trimmed.isEmpty()) return 0 to 0
+        // Validate that text contains at least one VPN config; reject pure subscription URLs
+        // Use AngConfigManager's parse detection: try parsing as batch config with empty subId
+        // but ensure it is not a subscription URL. Sub URLs will be rejected as VPN.
+        val lines = trimmed.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        // If all lines are subscription URLs, this is NOT a VPN config -> reject for manual flow
+        if (lines.isNotEmpty() && lines.all { Utils.isValidSubUrl(it) }) return 0 to 0
+        return AngConfigManager.importBatchConfig(configText, "", true)
+    }
+
+    override fun getManualServerGuids(): List<String> =
+        MmkvManager.decodeServerList(AppConfig.DEFAULT_SUBSCRIPTION_ID)
+
     override fun updateConfigViaSubAll(): SubscriptionUpdateResult =
         AngConfigManager.updateConfigViaSubAll()
 

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -172,6 +174,7 @@ fun MainScreen(
             onDelete = { id -> showDelSubscriptionConfirm = id },
             onAddClick = { showAddSubscription = true },
             onBack = { showSubscriptions = false },
+            onScanSubscriptionQr = { text -> onAction(MainAction.ImportSubscriptionFromQr(text)) },
         )
         return
     }
@@ -219,31 +222,30 @@ fun MainScreen(
                 )
             },
         ) { innerPadding ->
-            if (groups.isNotEmpty()) {
-                val connectedServer = mainViewModel.findServerCache(selectedGuid)
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    ConnectHero(
-                        isRunning = isRunning,
-                        isTesting = uiState.isTesting,
-                        statusText = displayText,
-                        onToggle = {
-                            if (!isRunning && uiState.autoConnection) {
-                                onAction(MainAction.AutoConnect)
-                            } else {
-                                onAction(MainAction.ToggleService)
-                            }
-                        },
-                        onCheckConnection = { onAction(MainAction.TestCurrentServer) },
-                    )
+            val connectedServer = mainViewModel.findServerCache(selectedGuid)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                ConnectHero(
+                    isRunning = isRunning,
+                    isTesting = uiState.isTesting,
+                    statusText = displayText,
+                    onToggle = {
+                        if (!isRunning && uiState.autoConnection) {
+                            onAction(MainAction.AutoConnect)
+                        } else {
+                            onAction(MainAction.ToggleService)
+                        }
+                    },
+                    onCheckConnection = { onAction(MainAction.TestCurrentServer) },
+                )
 
-                    // Only one of these two cards shows at a time: while
-                    // disconnected the user picks موقعیت/اتصال/سابسکریپشن
-                    // here; once connected this makes way for the live
-                    // ping/speed/country panel below.
+                // Keep HomeVpnCard for location/connection/subscription quick access,
+                // but the primary VPN config management is now the clean list below.
+                if (groups.isNotEmpty()) {
                     AnimatedVisibility(
                         visible = !isRunning,
                         enter = fadeIn() + expandVertically(),
@@ -261,19 +263,34 @@ fun MainScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         )
                     }
-
-                    ConnectionStatsPanel(
-                        isRunning = isRunning,
-                        pingText = uiState.livePingMillis?.let { "${it}ms" }
-                            ?: connectedServer?.testDelayString.orEmpty(),
-                        downloadSpeedText = uiState.downloadSpeedText,
-                        uploadSpeedText = uiState.uploadSpeedText,
-                        connectionDurationText = uiState.connectionDurationText,
-                        remoteIp = uiState.remoteIp,
-                        remoteCountryName = uiState.remoteCountryName,
-                        remoteCountryCode = uiState.remoteCountryCode,
-                    )
                 }
+
+                ConnectionStatsPanel(
+                    isRunning = isRunning,
+                    pingText = uiState.livePingMillis?.let { "${it}ms" }
+                        ?: connectedServer?.testDelayString.orEmpty(),
+                    downloadSpeedText = uiState.downloadSpeedText,
+                    uploadSpeedText = uiState.uploadSpeedText,
+                    connectionDurationText = uiState.connectionDurationText,
+                    remoteIp = uiState.remoteIp,
+                    remoteCountryName = uiState.remoteCountryName,
+                    remoteCountryCode = uiState.remoteCountryCode,
+                )
+
+                // ---- Clean Main VPN Configuration List (independent of subscription) ----
+                MainVpnConfigSection(
+                    mainViewModel = mainViewModel,
+                    selectedGuid = selectedGuid,
+                    isTesting = uiState.isTesting,
+                    onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                    onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                    onShareAction = { action -> onAction(action) },
+                    onRemoveServer = removeServer,
+                    onAddFromClipboard = { onAction(MainAction.ImportVpnFromClipboard) },
+                    onScanVpnQr = { onAction(MainAction.ImportQRcode) },
+                    onRetest = { onAction(MainAction.TestRealAllServers) },
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }

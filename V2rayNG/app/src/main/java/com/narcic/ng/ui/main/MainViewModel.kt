@@ -192,6 +192,24 @@ class MainViewModel(
     private fun currentServers(): List<ServersCache> =
         mutableServersForGroup(uiState.value.selectedGroupId).value
 
+    // Manual servers (subscriptionId = "" -> DEFAULT_SUBSCRIPTION_ID)
+    fun manualServersFlow(): StateFlow<List<ServersCache>> =
+        serversForGroup(AppConfig.DEFAULT_SUBSCRIPTION_ID)
+
+    fun getTop5BestServers(): List<ServersCache> {
+        val all = if (isGroupAllDisplayEnabled()) {
+            // When All enabled, manualServersFlow is separate; consider manual only for top5 in main list
+            manualServersFlow().value
+        } else {
+            manualServersFlow().value
+        }
+        return all.filter { it.testDelayMillis > 0L }
+            .sortedBy { it.testDelayMillis }
+            .take(5)
+    }
+
+    private fun isGroupAllDisplayEnabled(): Boolean = dataSource.isGroupAllDisplayEnabled()
+
     // ---------- Action handler ----------
     fun onAction(action: MainAction) {
         when (action) {
@@ -214,6 +232,10 @@ class MainViewModel(
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
+            is MainAction.ImportVpnConfig -> importManualVpnConfig(action.configText)
+            MainAction.ImportVpnFromClipboard -> importVpnFromClipboard()
+            is MainAction.ImportSubscriptionFromClipboard -> importSubscriptionFromClipboard(action.text)
+            is MainAction.ImportSubscriptionFromQr -> importSubscriptionFromQr(action.text)
             is MainAction.LocateHandled -> consumeLocateTarget(action.target)
             is MainAction.SetLocationFilter -> setLocationFilter(action.flag)
             MainAction.SetAutoConnection -> setAutoConnection(true)
@@ -324,6 +346,8 @@ class MainViewModel(
 
     fun getSubscriptions(): List<SubscriptionCache> = dataSource.getSubscriptions()
 
+    fun getSubscriptionItem(groupId: String) = dataSource.getSubscriptionItem(groupId)
+
     private fun resolveSelectedGroup(groups: List<GroupMapItem>): String {
         val current = uiState.value.selectedGroupId
         val resolved = when {
@@ -375,14 +399,22 @@ class MainViewModel(
                     )
                 }
                 groups.forEach { mutableServersForGroup(it.id) }
+                // Ensure manual group flow exists and is populated (independent of subscriptions)
+                mutableServersForGroup(AppConfig.DEFAULT_SUBSCRIPTION_ID)
 
                 if (groups.isEmpty()) {
-                    cacheMutex.withLock { groupDataCache.clear() }
+                    // Still load manual servers even if no subscriptions
+                    val manualServers = loadGroup(AppConfig.DEFAULT_SUBSCRIPTION_ID, forceRefresh)
+                    updateGroupUi(AppConfig.DEFAULT_SUBSCRIPTION_ID, manualServers)
+                    if (!initialPageReady.isCompleted) initialPageReady.complete(Unit)
                     return@launch
                 }
 
                 val selectedServers = loadGroup(selectedGroup, forceRefresh)
                 updateGroupUi(selectedGroup, selectedServers)
+                // Always keep manual list fresh for Main VPN section
+                val manualServersInit = loadGroup(AppConfig.DEFAULT_SUBSCRIPTION_ID, forceRefresh)
+                updateGroupUi(AppConfig.DEFAULT_SUBSCRIPTION_ID, manualServersInit)
 
                 if (!initialPageReady.isCompleted) {
                     initialPageReady.complete(Unit)
@@ -416,15 +448,19 @@ class MainViewModel(
         launchLoading {
             withContext(ioDispatcher) {
                 try {
-                    val (count, countSub) = dataSource.importBatchConfig(
-                        configText, uiState.value.selectedGroupId, true
-                    )
+                    // Legacy path: kept for narcic:// share-link import and file import.
+                    // Force empty subId so it becomes manual (never inherits selected subscription).
+                    val (count, countSub) = dataSource.importManualVpnConfig(configText)
+                    val effectiveCount = if (count > 0) count else {
+                        // If manual import yielded 0, maybe it was a subscription link - try subscription path only if caller explicitly wanted it?
+                        // For backward compat, fallback to generic import with empty subId
+                        dataSource.importBatchConfig(configText, "", true).first
+                    }
                     when {
-                        count > 0 -> {
-                            toast(dataSource.getString(R.string.title_import_config_count, count))
+                        effectiveCount > 0 -> {
+                            toast(dataSource.getString(R.string.title_import_config_count, effectiveCount))
                             setupGroupTab(forceRefresh = true)
                         }
-
                         countSub > 0 -> setupGroupTab(forceRefresh = true)
                         else -> toastError(R.string.toast_failure)
                     }
@@ -432,6 +468,78 @@ class MainViewModel(
                     throw cancelled
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Failed to import batch config", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    private fun importManualVpnConfig(configText: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val (count, _) = dataSource.importManualVpnConfig(configText)
+                    if (count > 0) {
+                        toast(dataSource.getString(R.string.title_import_config_count, count))
+                        // Refresh manual group and all groups
+                        cacheMutex.withLock { groupDataCache.remove(AppConfig.DEFAULT_SUBSCRIPTION_ID) }
+                        setupGroupTab(forceRefresh = true)
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import manual VPN config", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    private fun importVpnFromClipboard() {
+        // Direct clipboard handled in Activity; this is placeholder for ViewModel-initiated clipboard
+        // Not used; Activity reads clipboard and calls importManualVpnConfig
+    }
+
+    private fun importSubscriptionFromClipboard(text: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val (count, countSub) = dataSource.createSubscriptionOnly("", text)
+                    if (countSub > 0 || count > 0) {
+                        toast("سابسکریپشن اضافه شد")
+                        dataSource.syncSubscriptions()
+                        setupGroupTab(forceRefresh = true).join()
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import subscription from clipboard", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    private fun importSubscriptionFromQr(text: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val (count, countSub) = dataSource.createSubscriptionOnly("", text)
+                    if (countSub > 0 || count > 0) {
+                        toast("سابسکریپشن اضافه شد")
+                        dataSource.syncSubscriptions()
+                        setupGroupTab(forceRefresh = true).join()
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import subscription from QR", e)
                     toastError(R.string.toast_failure)
                 }
             }
@@ -649,6 +757,8 @@ class MainViewModel(
             val order = buildList {
                 if (selected in groupIds) add(selected)
                 addAll(groupIds.filter { it != selected })
+                // Always refresh manual group for Main VPN section
+                if (AppConfig.DEFAULT_SUBSCRIPTION_ID !in groupIds) add(AppConfig.DEFAULT_SUBSCRIPTION_ID)
             }
             order.forEachIndexed { index, groupId ->
                 ensureActive()
@@ -963,16 +1073,18 @@ class MainViewModel(
         }
     }
 
-    /** "+ افزودن سابسکریپشن" (image 9): paste a link or raw configs, name optional. */
+    /** "+ افزودن سابسکریپشن" (image 9): subscription URLs only - strict separation. */
     private fun addSubscriptionFromText(name: String, content: String) {
         launchLoading {
             withContext(ioDispatcher) {
                 try {
-                    val (count, countSub) = dataSource.createSubscriptionFromText(name, content)
-                    if (count > 0) {
-                        toast(dataSource.getString(R.string.title_import_config_count, count))
-                    } else if (countSub > 0) {
+                    // Strict: subscription section must NOT import ordinary VPN configs as subscriptions
+                    val (count, countSub) = dataSource.createSubscriptionOnly(name, content)
+                    if (countSub > 0) {
                         toast("سابسکریپشن اضافه شد")
+                    } else if (count > 0) {
+                        // Should not happen for strict, but handle
+                        toast(dataSource.getString(R.string.title_import_config_count, count))
                     } else {
                         toastError(R.string.toast_failure)
                         return@withContext

@@ -70,6 +70,14 @@ sealed interface MainAction {
     data object RestartService : MainAction
     data object LocateSelectedServer : MainAction
 
+    // ---- Manual VPN config (Main VPN section) ----
+    /** Clipboard/QR for VPN configs -> manual with subscriptionId = "" */
+    data class ImportVpnConfig(val configText: String) : MainAction
+    data object ImportVpnFromClipboard : MainAction
+    // ---- Subscription-only flows ----
+    data class ImportSubscriptionFromClipboard(val text: String) : MainAction
+    data class ImportSubscriptionFromQr(val text: String) : MainAction
+
     data class SelectGroup(val groupId: String) : MainAction
     data class SelectServer(val guid: String) : MainAction
     data class RemoveServer(val guid: String) : MainAction

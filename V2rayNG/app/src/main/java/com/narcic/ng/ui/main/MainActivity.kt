@@ -105,7 +105,7 @@ class MainActivity : HelperBaseComponentActivity() {
                 when (action) {
                     MainAction.ToggleService -> handleFabAction()
                     MainAction.TestCurrentServer -> handleLayoutTestClick()
-                    MainAction.ImportQRcode -> importQRcode()
+                    MainAction.ImportQRcode -> importVpnQRcode()
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
                     is MainAction.ImportManually -> importManually(action.type)
@@ -116,6 +116,11 @@ class MainActivity : HelperBaseComponentActivity() {
                     is MainAction.ShareClipboard -> shareToClipboard(action.guid)
                     is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
                     is MainAction.ShareLink -> shareLink(action.guid)
+                    is MainAction.ShareQRCode -> shareQRCode(action.guid)
+                    MainAction.ImportVpnFromClipboard -> importVpnFromClipboard()
+                    is MainAction.ImportVpnConfig -> importManualVpnConfig(action.configText)
+                    is MainAction.ImportSubscriptionFromClipboard -> mainViewModel.onAction(action)
+                    is MainAction.ImportSubscriptionFromQr -> mainViewModel.onAction(action)
                     else -> mainViewModel.onAction(action)
                 }
             },
@@ -235,6 +240,30 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    // Main VPN QR: VPN config -> manual (subscriptionId = "")
+    private fun importVpnQRcode() {
+        launchQRCodeScanner { scanResult ->
+            if (scanResult != null) {
+                // Validate is VPN config, reject subscription URLs for this flow
+                if (Utils.isValidSubUrl(scanResult.trim()) && !isVpnConfig(scanResult)) {
+                    toastError(R.string.toast_failure)
+                } else {
+                    mainViewModel.onAction(MainAction.ImportVpnConfig(scanResult))
+                }
+            }
+        }
+    }
+
+    // Subscription QR: subscription URL only
+    private fun importSubscriptionQRcode(scanResult: String) {
+        // Strict: only subscription URLs
+        if (isVpnConfig(scanResult) || !Utils.isValidSubUrl(scanResult.trim())) {
+            toastError(R.string.toast_failure)
+            return
+        }
+        mainViewModel.onAction(MainAction.ImportSubscriptionFromQr(scanResult))
+    }
+
     private fun importClipboard() {
         try {
             val text = Utils.getClipboard(this)
@@ -242,6 +271,47 @@ class MainActivity : HelperBaseComponentActivity() {
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to import config from clipboard", e)
         }
+    }
+
+    private fun importVpnFromClipboard() {
+        try {
+            val text = Utils.getClipboard(this)
+            if (text.isBlank()) {
+                toast(R.string.toast_none_data_clipboard)
+                return
+            }
+            if (text.trim().lines().all { Utils.isValidSubUrl(it.trim()) } && !isVpnConfig(text)) {
+                toastError(R.string.toast_failure)
+                return
+            }
+            mainViewModel.onAction(MainAction.ImportVpnConfig(text))
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to import VPN config from clipboard", e)
+            toastError(R.string.toast_failure)
+        }
+    }
+
+    private fun importManualVpnConfig(configText: String) {
+        // Direct manual import with empty subscriptionId, never inherits selected group
+        mainViewModel.onAction(MainAction.ImportVpnConfig(configText))
+    }
+
+    private fun isVpnConfig(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return false
+        val schemes = listOf(
+            AppConfig.VMESS, AppConfig.SHADOWSOCKS, AppConfig.SOCKS, AppConfig.VLESS,
+            AppConfig.TROJAN, AppConfig.WIREGUARD, AppConfig.HYSTERIA2, AppConfig.HY2,
+            "ss://", "vmess://", "vless://", "trojan://", "wireguard://", "socks://", "socks4://", "socks5://", "hysteria2://", "hy2://", "tuic://", "hysteria://"
+        )
+        return schemes.any { trimmed.startsWith(it, ignoreCase = true) } ||
+            (trimmed.contains("inbounds") && trimmed.contains("outbounds")) ||
+            trimmed.startsWith("[Interface]") ||
+            trimmed.startsWith("v2rayn://")
+    }
+
+    private fun shareQRCode(guid: String) {
+        mainViewModel.onAction(MainAction.ShareQRCode(guid))
     }
 
     private fun importConfigLocal() {
@@ -281,7 +351,8 @@ class MainActivity : HelperBaseComponentActivity() {
             return
         }
         
-        mainViewModel.onAction(MainAction.ImportBatchConfig(decodedConfig))
+        // Share link is always VPN config -> manual
+        mainViewModel.onAction(MainAction.ImportVpnConfig(decodedConfig))
     }
 
     private fun editServer(guid: String, profile: ProfileItem) {

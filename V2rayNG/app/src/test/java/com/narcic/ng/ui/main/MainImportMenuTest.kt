@@ -1,5 +1,7 @@
 package com.narcic.ng.ui.main
 
+import com.narcic.ng.dto.entities.ProfileItem
+import com.narcic.ng.enums.EConfigType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -43,13 +45,11 @@ class MainImportMenuTest {
 
     @Test
     fun shareMenuExcludesActionsForDefaultSubscription() {
-        val profile = ProfileItem().apply {
-            configType = EConfigType.VMESS
-            subscriptionId = "__default_subscription__"
-        }
+        // For default subscription, share/edit hidden but delete remains when management included
+        // With includeManagement=false (share only), all share actions hidden -> empty
         assertEquals(
             emptyList(),
-            serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = true)
+            serverMenuActions(isComplexProfile = false, includeManagementActions = false, isFromDefaultSubscription = true)
         )
     }
 

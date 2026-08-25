@@ -32,7 +32,7 @@ internal fun serverMenuActions(
 ): List<ServerMenuAction> = ServerMenuAction.entries.filter { action ->
     (includeManagementActions || action.isShareAction)
         && (!isComplexProfile || action.supportsComplexProfiles)
-        && !isFromDefaultSubscription
+        && (action == ServerMenuAction.Delete || !isFromDefaultSubscription)
 }
 
 private fun profileIsFromDefaultSubscription(profile: ProfileItem): Boolean {

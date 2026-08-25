@@ -20,6 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,12 +41,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.AppConfig
+import com.narcic.ng.R
 import com.narcic.ng.dto.GroupMapItem
+import com.narcic.ng.extension.toast
+import com.narcic.ng.ui.ScannerActivity
 import com.narcic.ng.ui.compose.AppTopBar
+import com.narcic.ng.util.Utils
 
 @Composable
 fun SubscriptionsScreen(
@@ -56,31 +64,66 @@ fun SubscriptionsScreen(
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onBack: () -> Unit,
+    onScanSubscriptionQr: (String) -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val subscriptionQrLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanResult = result.data?.getStringExtra("SCAN_RESULT")
+            if (!scanResult.isNullOrBlank()) {
+                // Strict subscription-only: reject ordinary VPN configs
+                val isVpn = scanResult.trim().let { txt ->
+                    listOf("vmess://", "vless://", "ss://", "trojan://", "wireguard://", "socks://", "hysteria2://", "hy2://", "tuic://", "hysteria://", "v2rayn://")
+                        .any { txt.startsWith(it, ignoreCase = true) }
+                }
+                if (isVpn || !Utils.isValidSubUrl(scanResult.trim())) {
+                    context.toast(R.string.toast_failure)
+                } else {
+                    onScanSubscriptionQr(scanResult)
+                }
+            } else {
+                context.toast(R.string.toast_decoding_failed)
+            }
+        }
+    }
     Scaffold(
         topBar = { AppTopBar(title = "سابسکریپشن", onBackClick = onBack, isLoading = isAdding) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             // ── هدر + دکمه افزودن ──────────────────────────────────────
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = "منبع را انتخاب کنید، اتصال‌هایش را تست کنید یا گزینه‌ها را باز کنید.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(
-                    onClick = onAddClick,
-                    enabled = !isAdding,
-                    shape = RoundedCornerShape(14.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(if (isAdding) "در حال افزودن…" else "+ افزودن")
+                    OutlinedButton(
+                        onClick = onAddClick,
+                        enabled = !isAdding,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (isAdding) "در حال افزودن…" else "+ افزودن")
+                    }
+                    OutlinedButton(
+                        onClick = { subscriptionQrLauncher.launch(Intent(context, ScannerActivity::class.java)) },
+                        enabled = !isAdding,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Scan Subscription QR")
+                    }
                 }
             }
 
@@ -214,7 +257,7 @@ private fun DefaultSubscriptionsSection(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// کارت هر سابسکریپشن اضافه‌شده
+// کارت هر سابسکریپشن اضافه‌شده — فقط اطلاعات سابسکریپشن، بدون لود کانفیگ‌های عادی
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SubscriptionCard(
@@ -226,8 +269,9 @@ private fun SubscriptionCard(
     onTest: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val servers by mainViewModel.serversForGroup(group.id).collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
+    // Load subscription metadata only, not VPN configs - per separation requirement
+    val subscription = remember(group.id) { runCatching { mainViewModel.getSubscriptionItem(group.id) }.getOrNull() }
 
     Column(
         modifier = Modifier
@@ -273,11 +317,21 @@ private fun SubscriptionCard(
         }
 
         Text(
-            text = "داخلی · ${servers.size} اتصال",
+            text = subscription?.url?.takeIf { it.isNotBlank() }?.let { url ->
+                if (url.length > 40) url.take(40) + "…" else url
+            } ?: "Local subscription",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
         )
+        if (subscription?.lastUpdated != null && subscription.lastUpdated > 0) {
+            Text(
+                text = "Updated: ${Utils.formatTimestamp(subscription.lastUpdated)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
 
         Row(
             modifier = Modifier
