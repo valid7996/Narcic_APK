@@ -220,7 +220,9 @@ class MainActivity : HelperBaseComponentActivity() {
                 putExtra("createConfigType", createConfigType)
             }
         }.apply {
-            putExtra("subscriptionId", mainViewModel.uiState.value.selectedGroupId)
+            // Manual configurations should have empty subscriptionId, not the selected group ID
+            // This ensures edit/pencil and share actions are visible for manual configs
+            putExtra("subscriptionId", "")
         }
         profileEditorLauncher.launch(intent)
     }
@@ -301,7 +303,9 @@ class MainActivity : HelperBaseComponentActivity() {
             putExtra("guid", guid)
             putExtra("isRunning", mainViewModel.uiState.value.isRunning)
             putExtra("createConfigType", profile.configType.value)
-            putExtra("subscriptionId", mainViewModel.uiState.value.selectedGroupId)
+            // Manual configurations should have empty subscriptionId, not the selected group ID
+            // This ensures edit/pencil and share actions are visible for manual configs
+            putExtra("subscriptionId", "")
         }
         profileEditorLauncher.launch(intent)
     }
