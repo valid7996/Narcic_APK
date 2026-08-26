@@ -33,6 +33,7 @@ import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.DeleteConfirmDialog
 import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.SpiderWebCorners
 import kotlinx.coroutines.launch
 
@@ -114,6 +115,14 @@ fun MainScreen(
             showDelSubscriptionConfirm = null
             onAction(MainAction.RemoveSubscriptionGroup(groupId))
         }
+    )
+
+    // "Share > QR Code" from a server row: the ViewModel renders the bitmap
+    // into uiState.shareQRCodeBitmap (see MainAction.ShareQRCode); this is
+    // what actually shows it to the user. QRCodeDialog no-ops on a null bitmap.
+    QRCodeDialog(
+        bitmap = uiState.shareQRCodeBitmap,
+        onDismiss = { onAction(MainAction.DismissQRCodeDialog) }
     )
 
     // ---- Drawer's "Manage configs" bulk-delete confirmations ----

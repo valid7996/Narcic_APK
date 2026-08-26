@@ -128,8 +128,15 @@ class MainActivity : HelperBaseComponentActivity() {
         )
     }
 
-    private fun shareToClipboard(guid: String): Boolean =
-        AngConfigManager.share2Clipboard(this, guid) == 0
+    private fun shareToClipboard(guid: String) {
+        // Was previously fire-and-forget with no user feedback at all --
+        // the config was copied but nothing on screen told the user it worked.
+        if (AngConfigManager.share2Clipboard(this, guid) == 0) {
+            toastSuccess(R.string.toast_success)
+        } else {
+            toastError(R.string.toast_failure)
+        }
+    }
 
     private fun shareLink(guid: String) {
         try {
