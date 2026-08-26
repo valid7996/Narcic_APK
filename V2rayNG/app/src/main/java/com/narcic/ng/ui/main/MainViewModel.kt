@@ -228,7 +228,7 @@ class MainViewModel(
             MainAction.ExportAll -> exportAllAsync()
             MainAction.AutoConnect -> autoConnect()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
-            is MainAction.SelectServer -> updateSelectedGuid(action.guid)
+            is MainAction.SelectServer -> selectServerManually(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
@@ -787,6 +787,19 @@ class MainViewModel(
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid, livePingMillis = null) }
+    }
+
+    /**
+     * A user tap on a specific server row in the main list. Unlike
+     * updateSelectedGuid() alone, this also turns off "auto-connect to best
+     * server" (autoConnection) -- otherwise the tap only changes which row
+     * is highlighted, but the next Connect press still runs autoConnect()
+     * and silently reconnects to the lowest-ping server instead of the one
+     * the user just picked.
+     */
+    fun selectServerManually(guid: String) {
+        if (uiState.value.autoConnection) setAutoConnection(false)
+        updateSelectedGuid(guid)
     }
 
     fun refreshSelectedGuid() {
