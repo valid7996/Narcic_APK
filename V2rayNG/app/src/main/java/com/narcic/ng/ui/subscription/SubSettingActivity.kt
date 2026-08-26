@@ -4,6 +4,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,9 +16,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,9 +41,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,8 +59,10 @@ import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.handler.MmkvManager.rememberMmkvBool
 import com.narcic.ng.ui.base.BaseComponentActivity
 import com.narcic.ng.ui.compose.AppTopBar
+import com.narcic.ng.ui.compose.AuroraCyan
+import com.narcic.ng.ui.compose.AuroraIndigo
+import com.narcic.ng.ui.compose.AuroraViolet
 import com.narcic.ng.ui.compose.DeleteConfirmDialog
-import com.narcic.ng.ui.compose.ItemDivider
 import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.ReorderableListItem
 import com.narcic.ng.ui.compose.SelectListDialog
@@ -158,17 +174,59 @@ fun SubSettingScreen(
                         scope = this,
                         isDragging = isDragging
                     ) {
+                        // Curated Narcic subscriptions (Irancell / NG-JSON / NG-WireGuard)
+                        // are read-only: never editable or shareable here, and their
+                        // source link is never shown below the name.
+                        val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
+                        val badgeColor = if (isDefault) AuroraCyan else AuroraViolet
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp),
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .shadow(
+                                    elevation = 3.dp,
+                                    shape = RoundedCornerShape(16.dp),
+                                    ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                )
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            MaterialTheme.colorScheme.surfaceContainer
+                                        )
+                                    )
+                                )
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .shadow(2.dp, CircleShape, spotColor = badgeColor.copy(alpha = 0.4f))
+                                    .clip(CircleShape)
+                                    .background(badgeColor.copy(alpha = 0.16f))
+                                    .border(1.dp, badgeColor.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_subscriptions_24dp),
+                                    contentDescription = null,
+                                    tint = badgeColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = subCache.subscription.remarks,
                                     style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -194,40 +252,36 @@ fun SubSettingScreen(
                                 horizontalAlignment = Alignment.End,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
-                                Row {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     if (!isDefault && subCache.subscription.url.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                        }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_share_24dp),
-                                                contentDescription = "Share",
-                                                tint = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
+                                        SubRoundIconButton(
+                                            icon = R.drawable.ic_share_24dp,
+                                            contentDescription = "Share",
+                                            tint = AuroraIndigo,
+                                            onClick = {
+                                                shareTarget = Pair(subCache.guid, subCache.subscription.url)
+                                            }
+                                        )
                                     }
                                     if (!isDefault) {
-                                        IconButton(onClick = { onEditSub(subCache.guid) }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_edit_24dp),
-                                                contentDescription = "Edit",
-                                                tint = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                    if (!isDefault) {
-                                        IconButton(onClick = {
-                                            if (confirmRemove) removeTarget = subCache.guid
-                                            else onRemoveSub(subCache.guid)
-                                        }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_delete_24dp),
-                                                contentDescription = "Delete"
-                                            )
-                                        }
+                                        SubRoundIconButton(
+                                            icon = R.drawable.ic_edit_24dp,
+                                            contentDescription = "Edit",
+                                            tint = AuroraCyan,
+                                            onClick = { onEditSub(subCache.guid) }
+                                        )
+                                        SubRoundIconButton(
+                                            icon = R.drawable.ic_delete_24dp,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            onClick = {
+                                                if (confirmRemove) removeTarget = subCache.guid
+                                                else onRemoveSub(subCache.guid)
+                                            }
+                                        )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Switch(
                                     checked = subCache.subscription.enabled,
                                     onCheckedChange = { checked ->
@@ -244,7 +298,6 @@ fun SubSettingScreen(
                             }
                         }
                     }
-                    ItemDivider()
                 }
             }
         }
@@ -342,6 +395,31 @@ fun SubSettingScreen(
                     Text(text = stringResource(android.R.string.cancel))
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun SubRoundIconButton(
+    icon: Int,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .shadow(2.dp, CircleShape, spotColor = tint.copy(alpha = 0.4f))
+            .clip(CircleShape)
+            .background(tint.copy(alpha = 0.14f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(18.dp)
         )
     }
 }
