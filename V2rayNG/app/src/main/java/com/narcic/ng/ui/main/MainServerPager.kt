@@ -366,12 +366,12 @@ fun ServerListItem(
                 // ویرایش و اشتراک‌گذاری فقط برای کانفیگ‌های غیر‌دیفالت
                 if (onShare != null) {
                     IconButton(onClick = onShare, Modifier.size(36.dp)) {
-                        Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(20.dp))
+                        Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 if (onEdit != null) {
                     IconButton(onClick = onEdit, Modifier.size(36.dp)) {
-                        Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(20.dp))
+                        Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 // حذف برای همه کانفیگ‌ها مجاز است

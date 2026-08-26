@@ -201,7 +201,8 @@ fun SubSettingScreen(
                                         }) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_share_24dp),
-                                                contentDescription = "Share"
+                                                contentDescription = "Share",
+                                                tint = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                     }
@@ -209,7 +210,8 @@ fun SubSettingScreen(
                                         IconButton(onClick = { onEditSub(subCache.guid) }) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_edit_24dp),
-                                                contentDescription = "Edit"
+                                                contentDescription = "Edit",
+                                                tint = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                     }

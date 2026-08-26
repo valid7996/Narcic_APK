@@ -1,11 +1,6 @@
 package com.narcic.ng.ui.main
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,21 +32,23 @@ import com.narcic.ng.ui.compose.SpiderWebCorners
  * Simplified connection screen:
  *  - Top bar: just the title + fetch-subscriptions action. There is no
  *    drawer/menu button — Import config / Manage configs have been removed.
- *  - ConnectHero: big connect circle + a "Test" button for a real/precise
- *    delay test of every config.
- *  - HomeVpnCard: the tappable موقعیت / اتصال / سابسکریپشن card. Each row
- *    opens its own full-screen picker (see the `show*` overlays below).
- *  - Every full-screen overlay (location/connection picker, subscriptions)
- *    registers a BackHandler so the hardware/gesture back button closes the
- *    overlay and returns to this screen instead of exiting the app. Once no
- *    overlay is showing, a root-level BackHandler takes over and minimizes
- *    the app (onMinimize) instead of finishing the activity.
- *  - ConnectionPickerScreen lists every config with a delete icon per row.
+ *  - ConnectHero: big connect circle.
+ *  - ConnectionStatsPanel: the "ping / IP / speed" card. Stays hidden while
+ *    disconnected and only appears once the user has picked a server from
+ *    the list below and actually connected (visible = isRunning).
+ *  - MainServerListSection: group tabs ("پیش‌فرض" = manually-entered
+ *    servers, like V2rayNg, plus one tab per subscription) with a single
+ *    "Test" button and a vertical server list, both scoped to whichever
+ *    tab/group is currently selected. Best ping always sorts to the top,
+ *    including inside the "Best Servers" (top 5) box.
+ *  - Every full-screen overlay (subscriptions) registers a BackHandler so
+ *    the hardware/gesture back button closes the overlay and returns to
+ *    this screen instead of exiting the app. Once no overlay is showing, a
+ *    root-level BackHandler takes over and minimizes the app (onMinimize)
+ *    instead of finishing the activity.
  *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / آمار / تنظیمات. Only the VPN tab
  *    renders this Scaffold; the other three either open a full-screen
- *    overlay or launch their own Activity (Statistics, Settings), matching
- *    the reference screenshots (none of the sub-screens keep the bottom bar
- *    visible).
+ *    overlay or launch their own Activity (Statistics, Settings).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,9 +69,7 @@ fun MainScreen(
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
     var showDelSubscriptionConfirm by remember { mutableStateOf<String?>(null) }
 
-    // Home "VPN" card + bottom-nav overlay screens.
-    var showLocationPicker by remember { mutableStateOf(false) }
-    var showConnectionPicker by remember { mutableStateOf(false) }
+    // Bottom-nav overlay screens.
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
 
@@ -113,50 +108,7 @@ fun MainScreen(
         )
     }
 
-    // ---- Full-screen overlays (image 3 / image 4-8 / image 5-7) ----
-    if (showLocationPicker) {
-        BackHandler { showLocationPicker = false }
-        val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
-        LocationPickerScreen(
-            servers = servers,
-            selectedFlag = uiState.locationFlag,
-            onSelect = { flag ->
-                onAction(MainAction.SetLocationFilter(flag))
-                showLocationPicker = false
-            },
-            onBack = { showLocationPicker = false },
-        )
-        return
-    }
-
-    if (showConnectionPicker) {
-        BackHandler { showConnectionPicker = false }
-        val servers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
-        ConnectionPickerScreen(
-            servers = servers,
-            groups = groups,
-            selectedGroupId = uiState.selectedGroupId,
-            isTesting = uiState.isTesting,
-            autoConnection = uiState.autoConnection,
-            selectedGuid = selectedGuid,
-            onSelectAuto = {
-                onAction(MainAction.SetAutoConnection)
-                showConnectionPicker = false
-            },
-            onSelectServer = { guid ->
-                onAction(MainAction.SetManualConnection(guid))
-                showConnectionPicker = false
-            },
-            onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
-            onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
-            onDelete = removeServer,
-            onSortByTest = { onAction(MainAction.SortByTestResults) },
-            onRemoveInvalid = { onAction(MainAction.RemoveInvalidServers) },
-            onBack = { showConnectionPicker = false },
-        )
-        return
-    }
-
+    // ---- Full-screen overlay: subscriptions ----
     if (showSubscriptions) {
         BackHandler { showSubscriptions = false }
         SubscriptionsScreen(
@@ -165,12 +117,6 @@ fun MainScreen(
             selectedGroupId = uiState.selectedGroupId,
             isAdding = isLoading,
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
-            onRefresh = { id -> onAction(MainAction.RefreshSubscription(id)) },
-            onTest = { id ->
-                onAction(MainAction.SelectGroup(id))
-                showSubscriptions = false
-                showConnectionPicker = true
-            },
             onDelete = { id -> showDelSubscriptionConfirm = id },
             onAddClick = { showAddSubscription = true },
             onBack = { showSubscriptions = false },
@@ -243,28 +189,8 @@ fun MainScreen(
                     onCheckConnection = { onAction(MainAction.TestCurrentServer) },
                 )
 
-                // Keep HomeVpnCard for location/connection/subscription quick access,
-                // but the primary VPN config management is now the clean list below.
-                if (groups.isNotEmpty()) {
-                    AnimatedVisibility(
-                        visible = !isRunning,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        HomeVpnCard(
-                            isRunning = isRunning,
-                            locationFlag = uiState.locationFlag,
-                            autoConnection = uiState.autoConnection,
-                            connectedServer = connectedServer,
-                            subscriptionName = groups.firstOrNull { it.id == uiState.selectedGroupId }?.remarks.orEmpty(),
-                            onOpenLocation = { showLocationPicker = true },
-                            onOpenConnection = { showConnectionPicker = true },
-                            onOpenSubscriptions = { showSubscriptions = true },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        )
-                    }
-                }
-
+                // Ping / IP / speed card — stays hidden until the user has
+                // picked a server below and actually connected.
                 ConnectionStatsPanel(
                     isRunning = isRunning,
                     pingText = uiState.livePingMillis?.let { "${it}ms" }
@@ -277,18 +203,21 @@ fun MainScreen(
                     remoteCountryCode = uiState.remoteCountryCode,
                 )
 
-                // ---- Clean Main VPN Configuration List (independent of subscription) ----
-                MainVpnConfigSection(
+                // ---- Group tabs (پیش‌فرض + هر سابسکریپشن) + تست + لیست عمودی سرورها ----
+                MainServerListSection(
                     mainViewModel = mainViewModel,
+                    groups = groups,
+                    selectedGroupId = uiState.selectedGroupId,
                     selectedGuid = selectedGuid,
                     isTesting = uiState.isTesting,
+                    onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
                     onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
                     onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
                     onShareAction = { action -> onAction(action) },
                     onRemoveServer = removeServer,
                     onAddFromClipboard = { onAction(MainAction.ImportVpnFromClipboard) },
                     onScanVpnQr = { onAction(MainAction.ImportQRcode) },
-                    onRetest = { onAction(MainAction.TestRealAllServers) },
+                    onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }

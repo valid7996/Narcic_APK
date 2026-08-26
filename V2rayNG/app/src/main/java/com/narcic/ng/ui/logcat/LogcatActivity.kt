@@ -172,7 +172,8 @@ fun LogcatScreen(
                     IconButton(onClick = { onShareLogcat() }) {
                         Icon(
                             painterResource(R.drawable.ic_share_24dp),
-                            contentDescription = stringResource(R.string.logcat_share)
+                            contentDescription = stringResource(R.string.logcat_share),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = {
