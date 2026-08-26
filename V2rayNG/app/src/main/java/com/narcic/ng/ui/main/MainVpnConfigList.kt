@@ -393,7 +393,7 @@ private fun VpnConfigRow(
     val profile = serverCache.profile
     val isSelected = serverCache.guid == selectedGuid
     // Curated Narcic subscriptions (Irancell / NG-JSON / NG-WireGuard) are
-    // read-only content: no Edit, no Share, and (per SubSettingActivity)
+    // read-only content: no Edit, no Share, and (per SubscriptionsScreen.kt)
     // their source link is never displayed either. Delete still works so
     // a customer can drop a single bad server locally.
     val isDefault = remember(profile.subscriptionId) { isDefaultConfig(profile) }
