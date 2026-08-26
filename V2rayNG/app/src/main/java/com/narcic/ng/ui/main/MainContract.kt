@@ -116,4 +116,7 @@ sealed interface MainAction {
 
     /** "سابسکریپشن‌ها" → "گزینه‌ها" → "حذف": delete a subscription and its configs. */
     data class RemoveSubscriptionGroup(val groupId: String) : MainAction
+
+    /** "سابسکریپشن‌ها" → ویرایش: rename a subscription and/or change its URL. */
+    data class EditSubscription(val groupId: String, val name: String, val url: String) : MainAction
 }

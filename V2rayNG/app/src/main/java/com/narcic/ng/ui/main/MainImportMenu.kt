@@ -20,7 +20,11 @@ internal enum class ServerMenuAction(
     ShareQRCode(R.string.share_method_qrcode, isShareAction = true, supportsComplexProfiles = false),
     ShareClipboard(R.string.share_method_clipboard, isShareAction = true, supportsComplexProfiles = false),
     ShareFullContent(R.string.share_method_full_content, isShareAction = true, supportsComplexProfiles = true),
-    ShareLink(R.string.share_method_link, isShareAction = true, supportsComplexProfiles = true),
+    // Like ShareQRCode/ShareClipboard, ShareLink is built from shareConfig(guid),
+    // which only produces a URI for the simple protocols (vmess/vless/ss/trojan/
+    // socks/wireguard/hysteria2) and returns "" for complex profiles (custom
+    // JSON / policy group / proxy chain) — so it must not be offered for those.
+    ShareLink(R.string.share_method_link, isShareAction = true, supportsComplexProfiles = false),
     Edit(R.string.action_edit, isShareAction = false, supportsComplexProfiles = true),
     Delete(R.string.action_delete, isShareAction = false, supportsComplexProfiles = true),
 }

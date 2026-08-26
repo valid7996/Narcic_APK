@@ -243,6 +243,7 @@ class MainViewModel(
             is MainAction.RefreshSubscription -> refreshSubscription(action.subId)
             is MainAction.AddSubscriptionFromText -> addSubscriptionFromText(action.name, action.content)
             is MainAction.RemoveSubscriptionGroup -> removeSubscriptionGroup(action.groupId)
+            is MainAction.EditSubscription -> editSubscription(action.groupId, action.name, action.url)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -1102,6 +1103,29 @@ class MainViewModel(
                     throw cancelled
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Failed to add subscription", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
+    /** "سابسکریپشن‌ها" → ویرایش: rename a subscription and/or change its URL. */
+    private fun editSubscription(groupId: String, name: String, url: String) {
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    val ok = dataSource.updateSubscription(groupId, name, url)
+                    if (ok) {
+                        cacheMutex.withLock { groupDataCache.remove(groupId) }
+                        setupGroupTab(forceRefresh = true).join()
+                        toastSuccess(R.string.toast_success)
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to edit subscription: $groupId", e)
                     toastError(R.string.toast_failure)
                 }
             }

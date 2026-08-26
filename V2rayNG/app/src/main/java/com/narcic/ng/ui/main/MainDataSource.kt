@@ -55,6 +55,13 @@ interface MainDataSource : Closeable {
     /** Deletes a subscription group and every config that belongs to it. */
     fun removeSubscription(groupId: String)
 
+    /**
+     * Updates an existing subscription's name and/or URL in place, preserving
+     * every other field (enabled, autoUpdate, filter, userAgent, etc.).
+     * Returns false if [groupId] doesn't refer to an existing subscription.
+     */
+    fun updateSubscription(groupId: String, name: String, url: String): Boolean
+
     fun clearAllTestDelayResults(guids: List<String>)
     fun sortByTestResultsForSub(subId: String)
     fun getSubsList(): List<String>

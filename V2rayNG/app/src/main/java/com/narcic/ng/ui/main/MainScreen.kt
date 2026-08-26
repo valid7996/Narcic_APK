@@ -8,30 +8,40 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
+import com.narcic.ng.ui.compose.DeleteConfirmDialog
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.SpiderWebCorners
+import kotlinx.coroutines.launch
 
 /**
- * Simplified connection screen:
- *  - Top bar: just the title + fetch-subscriptions action. There is no
- *    drawer/menu button — Import config / Manage configs have been removed.
+ * Connection screen:
+ *  - Top bar: a drawer/menu button (top-left) + the title + fetch-subscriptions
+ *    action. The drawer holds "Import config" (link/clipboard/QR/local file/
+ *    manual-by-protocol) and "Manage configs" (test/sort/export-all + delete
+ *    all / duplicate / invalid) — see MainDrawer.kt.
  *  - ConnectHero: big connect circle.
  *  - ConnectionStatsPanel: the "ping / IP / speed" card. Stays hidden while
  *    disconnected and only appears once the user has picked a server from
@@ -73,6 +83,14 @@ fun MainScreen(
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
 
+    // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
+    // "Manage configs" (test/sort/export-all + bulk delete).
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+    var showDelAllConfirm by remember { mutableStateOf(false) }
+    var showDelDuplicateConfirm by remember { mutableStateOf(false) }
+    var showDelInvalidConfirm by remember { mutableStateOf(false) }
+
     val removeServer: (String) -> Unit = { guid ->
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
     }
@@ -98,6 +116,29 @@ fun MainScreen(
         }
     )
 
+    // ---- Drawer's "Manage configs" bulk-delete confirmations ----
+    if (showDelAllConfirm) {
+        DeleteConfirmDialog(
+            message = stringResource(R.string.confirm_delete_visible_profiles),
+            onConfirm = { showDelAllConfirm = false; onAction(MainAction.RemoveAllServers) },
+            onDismiss = { showDelAllConfirm = false },
+        )
+    }
+    if (showDelDuplicateConfirm) {
+        DeleteConfirmDialog(
+            message = stringResource(R.string.confirm_delete_duplicate_profiles),
+            onConfirm = { showDelDuplicateConfirm = false; onAction(MainAction.RemoveDuplicateServers) },
+            onDismiss = { showDelDuplicateConfirm = false },
+        )
+    }
+    if (showDelInvalidConfirm) {
+        DeleteConfirmDialog(
+            message = stringResource(R.string.confirm_delete_invalid_profiles),
+            onConfirm = { showDelInvalidConfirm = false; onAction(MainAction.RemoveInvalidServers) },
+            onDismiss = { showDelInvalidConfirm = false },
+        )
+    }
+
     if (showAddSubscription) {
         AddSubscriptionDialog(
             onAdd = { name, content ->
@@ -118,6 +159,7 @@ fun MainScreen(
             isAdding = isLoading,
             onSelectGroup = { id -> onAction(MainAction.SelectGroup(id)) },
             onDelete = { id -> showDelSubscriptionConfirm = id },
+            onEdit = { groupId, name, url -> onAction(MainAction.EditSubscription(groupId, name, url)) },
             onAddClick = { showAddSubscription = true },
             onBack = { showSubscriptions = false },
             onScanSubscriptionQr = { text -> onAction(MainAction.ImportSubscriptionFromQr(text)) },
@@ -127,9 +169,12 @@ fun MainScreen(
 
     // No overlay is showing (all branches above return early), so this is
     // the root connection screen: back should minimize the app instead of
-    // finishing the activity, matching the "don't exit on back" behavior
-    // the app wants everywhere except from an overlay.
-    BackHandler { onMinimize() }
+    // finishing the activity — unless the drawer is open, in which case back
+    // just closes the drawer.
+    BackHandler(enabled = drawerState.isOpen) {
+        coroutineScope.launch { drawerState.close() }
+    }
+    BackHandler(enabled = !drawerState.isOpen) { onMinimize() }
 
     val isDark = LocalDarkTheme.current
     val backdrop = remember(isDark) {
@@ -142,6 +187,30 @@ fun MainScreen(
             Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
         }
     }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            MainDrawerContent(
+                onNavigate = onNavigate,
+                onAction = { action ->
+                    coroutineScope.launch { drawerState.close() }
+                    onAction(action)
+                },
+                onDelAllConfig = {
+                    coroutineScope.launch { drawerState.close() }
+                    showDelAllConfirm = true
+                },
+                onDelDuplicateConfig = {
+                    coroutineScope.launch { drawerState.close() }
+                    showDelDuplicateConfirm = true
+                },
+                onDelInvalidConfig = {
+                    coroutineScope.launch { drawerState.close() }
+                    showDelInvalidConfirm = true
+                },
+            )
+        },
+    ) {
     Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
         if (isDark) {
             // Decorative animated spiderweb in the four corners, echoing the
@@ -154,7 +223,8 @@ fun MainScreen(
             topBar = {
                 MainTopBar(
                     isLoading = isLoading,
-                    onFetchConfig = { onAction(MainAction.UpdateSubscriptions) }
+                    onFetchConfig = { onAction(MainAction.UpdateSubscriptions) },
+                    onMenuClick = { coroutineScope.launch { drawerState.open() } },
                 )
             },
             bottomBar = {
@@ -222,5 +292,6 @@ fun MainScreen(
                 )
             }
         }
+    }
     }
 }

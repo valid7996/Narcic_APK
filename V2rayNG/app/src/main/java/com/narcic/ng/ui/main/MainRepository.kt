@@ -202,6 +202,15 @@ class MainRepository(
     override fun removeSubscription(groupId: String) =
         SettingsManager.removeSubscriptionWithDefault(groupId)
 
+    override fun updateSubscription(groupId: String, name: String, url: String): Boolean {
+        if (groupId.isEmpty()) return false
+        val item = MmkvManager.decodeSubscription(groupId) ?: return false
+        item.remarks = name
+        item.url = url
+        MmkvManager.encodeSubscription(groupId, item)
+        return true
+    }
+
     override fun clearAllTestDelayResults(guids: List<String>) =
         MmkvManager.clearAllTestDelayResults(guids)
 

@@ -18,15 +18,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,11 +65,13 @@ fun SubscriptionsScreen(
     isAdding: Boolean,
     onSelectGroup: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onEdit: (groupId: String, name: String, url: String) -> Unit = { _, _, _ -> },
     onAddClick: () -> Unit,
     onBack: () -> Unit,
     onScanSubscriptionQr: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
+    var editingGroup by remember { mutableStateOf<GroupMapItem?>(null) }
     val subscriptionQrLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -146,11 +154,77 @@ fun SubscriptionsScreen(
                         selected = group.id == selectedGroupId,
                         onSelect = { onSelectGroup(group.id) },
                         onDelete = { onDelete(group.id) },
+                        onEditClick = { editingGroup = group },
                     )
                 }
             }
         }
     }
+
+    val groupBeingEdited = editingGroup
+    if (groupBeingEdited != null) {
+        val currentSub = remember(groupBeingEdited.id) {
+            runCatching { mainViewModel.getSubscriptionItem(groupBeingEdited.id) }.getOrNull()
+        }
+        EditSubscriptionDialog(
+            initialName = groupBeingEdited.remarks,
+            initialUrl = currentSub?.url.orEmpty(),
+            onSave = { name, url ->
+                onEdit(groupBeingEdited.id, name, url)
+                editingGroup = null
+            },
+            onDismiss = { editingGroup = null },
+        )
+    }
+}
+
+/**
+ * "ویرایش سابسکریپشن": lets the user rename a subscription and/or change
+ * its URL without deleting and re-adding it. Every other field (enabled,
+ * autoUpdate, filter, ...) is preserved untouched by the caller.
+ */
+@Composable
+private fun EditSubscriptionDialog(
+    initialName: String,
+    initialUrl: String,
+    onSave: (name: String, url: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var url by remember { mutableStateOf(initialUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش سابسکریپشن") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("آدرس (URL)") },
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name.trim(), url.trim()) },
+                enabled = name.isNotBlank() && url.isNotBlank(),
+            ) { Text("ذخیره") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("لغو") }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,6 +237,7 @@ private fun SubscriptionCard(
     selected: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
+    onEditClick: () -> Unit,
 ) {
     val subscription = remember(group.id) { runCatching { mainViewModel.getSubscriptionItem(group.id) }.getOrNull() }
 
@@ -223,6 +298,13 @@ private fun SubscriptionCard(
             }
         }
         if (group.id.isNotEmpty()) {
+            IconButton(onClick = onEditClick) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_edit_24dp),
+                    contentDescription = "ویرایش",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     painter = painterResource(R.drawable.ic_delete_24dp),

@@ -9,10 +9,14 @@ class MainImportMenuTest {
 
     @Test
     fun regularShareMenuContainsOnlyShareActions() {
+        // Simple profiles (vmess/vless/ss/trojan/socks/wireguard/hysteria2) can
+        // be shared via all four methods: QR code, raw link to clipboard, full
+        // JSON config to clipboard, and the app-specific narcic:// deep link.
         val expected = listOf(
             ServerMenuAction.ShareQRCode,
             ServerMenuAction.ShareClipboard,
             ServerMenuAction.ShareFullContent,
+            ServerMenuAction.ShareLink,
         )
         assertEquals(expected, serverMenuActions(isComplexProfile = false, includeManagementActions = false))
     }
