@@ -19,7 +19,13 @@ mockitoMockitoInline = "5.2.0"
 camerax = "1.6.1"
 composeBom = "2026.06.01"
 reorderable = "3.1.0"
+androidxAnnotation = "1.7.1"
+androidxCollection = "1.4.0"
+jsr305Version = "3.0.2"
 [libraries]
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+androidx-collection = { module = "androidx.collection:collection", version.ref = "androidxCollection" }
+jsr305 = { module = "com.google.code.findbugs:jsr305", version.ref = "jsr305Version" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 gradle-license-plugin = { module = "com.jaredsburrows:gradle-license-plugin", version.ref = "gradleLicensePlugin" }
