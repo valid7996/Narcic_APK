@@ -142,6 +142,9 @@ dependencies {
     // Core Libraries
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
+    // AmneziaWG native tunnel engine
+    implementation(project(":tunnel"))
+
     // AndroidX Core Libraries
     implementation(libs.androidx.core.ktx)
 
