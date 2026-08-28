@@ -4,3 +4,6 @@
 [submodule "hev-socks5-tunnel"]
 	path = hev-socks5-tunnel
 	url = https://github.com/heiher/hev-socks5-tunnel
+[submodule "amneziawg-android"]
+	path = amneziawg-android
+	url = https://github.com/amnezia-vpn/amneziawg-android
