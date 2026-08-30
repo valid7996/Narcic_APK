@@ -222,5 +222,21 @@
         <item>2</item>
     </string-array>
 
+    <string-array name="desync_profile_value" translatable="false">
+        <item>Off</item>
+        <item>Light</item>
+        <item>Balanced</item>
+        <item>Severe</item>
+        <item>Adaptive</item>
+        <item>Custom</item>
+    </string-array>
+
+    <string-array name="desync_method_value" translatable="false">
+        <item>Split</item>
+        <item>Disorder</item>
+        <item>Fake SNI</item>
+        <item>Out of Band</item>
+        <item>Disorder + Out of Band</item>
+    </string-array>
 
 </resources>

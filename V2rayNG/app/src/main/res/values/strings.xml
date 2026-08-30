@@ -131,6 +131,16 @@
     <string name="server_lab_pinned_ca256">Certificate fingerprint (SHA-256)</string>
     <string name="server_lab_browser_dialer">Enable Browser Dialer</string>
     <string name="server_lab_browser_dialer_tip">Only supports xhttp (packet-up) and ws outbound; TLS-related settings may be ignored or conflict</string>
+    <string name="server_lab_desync_profile">DPI Desync</string>
+    <string name="server_lab_desync_tip">Reshapes the handshake to this server so DPI-based filtering has a harder time recognizing it. Adds latency; try Light first and increase if the connection still gets blocked.</string>
+    <string name="server_lab_desync_method">Desync method</string>
+    <string name="server_lab_desync_position">Split position (bytes)</string>
+    <string name="server_lab_desync_fake_offset">Fake packet offset</string>
+    <string name="server_lab_desync_fake_ttl">Fake packet TTL</string>
+    <string name="server_lab_desync_fake_sni">Fake SNI hostnames (comma separated)</string>
+    <string name="server_lab_desync_fake_sni_hint">e.g. www.google.com, example.com</string>
+    <string name="server_lab_desync_tlsrec">TLS record split position</string>
+    <string name="server_lab_desync_timeout">Timeout (seconds)</string>
     <string name="toast_allow_insecure_deprecated">Current node uses an unencrypted connection. Your communication may be directly viewed by network intermediate facilities controlled by authoritarian governments.\nFor security reasons, such nodes cannot be connected via Xray core version 26.2.6+.\nIf it is a self-built node, please enable security encryption such as TLS, or pin the certificate pinnedCA256.\nIf it is a provider node, please contact the service provider to complete the technical upgrade. If the service provider refuses to cooperate, it is recommended to switch to a provider that pays more attention to user security.\nFor more information, please visit https://github.com/2dust/v2rayN/discussions/9460</string>
     <string name="pinned_ca256_action_fetch">Fetch and fill certificate fingerprint</string>
     <string name="toast_fetch_cert_sha256_success">Certificate fingerprint fetched successfully</string>

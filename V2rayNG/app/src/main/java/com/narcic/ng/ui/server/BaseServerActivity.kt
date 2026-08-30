@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.narcic.ng.AppConfig.REALITY
 import com.narcic.ng.AppConfig.TLS
 import com.narcic.ng.R
+import com.narcic.ng.core.DesyncCompat
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.enums.NetworkType
@@ -83,7 +85,9 @@ abstract class BaseServerActivity : BaseComponentActivity() {
             streamSecurityOptions = stringArrayResource(R.array.streamsecurityxs).toList(),
             uTlsOptions = stringArrayResource(R.array.streamsecurity_utls).toList(),
             alpnOptions = stringArrayResource(R.array.streamsecurity_alpn).toList(),
-            browserDialerOptions = stringArrayResource(R.array.browser_dialer_mode_value).toList()
+            browserDialerOptions = stringArrayResource(R.array.browser_dialer_mode_value).toList(),
+            desyncProfileOptions = stringArrayResource(R.array.desync_profile_value).toList(),
+            desyncMethodOptions = stringArrayResource(R.array.desync_method_value).toList()
         )
 
     data class FieldOptions(
@@ -95,7 +99,9 @@ abstract class BaseServerActivity : BaseComponentActivity() {
         val streamSecurityOptions: List<String>,
         val uTlsOptions: List<String>,
         val alpnOptions: List<String>,
-        val browserDialerOptions: List<String>
+        val browserDialerOptions: List<String>,
+        val desyncProfileOptions: List<String>,
+        val desyncMethodOptions: List<String>
     )
 
     @Composable
@@ -243,6 +249,81 @@ abstract class BaseServerActivity : BaseComponentActivity() {
                     { state.browserDialerMode = it }
                 )
             }
+        }
+    }
+
+    /**
+     * DPI-desync settings, shared across the config types [DesyncCompat.supports].
+     * Off by default; picking a built-in profile (Light/Balanced/Severe/Adaptive) needs no
+     * further input, while Custom exposes the raw ciadpi knobs via [DesyncCompat.CustomOptions].
+     */
+    @Composable
+    protected fun CommonDesyncFields(
+        state: ServerUiState,
+        options: FieldOptions
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormDropdownField(
+                stringResource(R.string.server_lab_desync_profile),
+                state.desyncProfile,
+                options.desyncProfileOptions,
+                { state.desyncProfile = it }
+            )
+
+            if (state.desyncProfile == DesyncCompat.PROFILE_OFF) return@Column
+
+            Text(
+                text = stringResource(R.string.server_lab_desync_tip),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            if (state.desyncProfile != DesyncCompat.PROFILE_CUSTOM) return@Column
+
+            val isFake = state.desyncMethod == DesyncCompat.METHOD_FAKE_SNI
+
+            FormDropdownField(
+                stringResource(R.string.server_lab_desync_method),
+                state.desyncMethod,
+                options.desyncMethodOptions,
+                { state.desyncMethod = it }
+            )
+            FormTextField(
+                stringResource(
+                    if (isFake) R.string.server_lab_desync_fake_offset
+                    else R.string.server_lab_desync_position
+                ),
+                state.desyncPosition,
+                { state.desyncPosition = it },
+                keyboardType = KeyboardType.Number
+            )
+            if (isFake) {
+                FormTextField(
+                    stringResource(R.string.server_lab_desync_fake_ttl),
+                    state.desyncFakeTtl,
+                    { state.desyncFakeTtl = it },
+                    keyboardType = KeyboardType.Number
+                )
+                FormTextField(
+                    stringResource(R.string.server_lab_desync_fake_sni),
+                    state.desyncFakeSni,
+                    { state.desyncFakeSni = it },
+                    placeholder = stringResource(R.string.server_lab_desync_fake_sni_hint)
+                )
+            }
+            FormTextField(
+                stringResource(R.string.server_lab_desync_tlsrec),
+                state.desyncTlsRecordPosition,
+                { state.desyncTlsRecordPosition = it },
+                keyboardType = KeyboardType.Number
+            )
+            FormTextField(
+                stringResource(R.string.server_lab_desync_timeout),
+                state.desyncTimeoutSeconds,
+                { state.desyncTimeoutSeconds = it },
+                keyboardType = KeyboardType.Number
+            )
         }
     }
 

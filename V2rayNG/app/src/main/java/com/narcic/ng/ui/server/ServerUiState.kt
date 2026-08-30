@@ -8,6 +8,7 @@ import com.narcic.ng.AppConfig.DEFAULT_PORT
 import com.narcic.ng.AppConfig.REALITY
 import com.narcic.ng.AppConfig.WIREGUARD_LOCAL_ADDRESS_V4
 import com.narcic.ng.AppConfig.WIREGUARD_LOCAL_MTU
+import com.narcic.ng.core.DesyncCompat
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.enums.NetworkType
@@ -62,7 +63,14 @@ class ServerUiState(
     echConfigList: String = "",
     verifyPeerCertByName: String = "",
     pinnedCA256: String = "",
-    isFetchingCert: Boolean = false
+    isFetchingCert: Boolean = false,
+    desyncProfile: String = DesyncCompat.PROFILE_OFF,
+    desyncMethod: String = DesyncCompat.METHOD_SPLIT,
+    desyncPosition: String = "1",
+    desyncFakeTtl: String = "8",
+    desyncFakeSni: String = "",
+    desyncTlsRecordPosition: String = "1",
+    desyncTimeoutSeconds: String = "3"
 ) {
     var configType by mutableStateOf(configType)
     var remarks by mutableStateOf(remarks)
@@ -112,6 +120,13 @@ class ServerUiState(
     var verifyPeerCertByName by mutableStateOf(verifyPeerCertByName)
     var pinnedCA256 by mutableStateOf(pinnedCA256)
     var isFetchingCert by mutableStateOf(isFetchingCert)
+    var desyncProfile by mutableStateOf(desyncProfile)
+    var desyncMethod by mutableStateOf(desyncMethod)
+    var desyncPosition by mutableStateOf(desyncPosition)
+    var desyncFakeTtl by mutableStateOf(desyncFakeTtl)
+    var desyncFakeSni by mutableStateOf(desyncFakeSni)
+    var desyncTlsRecordPosition by mutableStateOf(desyncTlsRecordPosition)
+    var desyncTimeoutSeconds by mutableStateOf(desyncTimeoutSeconds)
 
     fun toProfileItem(initialConfig: ProfileItem): ProfileItem {
         val isVmess = configType == EConfigType.VMESS
@@ -178,15 +193,31 @@ class ServerUiState(
             mldsa65Verify = mldsa65Verify,
             echConfigList = echConfigList,
             verifyPeerCertByName = verifyPeerCertByName,
-            pinnedCA256 = pinnedCA256
+            pinnedCA256 = pinnedCA256,
+            desyncProfile = desyncProfile.takeIf { it != DesyncCompat.PROFILE_OFF },
+            desyncArgs = if (desyncProfile == DesyncCompat.PROFILE_CUSTOM) {
+                DesyncCompat.buildCustomArguments(
+                    DesyncCompat.CustomOptions(
+                        method = desyncMethod,
+                        position = desyncPosition,
+                        fakeTtl = desyncFakeTtl,
+                        tlsRecordPosition = desyncTlsRecordPosition,
+                        timeoutSeconds = desyncTimeoutSeconds,
+                        fakeSni = desyncFakeSni
+                    )
+                )
+            } else {
+                null
+            }
         )
     }
 
     companion object {
         fun fromProfileItem(
             initialConfig: ProfileItem
-        ): ServerUiState =
-            ServerUiState(
+        ): ServerUiState {
+            val desyncOptions = DesyncCompat.parseCustomOptions(initialConfig.desyncArgs.orEmpty())
+            return ServerUiState(
                 configType = initialConfig.configType,
                 remarks = initialConfig.remarks,
                 address = initialConfig.server ?: "",
@@ -233,8 +264,17 @@ class ServerUiState(
                 mldsa65Verify = initialConfig.mldsa65Verify ?: "",
                 echConfigList = initialConfig.echConfigList ?: "",
                 verifyPeerCertByName = initialConfig.verifyPeerCertByName ?: "",
-                pinnedCA256 = initialConfig.pinnedCA256 ?: ""
+                pinnedCA256 = initialConfig.pinnedCA256 ?: "",
+                desyncProfile = initialConfig.desyncProfile?.takeIf { it.isNotBlank() }
+                    ?: DesyncCompat.PROFILE_OFF,
+                desyncMethod = desyncOptions.method,
+                desyncPosition = desyncOptions.position,
+                desyncFakeTtl = desyncOptions.fakeTtl,
+                desyncFakeSni = desyncOptions.fakeSni,
+                desyncTlsRecordPosition = desyncOptions.tlsRecordPosition,
+                desyncTimeoutSeconds = desyncOptions.timeoutSeconds
             )
+        }
 
         fun from(
             initialConfig: ProfileItem

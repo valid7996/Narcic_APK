@@ -14,6 +14,7 @@ class ServerHttpActivity : BaseServerActivity() {
 
     @Composable
     override fun ScreenContent() {
+        val options = rememberFieldOptions()
         val scope = rememberCoroutineScope()
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
             ServerUiState.from(
@@ -29,6 +30,7 @@ class ServerHttpActivity : BaseServerActivity() {
         ) {
             CommonBasicFields(uiState)
             HttpProtocolFields(uiState)
+            CommonDesyncFields(uiState, options)
 
         }
     }

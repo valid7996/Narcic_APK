@@ -33,6 +33,7 @@ class ServerTrojanActivity : BaseServerActivity() {
             CommonBasicFields(uiState)
             TrojanProtocolFields(uiState)
             CommonNetworkFields(uiState, options)
+            CommonDesyncFields(uiState, options)
             CommonStreamSecurityFields(
                 state = uiState,
                 options = options,
