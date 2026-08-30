@@ -25,6 +25,7 @@ import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
+import com.narcic.ng.ui.server.ServerAmneziaWgActivity
 import com.narcic.ng.ui.server.ServerCustomConfigActivity
 import com.narcic.ng.ui.server.ServerGroupActivity
 import com.narcic.ng.ui.server.ServerHttpActivity
@@ -431,6 +432,7 @@ class MainActivity : HelperBaseComponentActivity() {
             EConfigType.HTTP -> ServerHttpActivity::class.java
             EConfigType.TROJAN -> ServerTrojanActivity::class.java
             EConfigType.WIREGUARD -> ServerWireguardActivity::class.java
+            EConfigType.AMNEZIAWG -> ServerAmneziaWgActivity::class.java
             EConfigType.HYSTERIA2 -> ServerHysteria2Activity::class.java
             else -> ServerHttpActivity::class.java
         }
