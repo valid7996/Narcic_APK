@@ -57,6 +57,8 @@ data class ProfileItem(
     var localAddress: String? = null,
     var reserved: String? = null,
     var mtu: Int? = null,
+    /** Raw .conf text for AMNEZIAWG-type profiles, parsed at connect time by AwgManager. */
+    var awgConfigText: String? = null,
 
     var obfsPassword: String? = null,
     var portHopping: String? = null,
@@ -74,11 +76,6 @@ data class ProfileItem(
     var proxyChainProfiles: String? = null,
 
     var browserDialerMode: String? = null,
-
-    // Per-profile native DPI-desync engine (see com.narcic.ng.core.DesyncCompat).
-    // desyncProfile: "Off" (or null)/"Light"/"Balanced"/"Severe"/"Adaptive"/"Custom".
-    var desyncProfile: String? = null,
-    var desyncArgs: String? = null,
 ) {
 
     companion object {

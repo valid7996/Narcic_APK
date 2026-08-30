@@ -449,6 +449,22 @@ class MainViewModel(
         launchLoading {
             withContext(ioDispatcher) {
                 try {
+                    // AmneziaWG configs (detected by Jc/Jmin/H1-H4/I1-I5 fields) are stored
+                    // as-is and connected via the separate AmneziaWG engine, never through
+                    // the normal VLESS/VMess/etc parsers.
+                    if (com.narcic.ng.awg.AwgManager.isAmneziaWgConfig(configText)) {
+                        val profile = com.narcic.ng.dto.entities.ProfileItem.create(
+                            com.narcic.ng.enums.EConfigType.AMNEZIAWG
+                        ).apply {
+                            remarks = "AmneziaWG"
+                            awgConfigText = configText
+                        }
+                        dataSource.encodeServerConfig("", profile)
+                        toast(dataSource.getString(R.string.title_import_config_count, 1))
+                        setupGroupTab(forceRefresh = true)
+                        return@withContext
+                    }
+
                     // Legacy path: kept for narcic:// share-link import and file import.
                     // Force empty subId so it becomes manual (never inherits selected subscription).
                     val (count, countSub) = dataSource.importManualVpnConfig(configText)
@@ -1204,6 +1220,12 @@ class MainViewModel(
     }
 
     // ---------- Running state ----------
+    /** Public entry point for connection paths outside the normal V2ray broadcast
+     *  flow (currently: the AmneziaWG engine), to keep the UI in sync. */
+    fun setExternalRunningState(running: Boolean) {
+        updateRunningState(running)
+    }
+
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         _uiState.update { state ->
             state.copy(

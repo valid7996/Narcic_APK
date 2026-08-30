@@ -173,10 +173,67 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun handleFabAction() {
+        val selectedGuid = mainViewModel.uiState.value.selectedGuid
+        val selectedProfile = selectedGuid?.let { MmkvManager.decodeServerConfig(it) }
+
+        if (selectedProfile?.configType == com.narcic.ng.enums.EConfigType.AMNEZIAWG) {
+            handleAwgToggle(selectedProfile)
+            return
+        }
+
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
             proceedToConnect()
+        }
+    }
+
+    /** Separate connect/disconnect path for AmneziaWG configs — never touches
+     *  CoreVpnService/Xray-core, uses the AmneziaWG engine's own VpnService instead. */
+    private fun handleAwgToggle(profile: ProfileItem) {
+        if (com.narcic.ng.awg.AwgManager.isRunning()) {
+            val error = com.narcic.ng.awg.AwgManager.disconnect()
+            mainViewModel.setExternalRunningState(false)
+            if (error != null) toast(error)
+            return
+        }
+
+        val configText = profile.awgConfigText
+        if (configText.isNullOrBlank()) {
+            toast("AmneziaWG config is empty")
+            return
+        }
+
+        val intent = com.narcic.ng.awg.AwgManager.prepare(this)
+        if (intent != null) {
+            awgPermissionLauncher.launch(intent)
+            pendingAwgConfigText = configText
+        } else {
+            startAwgTunnel(configText)
+        }
+    }
+
+    private var pendingAwgConfigText: String? = null
+
+    private val awgPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val configText = pendingAwgConfigText
+        pendingAwgConfigText = null
+        if (result.resultCode == RESULT_OK && configText != null) {
+            startAwgTunnel(configText)
+        } else {
+            toast(R.string.home_permission_denied)
+        }
+    }
+
+    private fun startAwgTunnel(configText: String) {
+        val error = com.narcic.ng.awg.AwgManager.connect(this, configText)
+        if (error != null) {
+            toast(error)
+            mainViewModel.setExternalRunningState(false)
+        } else {
+            mainViewModel.setExternalRunningState(true)
         }
     }
 
