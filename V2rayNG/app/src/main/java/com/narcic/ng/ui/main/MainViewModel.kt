@@ -457,7 +457,7 @@ class MainViewModel(
                             com.narcic.ng.enums.EConfigType.AMNEZIAWG
                         ).apply {
                             remarks = "AmneziaWG"
-                            awgConfigText = configText
+                            awgConfigText = com.narcic.ng.awg.AwgManager.sanitizeConfigText(configText)
                         }
                         dataSource.encodeServerConfig("", profile)
                         toast(dataSource.getString(R.string.title_import_config_count, 1))

@@ -83,15 +83,21 @@ class ServerAmneziaWgActivity : BaseComponentActivity() {
         )
     }
 
-    private fun saveServer(remarks: String, configText: String): Boolean {
+    private fun saveServer(remarks: String, rawConfigText: String): Boolean {
         if (remarks.isBlank()) {
             toast(R.string.server_lab_remarks)
             return false
         }
-        if (configText.isBlank()) {
+        if (rawConfigText.isBlank()) {
             toast(R.string.toast_config_file_invalid)
             return false
         }
+
+        // Strip stray CR / trailing whitespace / invisible zero-width characters that often
+        // ride along when a config is pasted from Telegram bots or web pages — these look fine
+        // visually but break base64 key decoding (org.amnezia.awg.crypto.KeyFormatException)
+        // for some configs and not others depending on the source.
+        val configText = com.narcic.ng.awg.AwgManager.sanitizeConfigText(rawConfigText)
 
         try {
             // Validate with the same parser used to actually connect, so a malformed

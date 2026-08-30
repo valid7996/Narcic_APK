@@ -32,23 +32,88 @@ object AwgManager {
         return Regex("(?m)^\\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\\s*=").containsMatchIn(rawText)
     }
 
+    /**
+     * Cleans up text pasted from Telegram bots / websites / other apps before it ever reaches
+     * the AmneziaWG config parser. Stray carriage returns, trailing spaces, a leading BOM, or
+     * invisible zero-width characters copied along with a key are all "well-formed enough" to
+     * look fine to the human eye but break base64 key decoding with
+     * org.amnezia.awg.crypto.KeyFormatException. This is defensive and idempotent — safe to
+     * call on text that's already clean.
+     */
+    fun sanitizeConfigText(rawText: String): String {
+        return rawText
+            .removePrefix("\uFEFF") // BOM some editors/bots prepend
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .lines()
+            .joinToString("\n") { line ->
+                line
+                    .replace("\u200B", "").replace("\u200C", "")
+                    .replace("\u200D", "").replace("\u2060", "")
+                    .trim()
+            }
+            .trim()
+    }
+
+    /**
+     * Creates (and starts binding) the GoBackend well before the user taps Connect.
+     * GoBackend binds to its internal AmneziaWG VpnService asynchronously; calling
+     * setState(UP) before that binding finishes throws on the very first attempt right
+     * after the object is constructed — which is why the first tap failed with
+     * "AmneziaWG connect failed" while the second tap (backend already bound) worked.
+     * Call this once, early (e.g. app startup), so the backend is ready by the time the
+     * user actually connects.
+     */
+    fun preload(context: Context) {
+        try {
+            ensureBackend(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "AmneziaWG backend preload failed, will retry on demand", e)
+        }
+    }
+
     private fun ensureBackend(context: Context): GoBackend {
         return backend ?: GoBackend(context.applicationContext).also { backend = it }
     }
 
     /** Returns null on success, or an error message on failure. */
     fun connect(context: Context, rawConfigText: String): String? {
-        return try {
-            val config = Config.parse(BufferedReader(StringReader(rawConfigText)))
-            val goBackend = ensureBackend(context)
-            val tunnel = SimpleTunnel(TUNNEL_NAME)
-            currentTunnel = tunnel
-            goBackend.setState(tunnel, Tunnel.State.UP, config)
-            null
+        val cleanedText = sanitizeConfigText(rawConfigText)
+        val config = try {
+            Config.parse(BufferedReader(StringReader(cleanedText)))
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start AmneziaWG tunnel", e)
-            e.message ?: "AmneziaWG connect failed"
+            Log.e(TAG, "Failed to parse AmneziaWG config", e)
+            return e.message ?: "AmneziaWG config is invalid"
         }
+
+        val wasBackendAlreadyReady = backend != null
+        return try {
+            startTunnel(context, config)
+        } catch (e: Exception) {
+            Log.w(TAG, "AmneziaWG connect attempt failed, retrying once", e)
+            // Most first-attempt failures are the backend's internal VpnService still binding
+            // (see preload() doc above). Give it a moment and retry once before giving up.
+            if (wasBackendAlreadyReady) {
+                // Backend was already up, so this wasn't a binding race — don't mask a real error.
+                Log.e(TAG, "Failed to start AmneziaWG tunnel", e)
+                return e.message ?: "AmneziaWG connect failed"
+            }
+            try {
+                Thread.sleep(400)
+                startTunnel(context, config)
+            } catch (retryError: Exception) {
+                Log.e(TAG, "Failed to start AmneziaWG tunnel after retry", retryError)
+                retryError.message ?: "AmneziaWG connect failed"
+            }
+        }
+    }
+
+    private fun startTunnel(context: Context, config: Config): String? {
+        val goBackend = ensureBackend(context)
+        val tunnel = SimpleTunnel(TUNNEL_NAME)
+        currentTunnel = tunnel
+        goBackend.setState(tunnel, Tunnel.State.UP, config)
+        return null
     }
 
     fun disconnect(): String? {

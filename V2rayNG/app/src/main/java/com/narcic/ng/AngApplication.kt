@@ -43,5 +43,9 @@ class AngApplication : Application() {
 
         // Initialize theme state from MMKV
         ThemeManager.refresh()
+
+        // Pre-warm the AmneziaWG backend (async internal VpnService binding) so it's
+        // ready well before the user ever taps Connect on an AmneziaWG profile.
+        com.narcic.ng.awg.AwgManager.preload(this)
     }
 }
