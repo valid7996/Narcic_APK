@@ -15,6 +15,7 @@
     <string name="notification_action_stop_v2ray">Stop</string>
     <string name="toast_permission_denied">Unable to obtain the permission</string>
     <string name="toast_permission_denied_notification">Unable to obtain the notification permission</string>
+    <string name="home_permission_denied">Unable to obtain the VPN permission</string>
     <string name="notification_action_more">Click for more</string>
     <string name="toast_services_start">Start Services</string>
     <string name="toast_services_stop">Stop Services</string>

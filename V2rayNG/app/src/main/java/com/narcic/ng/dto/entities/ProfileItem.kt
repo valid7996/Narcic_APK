@@ -76,6 +76,11 @@ data class ProfileItem(
     var proxyChainProfiles: String? = null,
 
     var browserDialerMode: String? = null,
+
+    /** Narcic embedded DPI-desync engine: null/absent means Off. See [com.narcic.ng.core.DesyncCompat]. */
+    var desyncProfile: String? = null,
+    /** Raw ciadpi argument string, only meaningful when [desyncProfile] is Custom. */
+    var desyncArgs: String? = null,
 ) {
 
     companion object {

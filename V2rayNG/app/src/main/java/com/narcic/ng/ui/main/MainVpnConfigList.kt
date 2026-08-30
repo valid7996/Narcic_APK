@@ -335,6 +335,7 @@ private fun protocolBadge(type: EConfigType): ProtocolBadge = when (type) {
     EConfigType.SOCKS -> ProtocolBadge("SK", AuroraCyan)
     EConfigType.TROJAN -> ProtocolBadge("TR", colorConfigType)
     EConfigType.WIREGUARD -> ProtocolBadge("WG", AuroraViolet)
+    EConfigType.AMNEZIAWG -> ProtocolBadge("AW", AuroraViolet)
     EConfigType.HYSTERIA2, EConfigType.HYSTERIA -> ProtocolBadge("HY", colorConfigType)
     EConfigType.HTTP -> ProtocolBadge("HT", AuroraIndigo)
     EConfigType.CUSTOM -> ProtocolBadge("CF", AuroraViolet)
