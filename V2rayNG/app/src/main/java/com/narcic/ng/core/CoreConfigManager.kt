@@ -30,14 +30,14 @@ object CoreConfigManager {
     /**
      * Build the runtime configuration for normal startup.
      */
-    fun getV2rayConfig(context: Context, guid: String): ConfigResult {
+    fun getV2rayConfig(context: Context, guid: String, desyncPort: Int = 0): ConfigResult {
         try {
             val configContext = CoreConfigContextBuilder.build(context, guid)
                 ?: return ConfigResult(status = false, guid = guid, errorMessage = "Failed to build config context")
             if (configContext.isCustom) {
                 return buildV2rayCustomConfig(configContext)
             }
-            return toConfigResult(configContext, buildUnifiedConfig(configContext))
+            return toConfigResult(configContext, buildUnifiedConfig(configContext, desyncPort))
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to get V2ray config", e)
             return ConfigResult(
@@ -133,7 +133,7 @@ object CoreConfigManager {
      * The analyzed outbound plan is consumed in order and converted to concrete
      * outbounds before routing, DNS, and runtime extras are assembled.
      */
-    private fun buildUnifiedConfig(configContext: CoreConfigContext): V2rayConfig {
+    private fun buildUnifiedConfig(configContext: CoreConfigContext, desyncPort: Int = 0): V2rayConfig {
         require(configContext.resolvedOutbounds.isNotEmpty()) { "resolvedOutbounds must not be empty for a non-CUSTOM context" }
         val primaryResolvedOutbound = configContext.resolvedOutbounds.first()
 
@@ -193,6 +193,10 @@ object CoreConfigManager {
         applyObservability(v2rayConfig, balancerStrategies)
         applySpeedDisabled(v2rayConfig)
         resolveOutboundDomainsToHosts(v2rayConfig)
+
+        if (desyncPort != 0) {
+            DesyncCompat.attachOutbound(v2rayConfig, primaryResolvedOutbound.profile, desyncPort)
+        }
 
         return v2rayConfig
     }

@@ -74,6 +74,11 @@ data class ProfileItem(
     var proxyChainProfiles: String? = null,
 
     var browserDialerMode: String? = null,
+
+    // Per-profile native DPI-desync engine (see com.narcic.ng.core.DesyncCompat).
+    // desyncProfile: "Off" (or null)/"Light"/"Balanced"/"Severe"/"Adaptive"/"Custom".
+    var desyncProfile: String? = null,
+    var desyncArgs: String? = null,
 ) {
 
     companion object {

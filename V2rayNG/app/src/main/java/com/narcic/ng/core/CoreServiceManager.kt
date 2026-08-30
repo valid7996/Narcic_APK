@@ -124,7 +124,13 @@ object CoreServiceManager {
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
 
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
-        val result = CoreConfigManager.getV2rayConfig(service, guid)
+        val desyncPort = try {
+            DesyncManager.start(config)
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "StartCore-Manager: Failed to start desync engine", e)
+            error("Failed to start desync engine: ${e.message ?: e.javaClass.simpleName}")
+        }
+        val result = CoreConfigManager.getV2rayConfig(service, guid, desyncPort)
         LogUtil.d(AppConfig.TAG, result.content)
         if (!result.status) {
             error(result.errorMessage.ifBlank { "Failed to get V2Ray config" })
@@ -188,6 +194,7 @@ object CoreServiceManager {
         networkMonitor?.unregister()
         networkMonitor = null
         currentVpnInterface = null
+        DesyncManager.stop()
 
         if (isRunning()) {
             CoroutineScope(Dispatchers.IO).launch {
