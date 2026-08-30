@@ -1238,8 +1238,51 @@ class MainViewModel(
         if (running) {
             startConnectionTimer()
             startRemoteIpLookup()
+            startAwgTrafficStatsIfNeeded()
         } else {
             stopConnectionStats()
+        }
+    }
+
+    private var awgStatsJob: Job? = null
+
+    /**
+     * AmneziaWG connections never go through CoreVpnService, so the normal downloadBps/uploadBps
+     * events (fed from Xray-core's own traffic broadcast) never fire for them — that's why
+     * upload/download always showed blank while connected via AmneziaWG. This polls
+     * org.amnezia.awg's own Statistics API directly and derives a bytes/sec rate from the delta
+     * between polls, the same way the V2Ray side derives its speed text.
+     */
+    private fun startAwgTrafficStatsIfNeeded() {
+        if (!com.narcic.ng.awg.AwgManager.isRunning()) return
+        if (awgStatsJob?.isActive == true) return
+        awgStatsJob = viewModelScope.launch(ioDispatcher) {
+            var lastRx = -1L
+            var lastTx = -1L
+            var lastElapsed = SystemClock.elapsedRealtime()
+            while (isActive && uiState.value.isRunning) {
+                val stats = com.narcic.ng.awg.AwgManager.getStatistics()
+                if (stats != null) {
+                    val now = SystemClock.elapsedRealtime()
+                    val rx = stats.totalRx()
+                    val tx = stats.totalTx()
+                    val elapsedSeconds = ((now - lastElapsed).coerceAtLeast(1L)) / 1000.0
+                    if (lastRx >= 0 && lastTx >= 0) {
+                        val downBps = ((rx - lastRx).coerceAtLeast(0L) / elapsedSeconds).toLong()
+                        val upBps = ((tx - lastTx).coerceAtLeast(0L) / elapsedSeconds).toLong()
+                        _uiState.update {
+                            it.copy(
+                                downloadSpeedText = downBps.toSpeedString(),
+                                uploadSpeedText = upBps.toSpeedString()
+                            )
+                        }
+                    }
+                    lastRx = rx
+                    lastTx = tx
+                    lastElapsed = now
+                }
+                delay(2000L)
+            }
         }
     }
 
@@ -1300,6 +1343,8 @@ class MainViewModel(
         connectionTimerJob = null
         ipLookupJob?.cancel()
         ipLookupJob = null
+        awgStatsJob?.cancel()
+        awgStatsJob = null
         _uiState.update {
             it.copy(
                 connectionDurationText = "",
@@ -1320,6 +1365,7 @@ class MainViewModel(
         filterJob?.cancel()
         connectionTimerJob?.cancel()
         ipLookupJob?.cancel()
+        awgStatsJob?.cancel()
         cancelAllPing()
         dataSource.close()
         super.onCleared()

@@ -53,15 +53,23 @@ object SpeedtestManager {
      * Fetches and parses the raw IP-API response. Shared by [getRemoteIPInfo]
      * (used by the "Test Speed" status text) and [getRemoteIPInfoDetailed]
      * (used by the main screen's live IP/country display).
+     *
+     * When AmneziaWG is the active engine, there is no local HTTP/SOCKS proxy to point at —
+     * AmneziaWG is a raw system-level VpnService tunnel (like the OS's own VPN clients), so the
+     * app's own network traffic already flows through the tunnel once it's up. Routing through
+     * com.narcic.ng's local Xray proxy port in that case would either hit a closed port (Xray
+     * isn't running) or the wrong tunnel entirely, which is why the exit IP/country never
+     * resolved for AmneziaWG connections. httpPort=0 tells HttpUtil to connect directly.
      */
     private fun fetchRemoteIpApiInfo(): IPAPIInfo? {
         val url = MmkvManager.decodeSettingsString(AppConfig.PREF_IP_API_URL)
             .takeIf { !it.isNullOrBlank() } ?: AppConfig.IP_API_URL
 
-        val proxyUsername = SettingsManager.getSocksUsername()
-        val proxyPassword = SettingsManager.getSocksPassword()
-        val httpPort = SettingsManager.getHttpPort()
-        if (httpPort == 0) return null
+        val useAwg = com.narcic.ng.awg.AwgManager.isRunning()
+        val proxyUsername = if (useAwg) null else SettingsManager.getSocksUsername()
+        val proxyPassword = if (useAwg) null else SettingsManager.getSocksPassword()
+        val httpPort = if (useAwg) 0 else SettingsManager.getHttpPort()
+        if (!useAwg && httpPort == 0) return null
         val content = HttpUtil.getUrlContent(
             UrlContentRequest(
                 url = url,

@@ -139,6 +139,23 @@ object AwgManager {
         }
     }
 
+    /**
+     * Total tunnel rx/tx bytes since it came up, or null if not running / not available yet.
+     * Backed by org.amnezia.awg.backend.Backend#getStatistics, confirmed against upstream
+     * source (tunnel/src/main/java/org/amnezia/awg/backend/Statistics.java): totalRx()/totalTx()
+     * sum bytes across all peers tracked for the tunnel.
+     */
+    fun getStatistics(): org.amnezia.awg.backend.Statistics? {
+        val goBackend = backend ?: return null
+        val tunnel = currentTunnel ?: return null
+        return try {
+            goBackend.getStatistics(tunnel)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read AmneziaWG statistics", e)
+            null
+        }
+    }
+
     /** Standard Android VPN permission check, same pattern as VpnService.prepare(). */
     fun prepare(context: Context) = VpnService.prepare(context)
 
