@@ -35,13 +35,13 @@ class ServerShadowsocksActivity : BaseServerActivity() {
             CommonBasicFields(uiState)
             ShadowsocksProtocolFields(uiState, securityOptions)
             CommonNetworkFields(uiState, options)
-            CommonDesyncFields(uiState, options)
             CommonStreamSecurityFields(
                 state = uiState,
                 options = options,
                 scope = scope,
                 buildProfileItem = { uiState.toProfileItem(initialConfig) }
             )
+            CommonDesyncFields(uiState, options)
         }
     }
 

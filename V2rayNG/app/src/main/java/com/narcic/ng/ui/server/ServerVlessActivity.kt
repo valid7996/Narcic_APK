@@ -36,13 +36,13 @@ class ServerVlessActivity : BaseServerActivity() {
             CommonBasicFields(uiState)
             VlessProtocolFields(uiState, flowOptions)
             CommonNetworkFields(uiState, options)
-            CommonDesyncFields(uiState, options)
             CommonStreamSecurityFields(
                 state = uiState,
                 options = options,
                 scope = scope,
                 buildProfileItem = { uiState.toProfileItem(initialConfig) }
             )
+            CommonDesyncFields(uiState, options)
         }
     }
 
