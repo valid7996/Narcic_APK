@@ -106,7 +106,9 @@ class ServerAmneziaWgActivity : BaseComponentActivity() {
         val config = MmkvManager.decodeServerConfig(editGuid)
             ?: ProfileItem.create(EConfigType.AMNEZIAWG)
 
-        config.configType = EConfigType.AMNEZIAWG
+        // configType is a val (immutable) on ProfileItem; the loaded profile is already
+        // AMNEZIAWG (this screen is only reached for that type) and the fallback above
+        // is already constructed with it, so no reassignment is needed here.
         config.remarks = remarks
         config.awgConfigText = configText
 
