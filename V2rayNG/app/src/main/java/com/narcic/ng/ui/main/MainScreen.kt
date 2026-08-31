@@ -131,6 +131,39 @@ fun MainScreen(
     val accentPair = remember(engineIsAwg) { accentFor(engineIsAwg) }
     val engineLabel = if (engineIsAwg) "AWG" else "V2Ray"
 
+    // If switching engines hides the currently-selected tab (e.g. the
+    // WireGuard sub was selected and the user flips to V2Ray), jump to the
+    // first tab that's still visible instead of leaving an empty list up
+    // against a tab that no longer shows as selected.
+    LaunchedEffect(engineIsAwg, groups) {
+        val stillVisible = groups.filter { g ->
+            when (g.remarks) {
+                "Narcic Irancell", "Narcic NG - JSON" -> !engineIsAwg
+                "Narcic NG - WireGuard" -> engineIsAwg
+                else -> true
+            }
+        }
+        if (stillVisible.isNotEmpty() && stillVisible.none { it.id == uiState.selectedGroupId }) {
+            onAction(MainAction.SelectGroup(stillVisible.first().id))
+        }
+    }
+
+    // ---- Per-engine subscription tabs --------------------------------
+    // "Narcic Irancell" / "Narcic NG - JSON" only ever carry V2Ray-type
+    // configs, and "Narcic NG - WireGuard" only ever carries AmneziaWG
+    // configs -- so their tabs are hidden entirely on the engine they
+    // don't belong to instead of showing up empty. Any other (custom,
+    // user-added) subscription is unaffected and stays visible on both.
+    val visibleGroups = remember(groups, engineIsAwg) {
+        groups.filter { g ->
+            when (g.remarks) {
+                "Narcic Irancell", "Narcic NG - JSON" -> !engineIsAwg
+                "Narcic NG - WireGuard" -> engineIsAwg
+                else -> true
+            }
+        }
+    }
+
     // Global per-engine totals shown as the small counter badge on each
     // EngineSwitch tab (sums every group's servers, not just the selected
     // one) -- each group's flow is shared/cached in the ViewModel, so this
@@ -406,7 +439,7 @@ fun MainScreen(
                 Spacer(Modifier.height(10.dp))
 
                 GroupTabs(
-                    groups = groups,
+                    groups = visibleGroups,
                     selectedGroupId = uiState.selectedGroupId,
                     accent = accentPair.main,
                     engineIsAwg = engineIsAwg,
@@ -419,7 +452,7 @@ fun MainScreen(
                 // ---- تست + لیست عمودی سرورها (فیلترشده روی گروه + موتور فعال) ----
                 MainServerListSection(
                     mainViewModel = mainViewModel,
-                    groups = groups,
+                    groups = visibleGroups,
                     selectedGroupId = uiState.selectedGroupId,
                     selectedGuid = selectedGuid,
                     isTesting = uiState.isTesting,
