@@ -312,7 +312,7 @@ private fun VpnConfigRow(
     val proto = protocolBadge(profile.configType)
 
     ServerCard(
-        name = serverCache.remarks,
+        name = profile.remarks,
         address = profile.server.orEmpty().ifBlank { "..." },
         pingMs = if (serverCache.testDelayMillis > 0L) serverCache.testDelayMillis.toInt() else null,
         protoLabel = proto.label,
