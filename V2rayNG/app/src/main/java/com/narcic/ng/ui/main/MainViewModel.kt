@@ -1226,6 +1226,13 @@ class MainViewModel(
         updateRunningState(running)
     }
 
+    /** Drives the existing isTesting-based busy indicator (ConnectHero's "…" state) for the
+     *  AmneziaWG connect/disconnect path, which now runs on a background thread and can take
+     *  a couple of seconds — without this the button just looked frozen during that window. */
+    fun setAwgTransitioning(transitioning: Boolean) {
+        _uiState.update { it.copy(isTesting = transitioning) }
+    }
+
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         _uiState.update { state ->
             state.copy(

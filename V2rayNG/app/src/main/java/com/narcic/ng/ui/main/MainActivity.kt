@@ -189,13 +189,34 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private var awgToggleInProgress = false
+
     /** Separate connect/disconnect path for AmneziaWG configs — never touches
-     *  CoreVpnService/Xray-core, uses the AmneziaWG engine's own VpnService instead. */
+     *  CoreVpnService/Xray-core, uses the AmneziaWG engine's own VpnService instead.
+     *  Runs off the main thread: the underlying library's setState() can block
+     *  internally for a couple of seconds (see AwgManager.connect() doc), and doing
+     *  that synchronously on the UI thread is what caused the "app isn't responding"
+     *  hang, especially when toggling disconnect → reconnect quickly. */
     private fun handleAwgToggle(profile: ProfileItem) {
+        if (awgToggleInProgress) return
+
         if (com.narcic.ng.awg.AwgManager.isRunning()) {
-            val error = com.narcic.ng.awg.AwgManager.disconnect()
-            mainViewModel.setExternalRunningState(false)
-            if (error != null) toast(error)
+            awgToggleInProgress = true
+            mainViewModel.setAwgTransitioning(true)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val error = com.narcic.ng.awg.AwgManager.disconnect()
+                // The library tears its internal VpnService down on disconnect, so a fast
+                // reconnect right after would otherwise have to rebuild it from scratch again
+                // (the exact "toggle off/on quickly" case that was hanging). Re-prime it here,
+                // still off the main thread, so a quick reconnect finds it already warm.
+                com.narcic.ng.awg.AwgManager.preload(applicationContext)
+                withContext(Dispatchers.Main) {
+                    mainViewModel.setAwgTransitioning(false)
+                    mainViewModel.setExternalRunningState(false)
+                    if (error != null) toast(error)
+                    awgToggleInProgress = false
+                }
+            }
             return
         }
 
@@ -229,12 +250,20 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun startAwgTunnel(configText: String) {
-        val error = com.narcic.ng.awg.AwgManager.connect(this, configText)
-        if (error != null) {
-            toast(error)
-            mainViewModel.setExternalRunningState(false)
-        } else {
-            mainViewModel.setExternalRunningState(true)
+        awgToggleInProgress = true
+        mainViewModel.setAwgTransitioning(true)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val error = com.narcic.ng.awg.AwgManager.connect(this@MainActivity, configText)
+            withContext(Dispatchers.Main) {
+                mainViewModel.setAwgTransitioning(false)
+                if (error != null) {
+                    toast(error)
+                    mainViewModel.setExternalRunningState(false)
+                } else {
+                    mainViewModel.setExternalRunningState(true)
+                }
+                awgToggleInProgress = false
+            }
         }
     }
 
