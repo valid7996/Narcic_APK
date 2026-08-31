@@ -191,11 +191,27 @@ class MainActivity : HelperBaseComponentActivity() {
 
     /** Separate connect/disconnect path for AmneziaWG configs — never touches
      *  CoreVpnService/Xray-core, uses the AmneziaWG engine's own VpnService instead. */
+    /** Separate connect/disconnect path for AmneziaWG configs — never touches
+     *  CoreVpnService/Xray-core, uses the AmneziaWG engine's own VpnService instead.
+     *
+     *  IMPORTANT: AwgManager.connect() and disconnect() are blocking calls (sleep + I/O).
+     *  They MUST run on Dispatchers.IO. The UI state is optimistically updated on the
+     *  main thread before the background work begins so the button feels instant;
+     *  the state is corrected if the operation actually fails. */
     private fun handleAwgToggle(profile: ProfileItem) {
         if (com.narcic.ng.awg.AwgManager.isRunning()) {
-            val error = com.narcic.ng.awg.AwgManager.disconnect()
+            // Optimistic: show disconnected immediately so UI feels responsive
             mainViewModel.setExternalRunningState(false)
-            if (error != null) toast(error)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val error = com.narcic.ng.awg.AwgManager.disconnect()
+                if (error != null) {
+                    withContext(Dispatchers.Main) {
+                        // Rollback: disconnect failed
+                        mainViewModel.setExternalRunningState(true)
+                        toast(error)
+                    }
+                }
+            }
             return
         }
 
@@ -228,16 +244,25 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    /**
+     * Starts the AWG tunnel on a background thread.
+     * AwgManager.connect() is blocking (retries with sleep) — must NOT run on Main thread.
+     * State is optimistically set to true before the call; rolled back on failure.
+     */
     private fun startAwgTunnel(configText: String) {
-        val error = com.narcic.ng.awg.AwgManager.connect(this, configText)
-        if (error != null) {
-            toast(error)
-            mainViewModel.setExternalRunningState(false)
-        } else {
-            mainViewModel.setExternalRunningState(true)
+        // Optimistic update so button responds immediately
+        mainViewModel.setExternalRunningState(true)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val error = com.narcic.ng.awg.AwgManager.connect(this@MainActivity, configText)
+            withContext(Dispatchers.Main) {
+                if (error != null) {
+                    mainViewModel.setExternalRunningState(false)
+                    toast(error)
+                }
+                // error == null -> already optimistically true, nothing to do
+            }
         }
     }
-
     private fun proceedToConnect() {
         if (SettingsManager.isVpnMode()) {
             val intent = VpnService.prepare(this)

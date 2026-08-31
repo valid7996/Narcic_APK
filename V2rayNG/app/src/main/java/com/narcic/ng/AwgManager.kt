@@ -8,62 +8,40 @@ import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import java.io.BufferedReader
 import java.io.StringReader
+import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Thin bridge between our app and the AmneziaWG native engine (org.amnezia.awg).
- * This is a completely separate connection path from CoreVpnService/Xray-core —
- * used only when the selected profile is an AmneziaWG config (detected by the
- * presence of Jc/Jmin/Jmax/H1-H4/I1-I5 fields in the pasted .conf text).
- *
- * Only one of CoreVpnService or GoBackend.VpnService can be the active Android
- * VPN at a time; callers must make sure the other engine is stopped first.
- */
 object AwgManager {
 
     private const val TAG = "AwgManager"
     private const val TUNNEL_NAME = "narcic-awg"
+    private const val DISCONNECT_SETTLE_MS = 600L
+    private const val SETTLE_POLL_INTERVAL_MS = 50L
+    private val CONNECT_RETRY_DELAYS = longArrayOf(200L, 400L, 800L)
 
     private var backend: GoBackend? = null
     private var currentTunnel: SimpleTunnel? = null
+    private val isTransitioning = AtomicBoolean(false)
 
-    /** True if the raw config text looks like an AmneziaWG config (not a plain WireGuard one). */
     fun isAmneziaWgConfig(rawText: String): Boolean {
         if (!rawText.contains("[Interface]")) return false
-        return Regex("(?m)^\\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\\s*=").containsMatchIn(rawText)
+        return Regex("(?m)^\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\s*=").containsMatchIn(rawText)
     }
 
-    /**
-     * Cleans up text pasted from Telegram bots / websites / other apps before it ever reaches
-     * the AmneziaWG config parser. Stray carriage returns, trailing spaces, a leading BOM, or
-     * invisible zero-width characters copied along with a key are all "well-formed enough" to
-     * look fine to the human eye but break base64 key decoding with
-     * org.amnezia.awg.crypto.KeyFormatException. This is defensive and idempotent — safe to
-     * call on text that's already clean.
-     */
     fun sanitizeConfigText(rawText: String): String {
         return rawText
-            .removePrefix("\uFEFF") // BOM some editors/bots prepend
+            .removePrefix("﻿")
             .replace("\r\n", "\n")
             .replace('\r', '\n')
             .lines()
             .joinToString("\n") { line ->
                 line
-                    .replace("\u200B", "").replace("\u200C", "")
-                    .replace("\u200D", "").replace("\u2060", "")
+                    .replace("​", "").replace("‌", "")
+                    .replace("‍", "").replace("⁠", "")
                     .trim()
             }
             .trim()
     }
 
-    /**
-     * Creates (and starts binding) the GoBackend well before the user taps Connect.
-     * GoBackend binds to its internal AmneziaWG VpnService asynchronously; calling
-     * setState(UP) before that binding finishes throws on the very first attempt right
-     * after the object is constructed — which is why the first tap failed with
-     * "AmneziaWG connect failed" while the second tap (backend already bound) worked.
-     * Call this once, early (e.g. app startup), so the backend is ready by the time the
-     * user actually connects.
-     */
     fun preload(context: Context) {
         try {
             ensureBackend(context)
@@ -76,8 +54,26 @@ object AwgManager {
         return backend ?: GoBackend(context.applicationContext).also { backend = it }
     }
 
-    /** Returns null on success, or an error message on failure. */
     fun connect(context: Context, rawConfigText: String): String? {
+        if (!isTransitioning.compareAndSet(false, true)) {
+            val deadline = System.currentTimeMillis() + DISCONNECT_SETTLE_MS
+            while (isTransitioning.get() && System.currentTimeMillis() < deadline) {
+                try { Thread.sleep(SETTLE_POLL_INTERVAL_MS) } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt(); return "Connect interrupted"
+                }
+            }
+            if (!isTransitioning.compareAndSet(false, true)) {
+                return "AmneziaWG: another transition is still in progress"
+            }
+        }
+        return try {
+            connectInternal(context, rawConfigText)
+        } finally {
+            isTransitioning.set(false)
+        }
+    }
+
+    private fun connectInternal(context: Context, rawConfigText: String): String? {
         val cleanedText = sanitizeConfigText(rawConfigText)
         val config = try {
             Config.parse(BufferedReader(StringReader(cleanedText)))
@@ -86,26 +82,54 @@ object AwgManager {
             return e.message ?: "AmneziaWG config is invalid"
         }
 
-        val wasBackendAlreadyReady = backend != null
-        return try {
-            startTunnel(context, config)
-        } catch (e: Exception) {
-            Log.w(TAG, "AmneziaWG connect attempt failed, retrying once", e)
-            // Most first-attempt failures are the backend's internal VpnService still binding
-            // (see preload() doc above). Give it a moment and retry once before giving up.
-            if (wasBackendAlreadyReady) {
-                // Backend was already up, so this wasn't a binding race — don't mask a real error.
-                Log.e(TAG, "Failed to start AmneziaWG tunnel", e)
-                return e.message ?: "AmneziaWG connect failed"
-            }
+        val activeTunnel = currentTunnel
+        if (activeTunnel != null) {
             try {
-                Thread.sleep(400)
-                startTunnel(context, config)
-            } catch (retryError: Exception) {
-                Log.e(TAG, "Failed to start AmneziaWG tunnel after retry", retryError)
-                retryError.message ?: "AmneziaWG connect failed"
+                Log.i(TAG, "AmneziaWG: bringing existing tunnel down before reconnect")
+                backend?.setState(activeTunnel, Tunnel.State.DOWN, null)
+                currentTunnel = null
+                waitForTunnelDown(activeTunnel)
+            } catch (e: Exception) {
+                Log.w(TAG, "AmneziaWG: error while bringing tunnel down before reconnect", e)
             }
         }
+
+        var lastError: String? = null
+        for ((index, retryDelay) in CONNECT_RETRY_DELAYS.withIndex()) {
+            try {
+                startTunnel(context, config)
+                Log.i(TAG, "AmneziaWG: tunnel UP on attempt ${index + 1}")
+                return null
+            } catch (e: Exception) {
+                lastError = e.message ?: "AmneziaWG connect failed"
+                Log.w(TAG, "AmneziaWG connect attempt ${index + 1} failed: $lastError", e)
+                try { Thread.sleep(retryDelay) } catch (e2: InterruptedException) {
+                    Thread.currentThread().interrupt(); return "Connect interrupted"
+                }
+            }
+        }
+
+        Log.e(TAG, "AmneziaWG: all connect attempts exhausted. Last error: $lastError")
+        return lastError ?: "AmneziaWG connect failed"
+    }
+
+    private fun waitForTunnelDown(tunnel: SimpleTunnel) {
+        val deadline = System.currentTimeMillis() + DISCONNECT_SETTLE_MS
+        while (System.currentTimeMillis() < deadline) {
+            val state = try {
+                backend?.getState(tunnel)
+            } catch (e: Exception) {
+                null
+            }
+            if (state == Tunnel.State.DOWN || state == null) {
+                Log.d(TAG, "AmneziaWG: tunnel settled DOWN")
+                return
+            }
+            try { Thread.sleep(SETTLE_POLL_INTERVAL_MS) } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt(); return
+            }
+        }
+        Log.w(TAG, "AmneziaWG: tunnel did not settle DOWN within ${DISCONNECT_SETTLE_MS}ms")
     }
 
     private fun startTunnel(context: Context, config: Config): String? {
@@ -117,6 +141,25 @@ object AwgManager {
     }
 
     fun disconnect(): String? {
+        if (!isTransitioning.compareAndSet(false, true)) {
+            val deadline = System.currentTimeMillis() + DISCONNECT_SETTLE_MS
+            while (isTransitioning.get() && System.currentTimeMillis() < deadline) {
+                try { Thread.sleep(SETTLE_POLL_INTERVAL_MS) } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt(); return "Disconnect interrupted"
+                }
+            }
+            if (!isTransitioning.compareAndSet(false, true)) {
+                return "AmneziaWG: transition still in progress, cannot disconnect now"
+            }
+        }
+        return try {
+            disconnectInternal()
+        } finally {
+            isTransitioning.set(false)
+        }
+    }
+
+    private fun disconnectInternal(): String? {
         val goBackend = backend ?: return null
         val tunnel = currentTunnel ?: return null
         return try {
@@ -139,12 +182,6 @@ object AwgManager {
         }
     }
 
-    /**
-     * Total tunnel rx/tx bytes since it came up, or null if not running / not available yet.
-     * Backed by org.amnezia.awg.backend.Backend#getStatistics, confirmed against upstream
-     * source (tunnel/src/main/java/org/amnezia/awg/backend/Statistics.java): totalRx()/totalTx()
-     * sum bytes across all peers tracked for the tunnel.
-     */
     fun getStatistics(): org.amnezia.awg.backend.Statistics? {
         val goBackend = backend ?: return null
         val tunnel = currentTunnel ?: return null
@@ -156,7 +193,6 @@ object AwgManager {
         }
     }
 
-    /** Standard Android VPN permission check, same pattern as VpnService.prepare(). */
     fun prepare(context: Context) = VpnService.prepare(context)
 
     private class SimpleTunnel(private val name: String) : Tunnel {
