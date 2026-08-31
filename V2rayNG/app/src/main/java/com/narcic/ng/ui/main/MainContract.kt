@@ -12,6 +12,8 @@ data class MainUiState(
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
+    val isAwgConnecting: Boolean = false,
+    val awgConnectingMessage: String = "",
     val statusText: String = "",
     val livePingMillis: Long? = null,
     val locateTarget: LocateTarget? = null,
@@ -97,26 +99,15 @@ sealed interface MainAction {
     /** Pin a country filter ("" clears it, back to خودکار). */
     data class SetLocationFilter(val flag: String) : MainAction
 
-    /** Switch the connection row back to خودکار (auto-pick fastest). */
+    // When the user taps the connection card on the home screen:
+    //  - autoConnection == true -> toggle the whole service (connects via the auto-picked server)
+    //  - autoConnection == false -> open the bottom-sheet connection picker so they can select a server
     data object SetAutoConnection : MainAction
-
-    /** Manually pin one server as the connection (from the connection picker). */
     data class SetManualConnection(val guid: String) : MainAction
 
-    /** Refresh (تازه‌سازی) a single subscription, regardless of which tab is selected. */
+    // ---- Subscriptions screen actions ----
     data class RefreshSubscription(val subId: String) : MainAction
-
-    /**
-     * "افزودن سابسکریپشن": [content] is either one or more subscription
-     * links, or one or more raw share links (vless/vmess/trojan/ss/...),
-     * pasted directly. [name] is optional — used as the new subscription's
-     * remarks when the content isn't itself a link with a #fragment name.
-     */
     data class AddSubscriptionFromText(val name: String, val content: String) : MainAction
-
-    /** "سابسکریپشن‌ها" → "گزینه‌ها" → "حذف": delete a subscription and its configs. */
     data class RemoveSubscriptionGroup(val groupId: String) : MainAction
-
-    /** "سابسکریپشن‌ها" → ویرایش: rename a subscription and/or change its URL. */
     data class EditSubscription(val groupId: String, val name: String, val url: String) : MainAction
 }

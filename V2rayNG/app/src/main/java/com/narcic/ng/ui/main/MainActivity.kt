@@ -245,21 +245,34 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     /**
-     * Starts the AWG tunnel on a background thread.
-     * AwgManager.connect() is blocking (retries with sleep) — must NOT run on Main thread.
-     * State is optimistically set to true before the call; rolled back on failure.
+     * Starts the AWG tunnel on a background thread with background retry loop.
+     * Shows loading overlay ("در حال اتصال، لطفاً صبر کنید...") while in the background
+     * it tries up to 5 times (checking handshake for 5s each cycle) until good connection is established.
      */
     private fun startAwgTunnel(configText: String) {
-        // Optimistic update so button responds immediately
-        mainViewModel.setExternalRunningState(true)
+        mainViewModel.setAwgConnectingState(true, "در حال اتصال، لطفاً صبر کنید...")
         lifecycleScope.launch(Dispatchers.IO) {
-            val error = com.narcic.ng.awg.AwgManager.connect(this@MainActivity, configText)
+            val error = com.narcic.ng.awg.AwgManager.connectWithAutoRetry(
+                context = this@MainActivity,
+                rawConfigText = configText,
+                maxRetries = 5,
+                handshakeTimeoutMs = 5000L,
+                onProgress = { attempt, max ->
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        mainViewModel.setAwgConnectingState(
+                            true,
+                            if (attempt == 1) "در حال اتصال، لطفاً صبر کنید..."
+                            else "در حال تلاش مجدد ($attempt از $max)..."
+                        )
+                    }
+                }
+            )
             withContext(Dispatchers.Main) {
+                mainViewModel.setAwgConnectingState(false)
                 if (error != null) {
                     mainViewModel.setExternalRunningState(false)
                     toast(error)
                 } else {
-                    // Re-trigger stats polling now that the tunnel is confirmed UP and running
                     mainViewModel.setExternalRunningState(true)
                 }
             }

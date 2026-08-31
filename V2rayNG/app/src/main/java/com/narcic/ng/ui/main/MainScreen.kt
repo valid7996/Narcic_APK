@@ -480,6 +480,13 @@ fun MainScreen(
             message = "در حال تست سرورها...",
             accent = accentPair.main,
         )
+
+        // Full-screen smart loading overlay while AmneziaWG is performing background auto-retries
+        GooOverlay(
+            visible = uiState.isAwgConnecting,
+            message = uiState.awgConnectingMessage.ifBlank { "در حال اتصال، لطفاً صبر کنید..." },
+            accent = accentPair.main,
+        )
     }
     }
 }

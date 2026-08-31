@@ -113,6 +113,79 @@ object AwgManager {
         return lastError ?: "AmneziaWG connect failed"
     }
 
+    /**
+     * Connects with smart handshake verification up to 5 background retry cycles.
+     * In each cycle (up to maxRetries = 5), the tunnel is started and checked for actual
+     * RX traffic (meaning the handshake with the remote AmneziaWG peer succeeded).
+     * If no RX traffic is received within handshakeTimeoutMs (5000ms), it automatically
+     * brings the tunnel down, waits for settle, and retries in the background.
+     *
+     * @param onProgress Callback on each retry attempt e.g. onProgress(currentAttempt, maxAttempts)
+     * @return null on successful active handshake, or error message on complete failure.
+     */
+    fun connectWithAutoRetry(
+        context: Context,
+        rawConfigText: String,
+        maxRetries: Int = 5,
+        handshakeTimeoutMs: Long = 5000L,
+        onProgress: ((Int, Int) -> Unit)? = null
+    ): String? {
+        var lastError: String? = null
+
+        for (attempt in 1..maxRetries) {
+            onProgress?.invoke(attempt, maxRetries)
+            Log.i(TAG, "AmneziaWG auto-retry connect: cycle $attempt of $maxRetries")
+
+            // 1. Establish tunnel
+            val err = connect(context, rawConfigText)
+            if (err != null) {
+                lastError = err
+                Log.w(TAG, "AmneziaWG connect error on cycle $attempt: $err")
+                try { Thread.sleep(600L) } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return "اتصال متوقف شد"
+                }
+                continue
+            }
+
+            // 2. Wait up to handshakeTimeoutMs and monitor rx bytes to confirm handshake
+            val startRx = getStatistics()?.totalRx() ?: 0L
+            val deadline = System.currentTimeMillis() + handshakeTimeoutMs
+            var handshakeConfirmed = false
+
+            while (System.currentTimeMillis() < deadline) {
+                try { Thread.sleep(500L) } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return "اتصال متوقف شد"
+                }
+                val currentRx = getStatistics()?.totalRx() ?: 0L
+                if (currentRx > startRx) {
+                    Log.i(TAG, "AmneziaWG handshake confirmed with RX bytes: $currentRx (cycle $attempt)")
+                    handshakeConfirmed = true
+                    break
+                }
+            }
+
+            if (handshakeConfirmed) {
+                return null // Success with verified handshake!
+            }
+
+            // Handshake did not receive packets in 5 seconds
+            Log.w(TAG, "AmneziaWG handshake timeout after ${handshakeTimeoutMs}ms on cycle $attempt. Restarting tunnel...")
+            if (attempt < maxRetries) {
+                disconnect()
+                try { Thread.sleep(400L) } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return "اتصال متوقف شد"
+                }
+            } else {
+                lastError = "سرور پاسخ نداد (تعداد ۵ تلاش ناموفق)"
+            }
+        }
+
+        return lastError ?: "عدم برقراری ارتباط با سرور AmneziaWG"
+    }
+
     private fun waitForTunnelDown(tunnel: SimpleTunnel) {
         val deadline = System.currentTimeMillis() + DISCONNECT_SETTLE_MS
         while (System.currentTimeMillis() < deadline) {

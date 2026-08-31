@@ -495,6 +495,21 @@ class MainViewModel(
         launchLoading {
             withContext(ioDispatcher) {
                 try {
+                    // Check if it's an AmneziaWG configuration first
+                    if (com.narcic.ng.awg.AwgManager.isAmneziaWgConfig(configText)) {
+                        val profile = com.narcic.ng.dto.entities.ProfileItem.create(
+                            com.narcic.ng.enums.EConfigType.AMNEZIAWG
+                        ).apply {
+                            remarks = "AmneziaWG"
+                            awgConfigText = com.narcic.ng.awg.AwgManager.sanitizeConfigText(configText)
+                        }
+                        dataSource.encodeServerConfig("", profile)
+                        toast(dataSource.getString(R.string.title_import_config_count, 1))
+                        cacheMutex.withLock { groupDataCache.remove(AppConfig.DEFAULT_SUBSCRIPTION_ID) }
+                        setupGroupTab(forceRefresh = true)
+                        return@withContext
+                    }
+
                     val (count, _) = dataSource.importManualVpnConfig(configText)
                     if (count > 0) {
                         toast(dataSource.getString(R.string.title_import_config_count, count))
@@ -1224,6 +1239,16 @@ class MainViewModel(
      *  flow (currently: the AmneziaWG engine), to keep the UI in sync. */
     fun setExternalRunningState(running: Boolean) {
         updateRunningState(running)
+    }
+
+    /** Sets the full-screen loading state while AWG is doing smart auto-retries in the background */
+    fun setAwgConnectingState(isConnecting: Boolean, message: String = "") {
+        _uiState.update { state ->
+            state.copy(
+                isAwgConnecting = isConnecting,
+                awgConnectingMessage = message
+            )
+        }
     }
 
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {

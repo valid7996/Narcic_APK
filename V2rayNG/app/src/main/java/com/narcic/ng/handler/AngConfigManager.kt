@@ -441,6 +441,21 @@ object AngConfigManager {
             }
             return 0
         } else if (server.startsWith("[Interface]") && server.contains("[Peer]")) {
+            // Distinguish AmneziaWG (with obfuscation headers like Jc/Jmin/H1-H4/I1-I5) from standard WireGuard
+            if (com.narcic.ng.awg.AwgManager.isAmneziaWgConfig(server)) {
+                val profile = ProfileItem.create(EConfigType.AMNEZIAWG).apply {
+                    remarks = "AmneziaWG"
+                    awgConfigText = com.narcic.ng.awg.AwgManager.sanitizeConfigText(server)
+                    subscriptionId = subid
+                }
+                profile.description = generateDescription(profile)
+                if (!append) {
+                    MmkvManager.removeServerViaSubid(subid)
+                }
+                val key = MmkvManager.encodeServerConfig("", profile)
+                MmkvManager.encodeServerRaw(key, server)
+                return 1
+            }
             try {
                 val config = WireguardFmt.parseWireguardConfFile(server) ?: return R.string.toast_incorrect_protocol
                 config.description = generateDescription(config)
