@@ -24,7 +24,7 @@ object AwgManager {
 
     fun isAmneziaWgConfig(rawText: String): Boolean {
         if (!rawText.contains("[Interface]")) return false
-        return Regex("(?m)^\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\s*=").containsMatchIn(rawText)
+        return Regex("""(?m)^\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\s*=""").containsMatchIn(rawText)
     }
 
     fun sanitizeConfigText(rawText: String): String {
