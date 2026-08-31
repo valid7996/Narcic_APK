@@ -26,9 +26,7 @@ fun MainTopBar(
         onBackClick = {},
         isLoading = isLoading,
         navigationIcon = {
-            IconButton(onClick = onMenuClick) {
-                Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = "Menu")
-            }
+// Menu button hidden per UI redesign
         },
         actions = {
             IconButton(onClick = onFetchConfig) {

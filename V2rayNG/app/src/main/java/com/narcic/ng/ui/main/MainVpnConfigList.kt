@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -42,23 +40,11 @@ import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
 import com.narcic.ng.enums.EConfigType
+import com.narcic.ng.ui.compose.ConfigsHeaderBar
 import com.narcic.ng.ui.compose.Nc
 
 /**
  * The server list that lives directly under the connect button.
- *
- * - Horizontal group tabs on top: "پیش‌فرض" (manually-entered servers, like
- *   V2rayNg) plus one tab per subscription the user added (e.g. "Narcic
- *   Irancell").  Switching tabs switches which group's servers are shown.
- * - ONE "Test" button, scoped to whichever tab/group is currently selected
- *   (never tests every group at once).
- * - After a test finishes, servers are always sorted best-ping-first, both
- *   in the "Best Servers" (top 5) box and in the full list beneath it.
- * - Rows for servers that belong to one of the built-in Narcic subscriptions
- *   (see [AppConfig.DEFAULT_SUBSCRIPTIONS] / [isDefaultConfig]) never show
- *   Share or Edit -- those configs are curated by Narcic and aren't meant to
- *   be modified or re-shared by the customer. Only Delete stays available,
- *   so a customer can still drop a single bad server from the list.
  */
 @Composable
 fun MainServerListSection(
@@ -73,12 +59,64 @@ fun MainServerListSection(
     onEditServer: (String, ProfileItem) -> Unit,
     onShareAction: (MainAction) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onDeleteAllServers: () -> Unit,
     onAddFromClipboard: () -> Unit,
     onScanVpnQr: () -> Unit,
     onRetest: () -> Unit,
+    onAutoSelectBest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var shareTarget by remember { mutableStateOf<Pair<String, ProfileItem>?>(null) }
+    var showAddOptionsDialog by remember { mutableStateOf(false) }
+
+    if (showAddOptionsDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAddOptionsDialog = false },
+            title = {
+                Text(
+                    "افزودن کانفیگ",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = {
+                            showAddOptionsDialog = false
+                            onAddFromClipboard()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_file_24dp), contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text("افزودن از کلیپ‌بورد")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showAddOptionsDialog = false
+                            onScanVpnQr()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_scan_24dp), contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text("اسکن بارکد QR")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showAddOptionsDialog = false }) {
+                    Text("انصراف")
+                }
+            }
+        )
+    }
+
     shareTarget?.let { (guid, profile) ->
         ShareMethodDialog(
             guid = guid,
@@ -90,13 +128,9 @@ fun MainServerListSection(
         )
     }
 
-    // Only the servers belonging to the currently selected tab/group --
-    // this is what makes "Test" and the list itself scoped to one group.
     val groupServers by remember(selectedGroupId) { mainViewModel.serversForGroup(selectedGroupId) }
         .collectAsStateWithLifecycle()
 
-    // Best ping first, always -- both right after a test and on every
-    // recomposition, so the ordering never goes stale.
     val sortedAll = remember(groupServers) {
         groupServers.sortedWith(
             compareBy(
@@ -105,10 +139,7 @@ fun MainServerListSection(
             )
         )
     }
-    // Scoped further to whichever engine (AmneziaWG / V2Ray) is active in
-    // the EngineSwitch above — the two engines never run at once, so the
-    // list only ever shows configs the user could actually connect with
-    // right now.
+
     val sorted = remember(sortedAll, engineIsAwg) {
         sortedAll.filter { isAwgConfig(it.profile.configType) == engineIsAwg }
     }
@@ -117,40 +148,19 @@ fun MainServerListSection(
 
     Column(modifier = modifier.fillMaxWidth()) {
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Button(
-                onClick = onRetest,
-                enabled = !isTesting && sorted.isNotEmpty(),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent),
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(
-                        elevation = if (isTesting) 0.dp else 4.dp,
-                        shape = RoundedCornerShape(12.dp),
-                        ambientColor = accent.copy(alpha = 0.25f),
-                        spotColor = accent.copy(alpha = 0.35f)
-                    ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isTesting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White,
-                    )
-                    Spacer(Modifier.size(8.dp))
-                }
-                Text(if (isTesting) "در حال تست…" else "تست", color = Color.White)
-            }
-        }
+        // ---- Header Bar: کلاینت‌های AmneziaWG + دکمه‌های عملیاتی ----
+        ConfigsHeaderBar(
+            title = if (engineIsAwg) "کلاینت‌های AmneziaWG" else "کلاینت‌های V2Ray",
+            count = sorted.size,
+            accent = accent,
+            onAddClick = { showAddOptionsDialog = true },
+            onSortClick = onAutoSelectBest,
+            onTestClick = onRetest,
+            onDeleteAllClick = onDeleteAllServers,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
 
-        // Top 5 best servers of THIS group+engine only -- clearly identifiable as recommended.
+        // Top 5 best servers of THIS group+engine only
         if (top5.isNotEmpty() && !isTesting) {
             Column(
                 modifier = Modifier
@@ -176,7 +186,7 @@ fun MainServerListSection(
                             .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = .7f)))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "\u2b50", fontSize = 13.sp)
+                        Text(text = "⭐", fontSize = 13.sp)
                     }
                     Text(
                         text = "بهترین سرورها",
@@ -228,9 +238,9 @@ fun MainServerListSection(
                 Text(
                     text = when {
                         sortedAll.isNotEmpty() ->
-                            "این گروه کانفیگ ${if (engineIsAwg) "AmneziaWG" else "V2Ray"} ندارد\nموتور دیگر را امتحان کنید"
+                            "این گروه کانفیگ " + (if (engineIsAwg) "AmneziaWG" else "V2Ray") + " ندارد\nموتور دیگر را امتحان کنید"
                         isDefaultGroup ->
-                            "هنوز کانفیگی اضافه نشده\nاز «افزودن از کلیپ‌بورد» یا «اسکن QR» استفاده کنید"
+                            "هنوز کانفیگی اضافه نشده\nاز دکمه + بالای لیست استفاده کنید"
                         else ->
                             "این سابسکریپشن هنوز سروری ندارد\nبرای دریافت، از دکمه بروزرسانی بالای صفحه استفاده کنید"
                     },
@@ -241,13 +251,6 @@ fun MainServerListSection(
                 )
             }
         } else {
-            Text(
-                text = "لیست سرورها (${sorted.size})",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
             Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 sorted.forEach { server ->
                     VpnConfigRow(
@@ -264,49 +267,11 @@ fun MainServerListSection(
                 }
             }
         }
-
-        // Manually adding a config always lands in "پیش‌فرض" (Default),
-        // exactly like V2rayNg -- available no matter which tab is open.
-        if (isDefaultGroup || groups.size <= 1) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = onAddFromClipboard,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(14.dp),
-                            ambientColor = accent.copy(alpha = 0.25f),
-                            spotColor = accent.copy(alpha = 0.35f)
-                        ),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("افزودن از کلیپ‌بورد", fontWeight = FontWeight.Bold, color = Color.White)
-                }
-                OutlinedButton(
-                    onClick = onScanVpnQr,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(painterResource(R.drawable.ic_scan_24dp), contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text("اسکن QR")
-                }
-            }
-        }
     }
 }
 
 /**
  * Small colored circular badge showing a short protocol abbreviation
- * (e.g. "VL" for VLESS, "WG" for WireGuard) so rows are visually
- * distinguishable at a glance instead of relying on plain text alone.
  */
 private data class ProtocolBadge(val label: String, val color: Color)
 
@@ -329,12 +294,6 @@ private fun protocolBadge(type: EConfigType): ProtocolBadge = when (type) {
 private fun isAwgConfig(type: EConfigType): Boolean =
     type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
 
-/**
- * All configs -- including the ones seeded from the built-in Narcic
- * subscriptions -- are editable and shareable now; only Delete used to be
- * exclusive to those before.
- */
-
 @Composable
 private fun VpnConfigRow(
     serverCache: ServersCache,
@@ -347,33 +306,26 @@ private fun VpnConfigRow(
     onShareClick: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit
 ) {
+    val guid = serverCache.guid
     val profile = serverCache.profile
-    val isSelected = serverCache.guid == selectedGuid
-    val badge = remember(profile.configType) { protocolBadge(profile.configType) }
-    val pingMs = if (serverCache.testDelayMillis > 0L) serverCache.testDelayMillis.toInt() else null
+    val isSelected = guid == selectedGuid
+    val proto = protocolBadge(profile.configType)
 
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp)) {
-        ServerCard(
-            name = profile.remarks.ifBlank { "بدون‌نام" },
-            address = profile.getServerAddressAndPort().ifBlank { simpleProtocolLabel(profile) },
-            pingMs = pingMs,
-            protoLabel = badge.label,
-            protoColor = badge.color,
-            selected = isSelected,
-            enabled = true,
-            accent = accent,
-            showEditShare = true,
-            rankBadge = rank,
-            onSelect = { onSelectServer(serverCache.guid) },
-            onEdit = { onEditServer(serverCache.guid, profile) },
-            onShare = { onShareClick(serverCache.guid, profile) },
-            onDelete = { onRemoveServer(serverCache.guid) },
-        )
-    }
-}
-
-private fun simpleProtocolLabel(profile: ProfileItem): String {
-    val type = profile.configType.name
-    val net = profile.network?.takeIf { it.isNotBlank() && !it.equals("tcp", ignoreCase = true) }?.let { " / $it" } ?: ""
-    return type + net
+    ServerCard(
+        name = serverCache.remarks,
+        address = profile.server.orEmpty().ifBlank { "..." },
+        pingMs = if (serverCache.testDelayMillis > 0L) serverCache.testDelayMillis.toInt() else null,
+        protoLabel = proto.label,
+        protoColor = proto.color,
+        selected = isSelected,
+        enabled = true,
+        accent = accent,
+        showEditShare = true,
+        rankBadge = rank,
+        onSelect = { onSelectServer(guid) },
+        onEdit = { onEditServer(guid, profile) },
+        onShare = { onShareClick(guid, profile) },
+        onDelete = { onRemoveServer(guid) },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+    )
 }

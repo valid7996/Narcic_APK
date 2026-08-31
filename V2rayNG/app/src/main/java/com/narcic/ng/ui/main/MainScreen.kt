@@ -462,9 +462,11 @@ fun MainScreen(
                     onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
                     onShareAction = { action -> onAction(action) },
                     onRemoveServer = removeServer,
+                    onDeleteAllServers = { showDelAllConfirm = true },
                     onAddFromClipboard = { onAction(MainAction.ImportVpnFromClipboard) },
                     onScanVpnQr = { onAction(MainAction.ImportQRcode) },
                     onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
+                    onAutoSelectBest = { onAction(MainAction.AutoConnect) },
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
