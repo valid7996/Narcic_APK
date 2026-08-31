@@ -105,7 +105,7 @@ class ServerAmneziaWgActivity : BaseComponentActivity() {
             Config.parse(BufferedReader(StringReader(configText)))
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to parse AmneziaWG configuration", e)
-            toast("${getString(R.string.toast_config_file_invalid)} ${com.narcic.ng.awg.AwgManager.friendlyConfigError(e)}")
+            toast("${getString(R.string.toast_config_file_invalid)} ${e.message.orEmpty()}")
             return false
         }
 

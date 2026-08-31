@@ -1,27 +1,36 @@
 package com.narcic.ng.ui.main
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,239 +38,202 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.narcic.ng.R
-import com.narcic.ng.ui.compose.AuroraCyan
-import com.narcic.ng.ui.compose.AuroraIndigo
-import com.narcic.ng.ui.compose.AuroraViolet
-import com.narcic.ng.ui.compose.RoundedPolygonShape
-
-// Local, hero-specific neutrals. The accent itself (AuroraCyan/Indigo/Violet)
-// comes from Theme.kt so the whole app shares one signature gradient — the
-// same one used in the app's own launcher icon — instead of a one-off color.
-private val FgMuted = Color(0xFF8A97B0)
-private val RingBorderIdle = Color(0xFF232E45)
-private val CoreIdleTop = Color(0xFF1A2338)
-private val CoreIdleBottom = Color(0xFF0A0E1A)
-private val CoreRunningTop = Color(0xFF163852)
-private val CoreRunningBottom = Color(0xFF0A0E1A)
-
-// The hero core is a rounded hexagon instead of a plain circle — a more
-// deliberate, "secured network" silhouette that still nests cleanly inside
-// the circular orbit/pulse rings drawn around it.
-private val HeroCoreShape = RoundedPolygonShape(sides = 6, cornerRadius = 26.dp)
+import com.narcic.ng.ui.compose.GooLoader
+import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.Nc
 
 /**
- * Large animated connect button (orbit ring + conic glow + pulse, rounded
- * hexagonal core) matching the Narcic NG "Aurora" design, wired to REAL app
- * state and actions only (isRunning, isTesting, statusText, ToggleService,
- * TestRealAllServers, AutoConnect). No mock data, no simulated timers —
- * everything here reflects the actual VPN service state.
+ * Big connect button per the two-engine redesign: idle=red power icon,
+ * connecting=amber + [GooLoader] + fast spinning ring, connected=engine
+ * accent + double outward ripple. `accent`/`accent2` come from
+ * `accentFor(isAwg)` (Theme's DesignTokens) so the whole hero (ring, glow,
+ * button gradient, "test connection" chip) recolors with the active engine.
  *
- * While connected, statusText reads "Connected, tap to check connection"
- * (R.string.connection_connected) and is itself tappable, triggering
- * onCheckConnection (MainAction.TestCurrentServer) to re-run a real ping
- * against the current server.
+ * `isConnecting` is UI-local (MainScreen flips it true on tap and clears it
+ * once `isRunning` actually turns true, or after a timeout) since the real
+ * ViewModel doesn't expose a dedicated "handshaking" state.
  */
 @Composable
 fun ConnectHero(
     isRunning: Boolean,
+    isConnecting: Boolean,
     isTesting: Boolean,
     statusText: String,
+    timeText: String,
+    accent: Color,
+    accent2: Color,
     onToggle: () -> Unit,
     onCheckConnection: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "hero")
+    val isDark = LocalDarkTheme.current
+    val txtMain = if (isDark) Nc.Txt else Color(0xFF1B2230)
+    val txtSub = if (isDark) Nc.Sub else Color(0xFF6B7688)
+    val statusColor = when {
+        isRunning -> accent
+        isConnecting -> Nc.StateConnecting
+        else -> txtSub
+    }
 
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.85f, targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "pulse"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.28f, targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "pulseAlpha"
-    )
-    val orbitAngle by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(22000, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "orbit"
-    )
-    val conicAngle by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(5000, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "conic"
-    )
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(modifier = Modifier.size(190.dp), contentAlignment = Alignment.Center) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(230.dp)) {
 
-            if (isRunning) {
-                // Two-tone aurora pulse (cyan core wave, violet trailing wave)
-                Box(
-                    modifier = Modifier
-                        .size(185.dp)
-                        .scale(pulseScale)
-                        .background(AuroraCyan.copy(alpha = pulseAlpha), CircleShape)
+            // ── outward double ripple, only while actually connected ──
+            if (isRunning) repeat(2) { idx ->
+                val p by rememberInfiniteTransition(label = "rip$idx").animateFloat(
+                    initialValue = 0f, targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        tween(2600, easing = LinearEasing),
+                        initialStartOffset = StartOffset(idx * 1300),
+                    ), label = "ripP$idx"
                 )
                 Box(
-                    modifier = Modifier
-                        .size(185.dp)
-                        .scale(pulseScale * 0.9f)
-                        .background(AuroraViolet.copy(alpha = pulseAlpha * 0.6f), CircleShape)
+                    Modifier
+                        .size(202.dp)
+                        .graphicsLayer {
+                            val s = 0.62f + p * 0.83f
+                            scaleX = s; scaleY = s
+                            alpha = (0.55f * (1f - p)).coerceIn(0f, 1f)
+                        }
+                        .border(1.5.dp, accent, CircleShape)
                 )
-                Canvas(modifier = Modifier.size(196.dp).rotate(orbitAngle)) {
-                    drawCircle(
-                        brush = Brush.linearGradient(
-                            listOf(AuroraCyan.copy(alpha = 0.4f), AuroraIndigo.copy(alpha = 0.4f))
-                        ),
-                        radius = 98.dp.toPx(),
-                        style = Stroke(width = 1.2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
-                    )
-                    drawCircle(color = AuroraCyan, radius = 3.dp.toPx(), center = Offset(size.width / 2, 0f))
-                }
-                Canvas(modifier = Modifier.size(172.dp).rotate(conicAngle)) {
-                    drawCircle(
-                        brush = Brush.sweepGradient(
-                            listOf(
-                                Color.Transparent, AuroraCyan.copy(0.38f), Color.Transparent,
-                                AuroraIndigo.copy(0.38f), Color.Transparent
+            }
+
+            // ── pulsing glow halo ──
+            if (isRunning || isConnecting) {
+                val glowColor = if (isConnecting) Nc.StateConnecting else accent
+                val glow by rememberInfiniteTransition(label = "glow").animateFloat(
+                    1f, 1.12f,
+                    infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                    label = "glowS"
+                )
+                val glowAlpha by rememberInfiniteTransition(label = "glowA").animateFloat(
+                    .85f, .5f,
+                    infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                    label = "glowAl"
+                )
+                Box(
+                    Modifier
+                        .size(210.dp)
+                        .graphicsLayer { scaleX = glow; scaleY = glow; alpha = glowAlpha }
+                        .drawBehind {
+                            drawCircle(
+                                Brush.radialGradient(
+                                    listOf(glowColor.copy(alpha = .30f), Color.Transparent)
+                                )
                             )
-                        ),
-                        radius = 86.dp.toPx()
-                    )
-                }
-            } else {
-                // Idle state still gets a faint static hex outline one size up,
-                // so the core doesn't read as a flat, static circle-in-waiting.
-                Box(
-                    modifier = Modifier
-                        .size(180.dp)
-                        .border(1.dp, RingBorderIdle, HeroCoreShape)
+                        }
                 )
+            }
+
+            // ── spinning gradient ring — fast while connecting, slow while connected, static idle ──
+            val ringAngle by rememberInfiniteTransition(label = "ring").animateFloat(
+                0f, 360f,
+                infiniteRepeatable(tween(if (isConnecting) 900 else 7000, easing = LinearEasing)),
+                label = "ringA"
+            )
+            Box(
+                Modifier
+                    .size(198.dp)
+                    .graphicsLayer { rotationZ = ringAngle }
+                    .drawBehind {
+                        drawCircle(
+                            brush = Brush.sweepGradient(
+                                listOf(Color.Transparent, accent2.copy(alpha = .9f), accent, Color.Transparent)
+                            ),
+                            style = Stroke(3.5.dp.toPx()),
+                            alpha = if (isConnecting || isRunning) 1f else 0.3f,
+                        )
+                    }
+            )
+
+            // ── main button ──
+            val interaction = remember { MutableInteractionSource() }
+            val pressed by interaction.collectIsPressedAsState()
+            val btnScale by animateFloatAsState(
+                if (pressed) 0.93f else 1f,
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "btnS"
+            )
+
+            val btnColors = when {
+                isRunning -> listOf(accent.copy(alpha = .8f), accent, accent2.copy(alpha = .7f))
+                isConnecting -> listOf(Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309))
+                else -> listOf(Color(0xFFFB7185), Color(0xFFE11D48), Color(0xFFBE123C))
             }
 
             Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(158.dp)
-                    .shadow(
-                        elevation = if (isRunning) 22.dp else 8.dp,
-                        shape = HeroCoreShape,
-                        ambientColor = if (isRunning) AuroraCyan.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.3f),
-                        spotColor = if (isRunning) AuroraCyan.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.3f),
-                    )
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = if (isRunning) listOf(CoreRunningTop, CoreRunningBottom)
-                            else listOf(CoreIdleTop, CoreIdleBottom)
-                        ),
-                        shape = HeroCoreShape
-                    )
-                    .border(
-                        width = 2.dp,
-                        brush = if (isRunning) {
-                            Brush.sweepGradient(listOf(AuroraCyan, AuroraIndigo, AuroraViolet, AuroraCyan))
-                        } else {
-                            Brush.linearGradient(listOf(RingBorderIdle, RingBorderIdle))
-                        },
-                        shape = HeroCoreShape
-                    )
-                    .clip(HeroCoreShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onToggle
-                    ),
-                contentAlignment = Alignment.Center
+                    .graphicsLayer { scaleX = btnScale; scaleY = btnScale }
+                    .clip(CircleShape)
+                    .background(Brush.verticalGradient(btnColors))
+                    .drawBehind {
+                        // top-left glassy highlight
+                        drawCircle(
+                            Brush.radialGradient(
+                                colors = listOf(Color.White.copy(alpha = .28f), Color.Transparent),
+                                center = Offset(size.width * .32f, size.height * .22f),
+                                radius = size.width * .55f
+                            )
+                        )
+                    }
+                    .clickable(interactionSource = interaction, indication = null, onClick = onToggle)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (isConnecting) {
+                    GooLoader(size = 96.dp, color = Color.White)
+                } else {
                     Icon(
-                        painter = painterResource(R.drawable.ic_power_24dp),
-                        contentDescription = null,
-                        tint = if (isRunning) AuroraCyan else FgMuted,
-                        modifier = Modifier.size(38.dp)
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = when {
-                            isTesting -> "…"
-                            isRunning -> "قطع اتصال"
-                            else -> "اتصال"
-                        },
-                        color = if (isRunning) AuroraCyan else FgMuted,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-
-            // Small "secured" badge on the core's edge, only while connected.
-            if (isRunning) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .offset(x = 48.dp, y = 48.dp)
-                        .size(26.dp)
-                        .shadow(elevation = 4.dp, shape = CircleShape)
-                        .background(AuroraCyan, CircleShape)
-                        .border(2.dp, CoreRunningBottom, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_fab_check),
-                        contentDescription = null,
-                        tint = Color(0xFF04121F),
-                        modifier = Modifier.size(14.dp)
+                        Icons.Filled.PowerSettingsNew, null, tint = Color.White,
+                        modifier = Modifier.size(58.dp)
                     )
                 }
             }
         }
 
         Spacer(Modifier.height(14.dp))
+        Text(
+            timeText,
+            color = if (isRunning) txtMain else txtSub,
+            fontSize = if (isRunning) 16.sp else 15.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            statusText,
+            color = statusColor,
+            fontSize = 12.5.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(top = 4.dp)
+        )
 
-        if (statusText.isNotBlank()) {
-            Text(
-                text = statusText,
-                color = if (isRunning) AuroraCyan else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                // 2 lines: the live ping check replaces the idle "tap to
-                // check connection" hint with a 2-line result — delay in
-                // ms on the first line, exit IP/country on the second
-                // (see "$result\n$ip" in CoreServiceManager.measureV2rayDelay).
-                // maxLines = 1 was cutting that second line off entirely.
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+        if (isRunning) {
+            Spacer(Modifier.height(14.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
                 modifier = Modifier
-                    // fillMaxWidth so this box is always the same width,
-                    // whether it holds the short idle hint or the longer
-                    // ping/IP result — otherwise the text (and its tap
-                    // target) visibly resized/shifted every time the
-                    // content changed length.
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .clickable(enabled = isRunning, onClick = onCheckConnection)
-            )
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = if (isDark) .06f else .9f))
+                    .border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(50))
+                    .clickable(onClick = onCheckConnection)
+                    .padding(horizontal = 18.dp, vertical = 9.dp)
+            ) {
+                Icon(Icons.Outlined.NetworkCheck, null, tint = accent, modifier = Modifier.size(14.dp))
+                Text(
+                    if (isTesting) "در حال تست..." else "تست اتصال",
+                    color = txtMain, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
-

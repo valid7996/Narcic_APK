@@ -1,9 +1,9 @@
 package com.narcic.ng.ui.main
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,33 +14,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.narcic.ng.R
-import com.narcic.ng.ui.compose.AuroraCyan
-import com.narcic.ng.ui.compose.AuroraIndigo
-import com.narcic.ng.ui.compose.AuroraViolet
+import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.Nc
+import com.narcic.ng.ui.compose.Sparkline
 
 /**
- * Live connection info shown under the hero once the tunnel is up: real
- * download/upload throughput (reusing the same speed-notification data
- * source gated by "Enable speed display" in Settings), how long the current
- * session has been connected, and the exit IP/country. Hidden while
- * disconnected since none of these values mean anything then.
+ * Live connection info shown under the hero once the tunnel is up: exit
+ * country/IP + active engine badge, a rolling download-speed sparkline, and
+ * a ping/download/upload/duration grid. Hidden while disconnected.
  */
 @Composable
 fun ConnectionStatsPanel(
@@ -52,121 +52,103 @@ fun ConnectionStatsPanel(
     remoteIp: String,
     remoteCountryName: String,
     remoteCountryCode: String,
+    engineLabel: String,
+    accent: Color,
+    speedHistory: List<Float>,
+    modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
         visible = isRunning,
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically(),
     ) {
+        val isDark = LocalDarkTheme.current
+        val txtMain = if (isDark) Nc.Txt else Color(0xFF1B2230)
+        val txtSub = if (isDark) Nc.Sub else Color(0xFF6B7688)
+        val cellBg = Color.White.copy(alpha = .07f)
+
         Column(
-            modifier = Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
-                .padding(12.dp),
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color.White.copy(alpha = if (isDark) .06f else .92f))
+                .border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(22.dp))
+                .padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatChip(
-                    modifier = Modifier.weight(1f),
-                    icon = R.drawable.ic_arrow_downward_24dp,
-                    accent = AuroraCyan,
-                    label = "دانلود",
-                    value = downloadSpeedText.ifBlank { "—" },
+            // ── header: flag + country + engine badge + IP ──
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(flagEmoji(remoteCountryCode), fontSize = 22.sp)
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    remoteCountryName.ifBlank { "—" }, color = txtMain,
+                    fontSize = 13.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1
                 )
-                StatChip(
-                    modifier = Modifier.weight(1f),
-                    icon = R.drawable.ic_arrow_upward_24dp,
-                    accent = AuroraIndigo,
-                    label = "آپلود",
-                    value = uploadSpeedText.ifBlank { "—" },
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    engineLabel, color = accent, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier
+                        .background(accent.copy(alpha = .12f), RoundedCornerShape(50))
+                        .border(1.dp, accent.copy(alpha = .35f), RoundedCornerShape(50))
+                        .padding(horizontal = 9.dp, vertical = 2.5.dp)
                 )
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatChip(
-                    modifier = Modifier.weight(1f),
-                    icon = R.drawable.ic_timer_24dp,
-                    accent = AuroraViolet,
-                    label = "پینگ",
-                    value = pingText.ifBlank { "—" },
-                )
-                StatChip(
-                    modifier = Modifier.weight(1f),
-                    icon = R.drawable.ic_timer_24dp,
-                    accent = AuroraViolet,
-                    label = "زمان اتصال",
-                    value = connectionDurationText.ifBlank { "—" },
+                Spacer(Modifier.weight(1f))
+                Text(
+                    remoteIp.ifBlank { "—" }, color = txtSub, fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace, maxLines = 1
                 )
             }
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatChip(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = R.drawable.ic_public_24dp,
-                    accent = AuroraCyan,
-                    label = countryLabel(remoteCountryName, remoteCountryCode),
-                    value = remoteIp.ifBlank { "در حال یافتن..." },
+            Spacer(Modifier.height(12.dp))
+
+            // ── live sparkline ──
+            Column {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("دانلود زنده", color = txtSub, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                    Text(downloadSpeedText.ifBlank { "—" }, color = txtSub, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                }
+                Sparkline(
+                    values = speedHistory, accent = accent,
+                    modifier = Modifier.fillMaxWidth().height(38.dp)
                 )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            // ── 4-cell grid ──
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCell(Icons.Outlined.Speed, pingText, "پینگ", accent, cellBg, txtMain, txtSub, Modifier.weight(1f))
+                StatCell(Icons.Filled.ArrowDownward, downloadSpeedText, "دانلود", accent, cellBg, txtMain, txtSub, Modifier.weight(1f))
+                StatCell(Icons.Filled.ArrowUpward, uploadSpeedText, "آپلود", accent, cellBg, txtMain, txtSub, Modifier.weight(1f))
+                StatCell(Icons.Outlined.Schedule, connectionDurationText, "زمان", accent, cellBg, txtMain, txtSub, Modifier.weight(1f))
             }
         }
     }
-}
-
-private fun countryLabel(countryName: String, countryCode: String): String = when {
-    countryName.isNotBlank() && countryCode.isNotBlank() -> "$countryName ($countryCode)"
-    countryCode.isNotBlank() -> countryCode
-    else -> "IP و کشور"
 }
 
 @Composable
-private fun StatChip(
+private fun StatCell(
+    icon: ImageVector, value: String, label: String,
+    accent: Color, cellBg: Color, txtMain: Color, txtSub: Color,
     modifier: Modifier = Modifier,
-    icon: Int,
-    accent: Color,
-    label: String,
-    value: String,
 ) {
-    Row(
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(accent.copy(alpha = 0.08f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clip(RoundedCornerShape(15.dp))
+            .background(cellBg)
+            .padding(vertical = 10.dp, horizontal = 4.dp)
     ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(16.dp),
+        Icon(icon, null, tint = accent, modifier = Modifier.height(15.dp).width(15.dp))
+        Spacer(Modifier.height(5.dp))
+        Text(
+            value.ifBlank { "—" }, color = txtMain, fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold, maxLines = 1
         )
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text(
-                text = label,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = value,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(label, color = txtSub, fontSize = 9.sp)
     }
+}
+
+private fun flagEmoji(code: String): String {
+    val c = code.trim().uppercase()
+    if (c.length != 2 || c.any { it !in 'A'..'Z' }) return "🌐"
+    return c.map { Character.toChars(0x1F1E6 + (it - 'A')) }.joinToString("") { String(it) }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,9 +47,7 @@ import com.narcic.ng.extension.toTrafficString
 import com.narcic.ng.handler.TrafficStatsManager
 import com.narcic.ng.ui.base.BaseComponentActivity
 import com.narcic.ng.ui.compose.AppTopBar
-import com.narcic.ng.ui.compose.AuroraCyan
-import com.narcic.ng.ui.compose.AuroraIndigo
-import com.narcic.ng.ui.compose.AuroraViolet
+import com.narcic.ng.ui.compose.Nc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -76,6 +76,12 @@ class StatisticsActivity : BaseComponentActivity() {
  * Refreshes every few seconds while this screen is open so numbers keep
  * moving if the VPN is connected right now; the refresh loop is scoped to
  * the composition, so it stops automatically once the user leaves.
+ *
+ * All numbers here come straight from [TrafficStatsManager] -- there is no
+ * per-server or per-test-run breakdown recorded anywhere in the app, so
+ * (unlike the connect screen's redesign spec) this screen does not attempt
+ * a "by server" or "speed-test history" section; inventing numbers for
+ * those would just be misleading.
  */
 @Composable
 fun StatisticsScreen(onBackClick: () -> Unit) {
@@ -90,6 +96,7 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
 
     Scaffold(
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
+        containerColor = Nc.Bg,
         topBar = {
             AppTopBar(
                 title = "آمار",
@@ -105,7 +112,7 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = Nc.Cyan)
             }
             return@Scaffold
         }
@@ -124,13 +131,10 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
             StatSummaryCard(title = "امروز", stat = today)
             StatSummaryCard(title = "۷ روز اخیر", stat = week)
 
-            Text(
-                text = "روزهای اخیر",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 4.dp),
-            )
+            SectionTitle("مصرف ۷ روز اخیر")
+            WeekChartCard(days = currentDays)
 
+            SectionTitle("روزهای اخیر")
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // currentDays is oldest-first; reversed() shows today first
                 // with daysAgo matching each row's position (0, 1, 2, ...).
@@ -145,19 +149,30 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
 }
 
 @Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        color = Nc.Sub,
+        fontSize = 10.5.sp,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = Modifier.padding(top = 4.dp, start = 2.dp),
+    )
+}
+
+@Composable
 private fun StatSummaryCard(title: String, stat: DailyTrafficStat) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(18.dp))
             .padding(14.dp),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = Nc.Txt,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(12.dp))
@@ -168,14 +183,14 @@ private fun StatSummaryCard(title: String, stat: DailyTrafficStat) {
             MetricChip(
                 modifier = Modifier.weight(1f),
                 icon = R.drawable.ic_arrow_downward_24dp,
-                accent = AuroraCyan,
+                accent = Nc.Cyan,
                 label = "دانلود",
                 value = stat.downloadBytes.toTrafficString(),
             )
             MetricChip(
                 modifier = Modifier.weight(1f),
                 icon = R.drawable.ic_arrow_upward_24dp,
-                accent = AuroraIndigo,
+                accent = Nc.Violet,
                 label = "آپلود",
                 value = stat.uploadBytes.toTrafficString(),
             )
@@ -188,18 +203,83 @@ private fun StatSummaryCard(title: String, stat: DailyTrafficStat) {
             MetricChip(
                 modifier = Modifier.weight(1f),
                 icon = R.drawable.ic_stats_24dp,
-                accent = AuroraViolet,
+                accent = Nc.Amber,
                 label = "مجموع مصرف",
                 value = stat.totalBytes.toTrafficString(),
             )
             MetricChip(
                 modifier = Modifier.weight(1f),
                 icon = R.drawable.ic_timer_24dp,
-                accent = AuroraViolet,
+                accent = Nc.Amber,
                 label = "زمان اتصال",
                 value = formatConnectedDuration(stat.connectedMillis),
             )
         }
+    }
+}
+
+/**
+ * 7-day download/upload bar chart, gradients per the redesign spec
+ * (download: #67E8F9→#0891B2, upload: #A78BFA→#6D28D9). Backed by the same
+ * real [DailyTrafficStat] list as the rest of the screen.
+ */
+@Composable
+private fun WeekChartCard(days: List<DailyTrafficStat>) {
+    val maxVal = days.maxOfOrNull { maxOf(it.downloadBytes, it.uploadBytes) }?.coerceAtLeast(1L) ?: 1L
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = .06f))
+            .border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().height(120.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            days.forEachIndexed { i, day ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        WeekBar(day.downloadBytes.toFloat() / maxVal, Brush.verticalGradient(listOf(Nc.ChartDownloadTop, Nc.ChartDownloadBottom)))
+                        WeekBar(day.uploadBytes.toFloat() / maxVal, Brush.verticalGradient(listOf(Nc.ChartUploadTop, Nc.ChartUploadBottom)))
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        TrafficStatsManager.dayLabel(days.size - 1 - i),
+                        color = Nc.Sub, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            LegendDot(Nc.ChartDownloadTop, "دانلود")
+            Spacer(Modifier.width(16.dp))
+            LegendDot(Nc.ChartUploadTop, "آپلود")
+        }
+    }
+}
+
+@Composable
+private fun WeekBar(fraction: Float, brush: Brush) {
+    Box(
+        Modifier
+            .width(10.dp)
+            .fillMaxHeight(fraction.coerceIn(.02f, 1f))
+            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
+            .background(brush)
+    )
+}
+
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(9.dp).clip(RoundedCornerShape(3.dp)).background(color))
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = Nc.Sub, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -209,23 +289,23 @@ private fun DailyStatRow(daysAgo: Int, stat: DailyTrafficStat) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.20f))
+            .background(Color.White.copy(alpha = 0.05f))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = TrafficStatsManager.dayLabel(daysAgo),
-            style = MaterialTheme.typography.bodyMedium,
+            color = Nc.Txt,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Text(
             text = formatConnectedDuration(stat.connectedMillis),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Nc.Sub,
+            fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -233,9 +313,9 @@ private fun DailyStatRow(daysAgo: Int, stat: DailyTrafficStat) {
         )
         Text(
             text = stat.totalBytes.toTrafficString(),
-            style = MaterialTheme.typography.bodyMedium,
+            color = Nc.Cyan,
+            fontSize = 12.5.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
@@ -255,7 +335,7 @@ private fun MetricChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(accent.copy(alpha = 0.08f))
+            .background(accent.copy(alpha = 0.10f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -269,14 +349,14 @@ private fun MetricChip(
         Column {
             Text(
                 text = label,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Nc.Sub,
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = value,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Nc.Txt,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
