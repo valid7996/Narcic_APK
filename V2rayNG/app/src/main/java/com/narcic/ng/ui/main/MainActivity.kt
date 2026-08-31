@@ -258,8 +258,10 @@ class MainActivity : HelperBaseComponentActivity() {
                 if (error != null) {
                     mainViewModel.setExternalRunningState(false)
                     toast(error)
+                } else {
+                    // Re-trigger stats polling now that the tunnel is confirmed UP and running
+                    mainViewModel.setExternalRunningState(true)
                 }
-                // error == null -> already optimistically true, nothing to do
             }
         }
     }

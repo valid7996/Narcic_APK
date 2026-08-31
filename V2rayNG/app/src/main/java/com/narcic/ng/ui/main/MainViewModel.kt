@@ -1254,34 +1254,35 @@ class MainViewModel(
      * between polls, the same way the V2Ray side derives its speed text.
      */
     private fun startAwgTrafficStatsIfNeeded() {
-        if (!com.narcic.ng.awg.AwgManager.isRunning()) return
         if (awgStatsJob?.isActive == true) return
         awgStatsJob = viewModelScope.launch(ioDispatcher) {
             var lastRx = -1L
             var lastTx = -1L
             var lastElapsed = SystemClock.elapsedRealtime()
             while (isActive && uiState.value.isRunning) {
-                val stats = com.narcic.ng.awg.AwgManager.getStatistics()
-                if (stats != null) {
-                    val now = SystemClock.elapsedRealtime()
-                    val rx = stats.totalRx()
-                    val tx = stats.totalTx()
-                    val elapsedSeconds = ((now - lastElapsed).coerceAtLeast(1L)) / 1000.0
-                    if (lastRx >= 0 && lastTx >= 0) {
-                        val downBps = ((rx - lastRx).coerceAtLeast(0L) / elapsedSeconds).toLong()
-                        val upBps = ((tx - lastTx).coerceAtLeast(0L) / elapsedSeconds).toLong()
-                        _uiState.update {
-                            it.copy(
-                                downloadSpeedText = downBps.toSpeedString(),
-                                uploadSpeedText = upBps.toSpeedString()
-                            )
+                if (com.narcic.ng.awg.AwgManager.isRunning()) {
+                    val stats = com.narcic.ng.awg.AwgManager.getStatistics()
+                    if (stats != null) {
+                        val now = SystemClock.elapsedRealtime()
+                        val rx = stats.totalRx()
+                        val tx = stats.totalTx()
+                        val elapsedSeconds = ((now - lastElapsed).coerceAtLeast(1L)) / 1000.0
+                        if (lastRx >= 0 && lastTx >= 0) {
+                            val downBps = ((rx - lastRx).coerceAtLeast(0L) / elapsedSeconds).toLong()
+                            val upBps = ((tx - lastTx).coerceAtLeast(0L) / elapsedSeconds).toLong()
+                            _uiState.update {
+                                it.copy(
+                                    downloadSpeedText = downBps.toSpeedString(),
+                                    uploadSpeedText = upBps.toSpeedString()
+                                )
+                            }
                         }
+                        lastRx = rx
+                        lastTx = tx
+                        lastElapsed = now
                     }
-                    lastRx = rx
-                    lastTx = tx
-                    lastElapsed = now
                 }
-                delay(2000L)
+                delay(1000L)
             }
         }
     }
