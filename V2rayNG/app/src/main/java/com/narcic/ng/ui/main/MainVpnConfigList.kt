@@ -42,7 +42,6 @@ import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
 import com.narcic.ng.enums.EConfigType
-import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.ui.compose.Nc
 
 /**
@@ -331,15 +330,10 @@ private fun isAwgConfig(type: EConfigType): Boolean =
     type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
 
 /**
- * True when [profile] belongs to one of the built-in Narcic subscriptions
- * (see [AppConfig.DEFAULT_SUBSCRIPTIONS]). Used to hide Share/Edit for
- * those servers -- the customer can still Delete a single bad entry, but
- * can't modify or re-export the curated config itself.
+ * All configs -- including the ones seeded from the built-in Narcic
+ * subscriptions -- are editable and shareable now; only Delete used to be
+ * exclusive to those before.
  */
-private fun isDefaultConfig(profile: ProfileItem): Boolean {
-    val subUrl = MmkvManager.decodeSubscription(profile.subscriptionId)?.url ?: return false
-    return AppConfig.isDefaultSubscriptionUrl(subUrl)
-}
 
 @Composable
 private fun VpnConfigRow(
@@ -355,10 +349,6 @@ private fun VpnConfigRow(
 ) {
     val profile = serverCache.profile
     val isSelected = serverCache.guid == selectedGuid
-    // Curated Narcic subscriptions (Irancell / NG-JSON / NG-WireGuard) are
-    // read-only content: no Edit/Share, only Delete (a customer can still
-    // drop a single bad server locally) -- see isDefaultConfig() above.
-    val isDefault = remember(profile.subscriptionId) { isDefaultConfig(profile) }
     val badge = remember(profile.configType) { protocolBadge(profile.configType) }
     val pingMs = if (serverCache.testDelayMillis > 0L) serverCache.testDelayMillis.toInt() else null
 
@@ -372,7 +362,7 @@ private fun VpnConfigRow(
             selected = isSelected,
             enabled = true,
             accent = accent,
-            showEditShare = !isDefault,
+            showEditShare = true,
             rankBadge = rank,
             onSelect = { onSelectServer(serverCache.guid) },
             onEdit = { onEditServer(serverCache.guid, profile) },

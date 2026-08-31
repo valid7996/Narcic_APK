@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
@@ -247,7 +246,6 @@ private fun ServerItemRow(
             ?.toString() ?: ""
     } else ""
 
-    val isDefault = isDefaultConfig(profile)
     ServerListItem(
         remarks = profile.remarks,
         statistics = profile.description.nullIfBlank()
@@ -259,10 +257,10 @@ private fun ServerItemRow(
         subscriptionRemarks = subRemarks,
         doubleColumnDisplay = false,
         onClick = { onSelectServer(serverCache.guid) },
-        onShare = if (isDefault) null else { { onShareServer(serverCache.guid, profile) } },
-        onEdit = if (isDefault) null else { { onEditServer(serverCache.guid, profile) } },
+        onShare = { onShareServer(serverCache.guid, profile) },
+        onEdit = { onEditServer(serverCache.guid, profile) },
         onRemove = { onRemoveServer(serverCache.guid) },
-        onMore = if (isDefault) null else { { onMoreServer(serverCache.guid, profile) } }
+        onMore = { onMoreServer(serverCache.guid, profile) }
     )
 }
 
@@ -282,7 +280,6 @@ private fun ServerItemColumn(
     val subRemarks = if (subscriptionId.isEmpty()) {
         MmkvManager.decodeSubscription(profile.subscriptionId)?.remarks?.firstOrNull()?.toString() ?: ""
     } else ""
-    val isDefault = isDefaultConfig(profile)
     Column {
         ServerListItem(
             remarks = profile.remarks,
@@ -294,10 +291,10 @@ private fun ServerItemColumn(
             subscriptionRemarks = subRemarks,
             doubleColumnDisplay = doubleColumnDisplay,
             onClick = { onSelectServer(serverCache.guid) },
-            onEdit = if (isDefault) null else { { onEditServer(serverCache.guid, profile) } },
-            onShare = if (isDefault) null else { { onShareServer(serverCache.guid, profile) } },
+            onEdit = { onEditServer(serverCache.guid, profile) },
+            onShare = { onShareServer(serverCache.guid, profile) },
             onRemove = { onRemoveServer(serverCache.guid) },
-            onMore = if (isDefault) null else { { onMoreServer(serverCache.guid, profile) } }
+            onMore = { onMoreServer(serverCache.guid, profile) }
         )
         ItemDivider()
     }
@@ -401,14 +398,10 @@ fun ServerListItem(
 }
 
 /**
- * Returns true if this profile belongs to one of the built-in Narcic subscriptions.
- * Configs from default subscriptions must NOT be editable or shareable.
+ * All profiles -- including configs seeded from the built-in Narcic
+ * subscriptions -- are now editable/shareable like any manually-added
+ * server.
  */
-private fun isDefaultConfig(profile: ProfileItem): Boolean {
-    val subUrl = MmkvManager.decodeSubscription(profile.subscriptionId)?.url ?: return false
-    return AppConfig.isDefaultSubscriptionUrl(subUrl)
-}
-
 private fun getProtocolDescription(profile: ProfileItem): String {
     if (profile.configType.isComplexType()) return profile.configType.name
     val parts = mutableListOf(profile.configType.name)

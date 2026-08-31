@@ -41,7 +41,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.narcic.ng.R
-import com.narcic.ng.AppConfig
 import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.extension.toast
 import com.narcic.ng.ui.ScannerActivity
@@ -241,10 +240,8 @@ private fun SubscriptionCard(
     onEditClick: () -> Unit,
 ) {
     val subscription = remember(group.id) { runCatching { mainViewModel.getSubscriptionItem(group.id) }.getOrNull() }
-    // Curated Narcic subscriptions (Irancell / NG-JSON / NG-WireGuard) are
-    // read-only: never editable, and their source link is never shown here.
-    // Deleting the whole group is still allowed.
-    val isDefault = remember(subscription?.url) { AppConfig.isDefaultSubscriptionUrl(subscription?.url.orEmpty()) }
+    // All subscriptions -- including the curated Narcic ones -- are now
+    // editable and their URL is shown, same as a custom subscription.
 
     Row(
         modifier = Modifier
@@ -286,13 +283,9 @@ private fun SubscriptionCard(
                 }
             }
             Text(
-                text = if (isDefault) {
-                    "سابسکریپشن رسمی Narcic"
-                } else {
-                    subscription?.url?.takeIf { it.isNotBlank() }?.let { url ->
-                        if (url.length > 40) url.take(40) + "…" else url
-                    } ?: "سابسکریپشن محلی"
-                },
+                text = subscription?.url?.takeIf { it.isNotBlank() }?.let { url ->
+                    if (url.length > 40) url.take(40) + "…" else url
+                } ?: "سابسکریپشن محلی",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -307,16 +300,14 @@ private fun SubscriptionCard(
             }
         }
         if (group.id.isNotEmpty()) {
-            // Curated Narcic subscriptions can't be renamed/re-pointed --
-            // no Edit button for them. Delete stays available either way.
-            if (!isDefault) {
-                IconButton(onClick = onEditClick) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_edit_24dp),
-                        contentDescription = "ویرایش",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // Every subscription -- including the curated Narcic ones -- can
+            // now be renamed / re-pointed and deleted like any custom sub.
+            IconButton(onClick = onEditClick) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_edit_24dp),
+                    contentDescription = "ویرایش",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             IconButton(onClick = onDelete) {
                 Icon(

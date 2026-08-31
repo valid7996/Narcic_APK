@@ -174,9 +174,9 @@ fun SubSettingScreen(
                         scope = this,
                         isDragging = isDragging
                     ) {
-                        // Curated Narcic subscriptions (Irancell / NG-JSON / NG-WireGuard)
-                        // are read-only: never editable or shareable here, and their
-                        // source link is never shown below the name.
+                        // All subscriptions -- including the curated Narcic
+                        // ones -- are editable/shareable/deletable now, same
+                        // as any custom subscription.
                         val isDefault = AppConfig.isDefaultSubscriptionUrl(subCache.subscription.url)
                         val badgeColor = if (isDefault) AuroraCyan else AuroraViolet
 
@@ -230,7 +230,7 @@ fun SubSettingScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                if (!isDefault && subCache.subscription.url.isNotEmpty()) {
+                                if (subCache.subscription.url.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = subCache.subscription.url,
@@ -253,7 +253,7 @@ fun SubSettingScreen(
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    if (!isDefault && subCache.subscription.url.isNotEmpty()) {
+                                    if (subCache.subscription.url.isNotEmpty()) {
                                         SubRoundIconButton(
                                             icon = R.drawable.ic_share_24dp,
                                             contentDescription = "Share",
@@ -263,23 +263,21 @@ fun SubSettingScreen(
                                             }
                                         )
                                     }
-                                    if (!isDefault) {
-                                        SubRoundIconButton(
-                                            icon = R.drawable.ic_edit_24dp,
-                                            contentDescription = "Edit",
-                                            tint = AuroraCyan,
-                                            onClick = { onEditSub(subCache.guid) }
-                                        )
-                                        SubRoundIconButton(
-                                            icon = R.drawable.ic_delete_24dp,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            onClick = {
-                                                if (confirmRemove) removeTarget = subCache.guid
-                                                else onRemoveSub(subCache.guid)
-                                            }
-                                        )
-                                    }
+                                    SubRoundIconButton(
+                                        icon = R.drawable.ic_edit_24dp,
+                                        contentDescription = "Edit",
+                                        tint = AuroraCyan,
+                                        onClick = { onEditSub(subCache.guid) }
+                                    )
+                                    SubRoundIconButton(
+                                        icon = R.drawable.ic_delete_24dp,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        onClick = {
+                                            if (confirmRemove) removeTarget = subCache.guid
+                                            else onRemoveSub(subCache.guid)
+                                        }
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Switch(

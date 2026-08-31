@@ -48,11 +48,16 @@ class MainImportMenuTest {
     }
 
     @Test
-    fun shareMenuExcludesActionsForDefaultSubscription() {
-        // For default subscription, share/edit hidden but delete remains when management included
-        // With includeManagement=false (share only), all share actions hidden -> empty
+    fun shareMenuNoLongerExcludesActionsForDefaultSubscription() {
+        // Default-subscription configs are now editable/shareable like any
+        // other config -- isFromDefaultSubscription no longer restricts anything.
         assertEquals(
-            emptyList(),
+            listOf(
+                ServerMenuAction.ShareQRCode,
+                ServerMenuAction.ShareClipboard,
+                ServerMenuAction.ShareFullContent,
+                ServerMenuAction.ShareLink,
+            ),
             serverMenuActions(isComplexProfile = false, includeManagementActions = false, isFromDefaultSubscription = true)
         )
     }
@@ -77,13 +82,20 @@ class MainImportMenuTest {
     }
 
     @Test
-    fun shareMenuExcludesEditAndShareForDefaultSubEvenWithManagement() {
+    fun shareMenuNoLongerExcludesEditAndShareForDefaultSubEvenWithManagement() {
         val profile = ProfileItem().apply {
             configType = EConfigType.VMESS
             subscriptionId = "__default_subscription__"
         }
         assertEquals(
-            listOf(ServerMenuAction.Delete),
+            listOf(
+                ServerMenuAction.ShareQRCode,
+                ServerMenuAction.ShareClipboard,
+                ServerMenuAction.ShareFullContent,
+                ServerMenuAction.ShareLink,
+                ServerMenuAction.Edit,
+                ServerMenuAction.Delete,
+            ),
             serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = true)
         )
     }

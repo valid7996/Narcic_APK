@@ -63,14 +63,12 @@ class MainVpnSubscriptionSeparationTest {
     }
 
     @Test
-    fun subscriptionConfigEditShareHidden() {
-        // Default subscription configs must NOT have Edit/Share
+    fun subscriptionConfigEditShareNoLongerHidden() {
+        // Default subscription configs are now editable/shareable, same as manual ones.
         val actions = serverMenuActions(isComplexProfile = false, includeManagementActions = true, isFromDefaultSubscription = true)
-        assertFalse(actions.contains(ServerMenuAction.Edit))
-        assertFalse(actions.contains(ServerMenuAction.ShareQRCode))
-        assertFalse(actions.contains(ServerMenuAction.ShareLink))
-        // Delete remains for cleanup (per current logic, delete hidden for default too, but ensure not edit/share)
-        // For default subscription, even with includeManagement, Edit/Share should be hidden
+        assertTrue(actions.contains(ServerMenuAction.Edit))
+        assertTrue(actions.contains(ServerMenuAction.ShareQRCode))
+        assertTrue(actions.contains(ServerMenuAction.ShareLink))
     }
 
     // ---- Separation: VPN QR vs Subscription QR ----
