@@ -1,14 +1,17 @@
 package com.narcic.ng.ui.compose
 
 import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -69,20 +72,22 @@ fun GooLoader(
                     0f, 0f, 0f, 19f, -8f,
                 )
             )
-            RenderEffect.createBlurEffect(6f, 6f, Shader.TileMode.CLAMP)
-                .chain(RenderEffect.createColorMatrixEffect(alphaThreshold))
-                .asComposeRenderEffect()
+            val blur: RenderEffect = RenderEffect.createBlurEffect(6f, 6f, Shader.TileMode.CLAMP)
+            val threshold: RenderEffect =
+                RenderEffect.createColorFilterEffect(ColorMatrixColorFilter(alphaThreshold))
+            RenderEffect.createChainEffect(threshold, blur).asComposeRenderEffect()
         } else null
     }
 
     Canvas(modifier.size(size).graphicsLayer { renderEffect = gooEffect }) {
-        val s = this.size.minDimension / 64f
+        val s: Float = this.size.minDimension / 64f
         val c = Offset(this.size.width / 2f, this.size.height / 2f)
 
         fun armDot(angleDeg: Float, dist: Float, r: Float) {
             val a = Math.toRadians(angleDeg.toDouble())
             drawCircle(
-                color = color, radius = r * s,
+                color = color,
+                radius = r * s,
                 center = Offset(
                     c.x + (dist * sin(a)).toFloat() * s,
                     c.y - (dist * cos(a)).toFloat() * s
@@ -90,12 +95,17 @@ fun GooLoader(
             )
         }
         // Breathing core: scale .82<->1.05 over 3.2s.
-        val breathe = 0.935f - 0.115f * cos((elapsed / 3.2f) * (2.0 * Math.PI).toFloat())
-        drawCircle(color, 9.5f * s * breathe, c)
+        val breathe: Float = 0.935f - 0.115f * cos((elapsed / 3.2f) * (2.0 * Math.PI).toFloat())
+        drawCircle(color = color, radius = 9.5f * s * breathe, center = c)
         GOO_ARMS.forEach { arm ->
             armDot(arm.dir * 360f * (elapsed / arm.periodSec), arm.dist, arm.r)
         }
         // Faint outer ring.
-        drawCircle(color.copy(alpha = 0.14f), 30f * s, c, style = Stroke(1.dp.toPx()))
+        drawCircle(
+            color = color.copy(alpha = 0.14f),
+            radius = 30f * s,
+            center = c,
+            style = Stroke(width = 1.dp.toPx())
+        )
     }
 }
