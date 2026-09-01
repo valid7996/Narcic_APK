@@ -150,9 +150,6 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
-            pickFirsts += listOf(
-                "lib/**/libgojni.so"
-            )
         }
     }
 
