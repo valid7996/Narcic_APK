@@ -109,12 +109,20 @@ class CoreVpnService : VpnService(), ServiceControl {
 
         val isMsnGuard = MmkvManager.decodeSettingsBool(AppConfig.PREF_MSN_GUARD_ENABLED)
         if (isMsnGuard) {
-            // First start upstream core (Xray) on local loopback to provide SOCKS5 proxy
-            if (!CoreServiceManager.startCoreLoop(null)) {
-                LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to start base core for MSN-Guard chain")
+            // First start upstream core (Xray) on local loopback to provide SOCKS5 proxy.
+            // If this fails (e.g. no server was selected before enabling MSN-Guard, since
+            // the server list is hidden in this mode), fall back to Direct MSN-Guard mode
+            // instead of handing Psiphon an upstream port nothing is listening on — that
+            // would silently break every ladder step.
+            val baseStarted = CoreServiceManager.startCoreLoop(null)
+            if (!baseStarted) {
+                LogUtil.w(
+                    AppConfig.TAG,
+                    "StartCore-VPN: No upstream core for MSN-Guard chain (no server selected?) — falling back to Direct Psiphon mode"
+                )
             }
             val region = MmkvManager.decodeSettingsString(AppConfig.PREF_MSN_GUARD_REGION).orEmpty()
-            val upstreamPort = SettingsManager.getSocksPort()
+            val upstreamPort = if (baseStarted) SettingsManager.getSocksPort() else 0
             com.narcic.ng.psiphon.PsiphonManager.start(
                 context = this,
                 upstreamSocksPort = upstreamPort,
