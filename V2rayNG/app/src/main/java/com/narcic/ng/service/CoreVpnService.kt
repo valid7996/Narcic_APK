@@ -173,7 +173,14 @@ class CoreVpnService : VpnService(), ServiceControl {
             return false
         }
 
-        runTun2socks()
+        // In MSN-Guard (chain) mode, tun2socks must point at Psiphon's local SOCKS
+        // port, which is only alive once PsiphonManager reports onConnected (see
+        // startService()). Starting it here as well would race a dead port and
+        // leave the native tunnel stuck in a broken "already running" state.
+        val isMsnGuard = MmkvManager.decodeSettingsBool(AppConfig.PREF_MSN_GUARD_ENABLED)
+        if (!isMsnGuard) {
+            runTun2socks()
+        }
         return true
     }
 
@@ -327,6 +334,13 @@ class CoreVpnService : VpnService(), ServiceControl {
      * Starts the tun2socks process with the appropriate parameters.
      */
     private fun runTun2socks() {
+        // Always stop any previously running native tunnel before starting a new
+        // one. Without this, a second start (e.g. once Psiphon connects in chain
+        // mode) leaves the native hev-socks5-tunnel in a stale "already running"
+        // state and traffic never actually flows through the new SOCKS target.
+        tun2SocksService?.stopTun2Socks()
+        tun2SocksService = null
+
         if (SettingsManager.isUsingHevTun()) {
             tun2SocksService = TProxyService(
                 context = applicationContext,
