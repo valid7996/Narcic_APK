@@ -5,10 +5,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * "Narcic Two-Engine" design tokens — the flat palette from the redesign
  * spec (dark glass UI, cyan/sky accent for AmneziaWG, violet/indigo accent
- * for V2Ray). Kept as a separate, additive object so existing screens that
- * still read [MaterialTheme.colorScheme] / Aurora* colors (Theme.kt) are
- * untouched; new VPN-screen components (ConnectHero, EngineSwitch,
- * ServerCard, GooLoader, ...) pull their colors from here instead.
+ * for V2Ray, emerald green for MSN-Guard).
  */
 object Nc {
     val Bg = Color(0xFF070B14)
@@ -20,6 +17,7 @@ object Nc {
     val Cyan = Color(0xFF22D3EE)
     val Violet = Color(0xFF8B5CF6)
     val Green = Color(0xFF34D399)
+    val Emerald = Color(0xFF10B981)
     val Amber = Color(0xFFFBBF24)
     val Red = Color(0xFFFB7185)
 
@@ -28,6 +26,8 @@ object Nc {
     val AwgAccent2 = Color(0xFF0EA5E9)
     val V2Accent = Color(0xFF8B5CF6)
     val V2Accent2 = Color(0xFF6366F1)
+    val MsnAccent = Color(0xFF10B981)
+    val MsnAccent2 = Color(0xFF059669)
 
     // State colors for the connect button / status pill.
     val StateConnecting = Color(0xFFF59E0B)
@@ -56,7 +56,13 @@ object Nc {
 /** One accent + its darker/secondary partner, used for gradients/rings. */
 data class AccentPair(val main: Color, val second: Color)
 
-/** Active-engine accent: AmneziaWG (cyan/sky) vs V2Ray (violet/indigo). */
+/** Active-engine accent: AmneziaWG (cyan/sky) vs V2Ray (violet/indigo) vs MSN-Guard (emerald). */
+fun accentFor(engineMode: String): AccentPair = when (engineMode) {
+    "awg" -> AccentPair(Nc.AwgAccent, Nc.AwgAccent2)
+    "msn" -> AccentPair(Nc.MsnAccent, Nc.MsnAccent2)
+    else -> AccentPair(Nc.V2Accent, Nc.V2Accent2)
+}
+
 fun accentFor(isAwg: Boolean): AccentPair =
     if (isAwg) AccentPair(Nc.AwgAccent, Nc.AwgAccent2) else AccentPair(Nc.V2Accent, Nc.V2Accent2)
 

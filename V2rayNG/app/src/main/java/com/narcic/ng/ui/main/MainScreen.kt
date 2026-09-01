@@ -49,6 +49,7 @@ import com.narcic.ng.ui.compose.EngineSwitch
 import com.narcic.ng.ui.compose.GooOverlay
 import com.narcic.ng.ui.compose.GroupTabs
 import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.MsnGuardCard
 import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.SpiderWebCorners
 import com.narcic.ng.ui.compose.StatusPill
@@ -113,14 +114,11 @@ fun MainScreen(
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
     }
 
-    // ---- Active engine (AmneziaWG vs V2Ray) -----------------------------
-    // UI-local: which engine's servers are currently *shown*. It starts in
-    // sync with whatever server is actually selected in the ViewModel, but
-    // the user can freely browse the other engine's tab without that
-    // changing the real selection until they tap a server card
-    // (SelectServer) -- the ViewModel's notion of "selected server" is
-    // untouched by this switch.
+    // ---- Active engine (AmneziaWG vs V2Ray vs MSN-Guard) -----------------
+    // UI-local: which engine's servers/view is currently *shown*.
     var engineIsAwg by rememberSaveable { mutableStateOf(false) }
+    var isMsnGuardEnabled by rememberSaveable { mutableStateOf(false) }
+    var selectedMsnRegion by rememberSaveable { mutableStateOf("") }
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
     LaunchedEffect(selectedGuid) {
         val type = connectedServer?.profile?.configType
@@ -128,8 +126,14 @@ fun MainScreen(
             engineIsAwg = type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
         }
     }
-    val accentPair = remember(engineIsAwg) { accentFor(engineIsAwg) }
-    val engineLabel = if (engineIsAwg) "AWG" else "V2Ray"
+    val accentPair = remember(engineIsAwg, isMsnGuardEnabled) {
+        if (isMsnGuardEnabled) accentFor("msn") else accentFor(engineIsAwg)
+    }
+    val engineLabel = when {
+        isMsnGuardEnabled -> "MSN-Guard"
+        engineIsAwg -> "AWG"
+        else -> "V2Ray"
+    }
 
     // If switching engines hides the currently-selected tab (e.g. the
     // WireGuard sub was selected and the user flips to V2Ray), jump to the
@@ -438,37 +442,54 @@ fun MainScreen(
 
                 Spacer(Modifier.height(10.dp))
 
-                GroupTabs(
-                    groups = visibleGroups,
-                    selectedGroupId = uiState.selectedGroupId,
+                // ---- حالت MSN-Guard (زنجیره سایفون / سوار بر امنزیا و وایرگارد) ----
+                MsnGuardCard(
+                    enabled = isMsnGuardEnabled,
+                    onToggle = { isMsnGuardEnabled = it },
+                    selectedRegion = selectedMsnRegion,
+                    onSelectRegion = { selectedMsnRegion = it },
+                    isLocked = isRunning,
                     accent = accentPair.main,
-                    engineIsAwg = engineIsAwg,
-                    serverFlowFor = { id -> mainViewModel.serversForGroup(id) },
-                    enabled = !isRunning,
-                    onSelect = { id -> onAction(MainAction.SelectGroup(id)) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
-                // ---- تست + لیست عمودی سرورها (فیلترشده روی گروه + موتور فعال) ----
-                MainServerListSection(
-                    mainViewModel = mainViewModel,
-                    groups = visibleGroups,
-                    selectedGroupId = uiState.selectedGroupId,
-                    selectedGuid = selectedGuid,
-                    isTesting = uiState.isTesting,
-                    engineIsAwg = engineIsAwg,
-                    accent = accentPair.main,
-                    onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                    onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
-                    onShareAction = { action -> onAction(action) },
-                    onRemoveServer = removeServer,
-                    onDeleteAllServers = { showDelAllConfirm = true },
-                    onAddFromClipboard = { onAction(MainAction.ImportVpnFromClipboard) },
-                    onScanVpnQr = { onAction(MainAction.ImportQRcode) },
-                    onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
-                    onAutoSelectBest = { onAction(MainAction.AutoConnect) },
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Spacer(Modifier.height(10.dp))
+
+                // هنگام فعال بودن تیک MSN-Guard، لیست سرورهای پیش‌فرض مخفی شده
+                // و کاربر مستقیماً با حالت محافظت ویژه سایفون و نردبان استراتژی وصل می‌شود.
+                if (!isMsnGuardEnabled) {
+                    GroupTabs(
+                        groups = visibleGroups,
+                        selectedGroupId = uiState.selectedGroupId,
+                        accent = accentPair.main,
+                        engineIsAwg = engineIsAwg,
+                        serverFlowFor = { id -> mainViewModel.serversForGroup(id) },
+                        enabled = !isRunning,
+                        onSelect = { id -> onAction(MainAction.SelectGroup(id)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    )
+
+                    // ---- تست + لیست عمودی سرورها (فیلترشده روی گروه + موتور فعال) ----
+                    MainServerListSection(
+                        mainViewModel = mainViewModel,
+                        groups = visibleGroups,
+                        selectedGroupId = uiState.selectedGroupId,
+                        selectedGuid = selectedGuid,
+                        isTesting = uiState.isTesting,
+                        engineIsAwg = engineIsAwg,
+                        accent = accentPair.main,
+                        onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                        onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                        onShareAction = { action -> onAction(action) },
+                        onRemoveServer = removeServer,
+                        onDeleteAllServers = { showDelAllConfirm = true },
+                        onAddFromClipboard = { onAction(MainAction.ImportVpnFromClipboard) },
+                        onScanVpnQr = { onAction(MainAction.ImportQRcode) },
+                        onRetest = { onAction(MainAction.TestGroupServers(uiState.selectedGroupId)) },
+                        onAutoSelectBest = { onAction(MainAction.AutoConnect) },
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         }
 
