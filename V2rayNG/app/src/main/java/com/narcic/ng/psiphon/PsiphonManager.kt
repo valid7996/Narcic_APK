@@ -38,6 +38,11 @@ object PsiphonManager : PsiphonTunnel.HostService {
     var currentEgressRegion: String = ""
         private set
 
+    // Holds the most recently built config; returned via the HostService
+    // callback getPsiphonConfig(), which PsiphonTunnel invokes internally
+    // when startTunneling() is called.
+    private var currentConfigJson: String = "{}"
+
     // Traffic listeners
     var onConnectedCallback: (() -> Unit)? = null
     var onDisconnectedCallback: (() -> Unit)? = null
@@ -123,9 +128,11 @@ object PsiphonManager : PsiphonTunnel.HostService {
         try {
             stopCurrentTunnel()
 
+            currentConfigJson = configJson
+
             val tunnel = PsiphonTunnel.newPsiphonTunnel(this)
             psiphonTunnel = tunnel
-            tunnel.startTunnel(configJson)
+            tunnel.startTunneling(configJson)
 
             // Setup timer for this ladder rung
             ladderTimer?.cancel(true)
@@ -214,9 +221,9 @@ object PsiphonManager : PsiphonTunnel.HostService {
     fun isRunning(): Boolean = isRunning.get()
 
     // HostService Implementation
-    override fun getAppName(): String = "Narcic"
-
     override fun getContext(): Context? = null
+
+    override fun getPsiphonConfig(): String = currentConfigJson
 
     override fun onDiagnosticMessage(message: String?) {
         LogUtil.d(TAG, "Psiphon notice: $message")
