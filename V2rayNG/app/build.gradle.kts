@@ -157,6 +157,7 @@ android {
 
 dependencies {
     // Core Libraries
+    implementation(files("libs/psiphontunnel-2.0.39.aar"))
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
     // AmneziaWG native tunnel engine
