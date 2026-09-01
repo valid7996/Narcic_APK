@@ -62,9 +62,10 @@ class TProxyService(
     }
 
     private fun buildConfig(): String {
-        val socksPort = SettingsManager.getSocksPort()
-        val socksUsername = SettingsManager.getSocksUsername()
-        val socksPassword = SettingsManager.getSocksPassword()
+        val isMsnGuard = MmkvManager.decodeSettingsBool(AppConfig.PREF_MSN_GUARD_ENABLED)
+        val socksPort = if (isMsnGuard) com.narcic.ng.psiphon.PsiphonManager.DEFAULT_LOCAL_SOCKS_PORT else SettingsManager.getSocksPort()
+        val socksUsername = if (isMsnGuard) null else SettingsManager.getSocksUsername()
+        val socksPassword = if (isMsnGuard) null else SettingsManager.getSocksPassword()
         val vpnConfig = SettingsManager.getCurrentVpnInterfaceAddressConfig()
         val escapedSocksUsername = socksUsername?.replace("'", "''")
         val escapedSocksPassword = socksPassword?.replace("'", "''")

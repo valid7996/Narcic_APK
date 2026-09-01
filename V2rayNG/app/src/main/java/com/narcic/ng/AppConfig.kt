@@ -109,6 +109,8 @@ object AppConfig {
      */
     const val CACHE_HOME_LOCATION_FLAG = "cache_home_location_flag"
     const val CACHE_HOME_AUTO_CONNECTION = "cache_home_auto_connection"
+    const val PREF_MSN_GUARD_ENABLED = "pref_msn_guard_enabled"
+    const val PREF_MSN_GUARD_REGION = "pref_msn_guard_region"
 
     /** Protocol identifiers. */
     const val PROTOCOL_FREEDOM = "freedom"

@@ -106,6 +106,28 @@ class CoreVpnService : VpnService(), ServiceControl {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Interface not initialized")
             return
         }
+
+        val isMsnGuard = MmkvManager.decodeSettingsBool(AppConfig.PREF_MSN_GUARD_ENABLED)
+        if (isMsnGuard) {
+            // First start upstream core (Xray) on local loopback to provide SOCKS5 proxy
+            if (!CoreServiceManager.startCoreLoop(null)) {
+                LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to start base core for MSN-Guard chain")
+            }
+            val region = MmkvManager.decodeSettingsString(AppConfig.PREF_MSN_GUARD_REGION).orEmpty()
+            val upstreamPort = SettingsManager.getSocksPort()
+            com.narcic.ng.psiphon.PsiphonManager.start(
+                context = this,
+                upstreamSocksPort = upstreamPort,
+                targetRegion = region,
+                onConnected = {
+                    LogUtil.i(AppConfig.TAG, "MSN-Guard Psiphon Connected, starting tun2socks")
+                    runTun2socks()
+                }
+            )
+            RootLanSharing.startClientSharing(this)
+            return
+        }
+
         if (!CoreServiceManager.startCoreLoop(mInterface)) {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to start core loop")
             stopAllService()
@@ -327,6 +349,7 @@ class CoreVpnService : VpnService(), ServiceControl {
         unlockStart()
         isRunning = false
 
+        com.narcic.ng.psiphon.PsiphonManager.stop()
         tun2SocksService?.stopTun2Socks()
         tun2SocksService = null
 

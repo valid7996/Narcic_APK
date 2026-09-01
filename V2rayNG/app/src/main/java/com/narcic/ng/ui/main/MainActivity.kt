@@ -294,7 +294,17 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun startV2Ray() {
-        if (mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) {
+        val isMsnGuard = MmkvManager.decodeSettingsBool(AppConfig.PREF_MSN_GUARD_ENABLED)
+        if (!isMsnGuard && mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) {
+            // Auto select a valid server if in MSN-Guard mode
+            val anyServer = MmkvManager.decodeAllServerList().firstOrNull()
+            if (anyServer != null) {
+                MmkvManager.setSelectServer(anyServer)
+            } else {
+                toast(R.string.title_file_chooser)
+                return
+            }
+        } else if (mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) {
             toast(R.string.title_file_chooser)
             return
         }

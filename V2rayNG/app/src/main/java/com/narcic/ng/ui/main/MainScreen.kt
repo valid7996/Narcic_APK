@@ -117,8 +117,12 @@ fun MainScreen(
     // ---- Active engine (AmneziaWG vs V2Ray vs MSN-Guard) -----------------
     // UI-local: which engine's servers/view is currently *shown*.
     var engineIsAwg by rememberSaveable { mutableStateOf(false) }
-    var isMsnGuardEnabled by rememberSaveable { mutableStateOf(false) }
-    var selectedMsnRegion by rememberSaveable { mutableStateOf("") }
+    var isMsnGuardEnabled by rememberSaveable {
+        mutableStateOf(com.narcic.ng.handler.MmkvManager.decodeSettingsBool(com.narcic.ng.AppConfig.PREF_MSN_GUARD_ENABLED, false))
+    }
+    var selectedMsnRegion by rememberSaveable {
+        mutableStateOf(com.narcic.ng.handler.MmkvManager.decodeSettingsString(com.narcic.ng.AppConfig.PREF_MSN_GUARD_REGION) ?: "")
+    }
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
     LaunchedEffect(selectedGuid) {
         val type = connectedServer?.profile?.configType
@@ -445,9 +449,15 @@ fun MainScreen(
                 // ---- حالت MSN-Guard (زنجیره سایفون / سوار بر امنزیا و وایرگارد) ----
                 MsnGuardCard(
                     enabled = isMsnGuardEnabled,
-                    onToggle = { isMsnGuardEnabled = it },
+                    onToggle = {
+                        isMsnGuardEnabled = it
+                        com.narcic.ng.handler.MmkvManager.encodeSettings(com.narcic.ng.AppConfig.PREF_MSN_GUARD_ENABLED, it)
+                    },
                     selectedRegion = selectedMsnRegion,
-                    onSelectRegion = { selectedMsnRegion = it },
+                    onSelectRegion = {
+                        selectedMsnRegion = it
+                        com.narcic.ng.handler.MmkvManager.encodeSettings(com.narcic.ng.AppConfig.PREF_MSN_GUARD_REGION, it)
+                    },
                     isLocked = isRunning,
                     accent = accentPair.main,
                     modifier = Modifier.padding(horizontal = 16.dp)
