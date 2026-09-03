@@ -153,6 +153,15 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // Both the libv2ray AAR (Xray core) and the psiphontunnel AAR ship
+            // their Go runtime as libgojni.so. There can be only one Go runtime
+            // per process and the two never clash at runtime (Psiphon and Xray
+            // coexist through gomobile's single-runtime constraint) — the
+            // duplicate is only the filename. Keep the first one encountered.
+            pickFirsts += "lib/arm64-v8a/libgojni.so"
+            pickFirsts += "lib/armeabi-v7a/libgojni.so"
+            pickFirsts += "lib/x86/libgojni.so"
+            pickFirsts += "lib/x86_64/libgojni.so"
         }
     }
 
