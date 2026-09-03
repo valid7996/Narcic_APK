@@ -23,8 +23,10 @@ import com.narcic.ng.handler.NotificationManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.handler.SpeedtestManager
 import com.narcic.ng.helper.MessageHelper
+import com.narcic.ng.rsta.NarcisSpoofConfig
 import com.narcic.ng.service.DialerNativeService
 import com.narcic.ng.service.DialerWebviewService
+import com.narcic.ng.service.NarcisSpoofService
 import com.narcic.ng.service.NetworkMonitor
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
@@ -124,6 +126,24 @@ object CoreServiceManager {
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
 
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
+
+        // نرسیس اسپوف (Narcis Spoof): if this server points at the local
+        // spoof listener, start the native forwarder before the core config
+        // is built so the outbound has somewhere to dial into.
+        if (NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)) {
+            val intent = Intent(service, NarcisSpoofService::class.java).apply {
+                action = "START"
+                putExtra("IP", NarcisSpoofConfig.connectIp())
+                putExtra("PORT", NarcisSpoofConfig.connectPort())
+                putExtra("SNI", NarcisSpoofConfig.fakeSni())
+                putExtra("METHOD", NarcisSpoofConfig.method())
+            }
+            ContextCompat.startForegroundService(service, intent)
+        } else {
+            val intent = Intent(service, NarcisSpoofService::class.java).apply { action = "STOP" }
+            service.startService(intent)
+        }
+
         val desyncPort = try {
             DesyncManager.start(config)
         } catch (e: Exception) {
@@ -195,6 +215,11 @@ object CoreServiceManager {
         networkMonitor = null
         currentVpnInterface = null
         DesyncManager.stop()
+
+        run {
+            val intent = Intent(service, NarcisSpoofService::class.java).apply { action = "STOP" }
+            service.startService(intent)
+        }
 
         if (isRunning()) {
             CoroutineScope(Dispatchers.IO).launch {

@@ -18,5 +18,10 @@ enum class NotificationChannelType(
         channelId = "core_test_channel",
         channelName = "Core Test Service",
         notificationId = 12
+    ),
+    NARCIS_SPOOF(
+        channelId = "narcis_spoof_channel",
+        channelName = "Narcis Spoof Service",
+        notificationId = 14
     )
 }

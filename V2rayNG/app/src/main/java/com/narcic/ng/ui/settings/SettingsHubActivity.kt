@@ -42,6 +42,7 @@ class SettingsHubActivity : BaseComponentActivity() {
             onBackClick = { finish() },
             onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
             onOpenAutoConnectSettings = { startActivity(Intent(this, AutoConnectSettingsActivity::class.java)) },
+            onOpenNarcisSpoofSettings = { startActivity(Intent(this, NarcisSpoofSettingActivity::class.java)) },
             onOpenPerAppProxy = { startActivity(Intent(this, PerAppProxyActivity::class.java)) },
             onOpenUserAsset = { startActivity(Intent(this, UserAssetActivity::class.java)) },
             onOpenCheckUpdate = { startActivity(Intent(this, CheckUpdateActivity::class.java)) },
@@ -56,6 +57,7 @@ fun SettingsHubScreen(
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAutoConnectSettings: () -> Unit,
+    onOpenNarcisSpoofSettings: () -> Unit,
     onOpenPerAppProxy: () -> Unit,
     onOpenUserAsset: () -> Unit,
     onOpenCheckUpdate: () -> Unit,
@@ -87,6 +89,12 @@ fun SettingsHubScreen(
                 title = stringResource(R.string.title_auto_connect_settings),
                 subtitle = stringResource(R.string.title_auto_connect_settings_subtitle),
                 onClick = onOpenAutoConnectSettings
+            )
+            SettingsMenuItem(
+                icon = painterResource(R.drawable.ic_lock_24dp),
+                title = stringResource(R.string.title_narcis_spoof_setting),
+                subtitle = stringResource(R.string.title_narcis_spoof_setting_subtitle),
+                onClick = onOpenNarcisSpoofSettings
             )
 
             AppDivider()

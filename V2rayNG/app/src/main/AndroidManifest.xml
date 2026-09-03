@@ -134,6 +134,9 @@
             android:name=".ui.settings.AutoConnectSettingsActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.settings.NarcisSpoofSettingActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.perappproxy.PerAppProxyActivity"
             android:exported="false" />
         <activity
@@ -265,6 +268,18 @@
             android:foregroundServiceType="specialUse"
             android:label="@string/app_name"
             android:process=":RunSoLibV2RayDaemon">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="proxy" />
+        </service>
+
+        <!-- نرسیس اسپوف: runs in its own process, isolated from the core/VPN process. -->
+        <service
+            android:name=".service.NarcisSpoofService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:label="@string/title_narcis_spoof_setting"
+            android:process=":NarcisSpoofProcess">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="proxy" />

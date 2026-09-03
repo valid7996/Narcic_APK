@@ -181,6 +181,29 @@
     <string name="title_settings_hub_settings_subtitle">Core, network, and connection preferences</string>
     <string name="title_auto_connect_settings">Auto-connect settings</string>
     <string name="title_auto_connect_settings_subtitle">Decide how long Auto (خودکار) tests before connecting</string>
+
+    <!-- Narcis Spoof (نرسیس اسپوف) -->
+    <string name="title_narcis_spoof_setting">Narcis Spoof</string>
+    <string name="title_narcis_spoof_setting_subtitle">Local SNI-spoofing / TLS-fragmentation forwarder</string>
+    <string name="title_narcis_spoof_explain">Narcis Spoof runs a local forwarder that disguises the TLS handshake (fake SNI, fragmentation, TTL tricks) to help traffic pass through DPI-based filtering. Set the real remote address, a fake SNI, and a method below, then point a server entry at 127.0.0.1:%1$d to route it through this engine.</string>
+    <string name="title_narcis_spoof_connect_ip">Remote IP</string>
+    <string name="summary_narcis_spoof_connect_ip">The real server address to forward to</string>
+    <string name="title_narcis_spoof_connect_port">Remote port</string>
+    <string name="summary_narcis_spoof_connect_port">The real server port to forward to</string>
+    <string name="title_narcis_spoof_fake_sni">Fake SNI</string>
+    <string name="summary_narcis_spoof_fake_sni">Domain name presented during the TLS handshake</string>
+    <string name="title_narcis_spoof_method">Method</string>
+    <string name="category_narcis_spoof_status">Status</string>
+    <string name="title_narcis_spoof_status">Engine status</string>
+    <string name="title_narcis_spoof_unavailable">Native engine unavailable on this device</string>
+    <string name="title_narcis_spoof_start">Start engine</string>
+    <string name="title_narcis_spoof_stop">Stop engine</string>
+    <string name="summary_narcis_spoof_manual_toggle">Run it standalone to test your settings, outside of a VPN connection</string>
+    <string name="title_narcis_spoof_view_log">View log</string>
+    <string name="summary_narcis_spoof_view_log">Show the engine\'s recent activity</string>
+    <string name="title_narcis_spoof_log_empty">No log lines yet</string>
+    <string name="summary_narcis_spoof_footer">Listening on %1$s:%2$d — create a server pointing here to route it through Narcis Spoof automatically.</string>
+    <string name="notify_narcis_spoof_running">Running local spoof engine…</string>
     <string name="summary_auto_connect_ping_limit_intro">When you tap خودکار (Auto) on a subscription with no cached results yet, it real-pings the configs in that subscription and connects to one of them. Choose how that works below.</string>
     <string name="title_auto_connect_ping_limit_enabled">Limit ping for auto-connect</string>
     <string name="summary_auto_connect_ping_limit_enabled">When on, Auto stops testing and connects as soon as it finds a config at or under the ping below — instead of always testing every config first. Saves time on subscriptions with many configs.</string>

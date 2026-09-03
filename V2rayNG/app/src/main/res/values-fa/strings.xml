@@ -163,6 +163,29 @@
     <string name="title_settings_hub_settings_subtitle">تنظیمات فنی هسته، شبکه و اتصال</string>
     <string name="title_auto_connect_settings">تنظیم اتصال خودکار</string>
     <string name="title_auto_connect_settings_subtitle">مشخص کنید گزینه‌ی «خودکار» چقدر تست بگیرد تا متصل شود</string>
+
+    <!-- نرسیس اسپوف -->
+    <string name="title_narcis_spoof_setting">نرسیس اسپوف</string>
+    <string name="title_narcis_spoof_setting_subtitle">جعل SNI و فرگمنتیشن TLS به‌صورت محلی</string>
+    <string name="title_narcis_spoof_explain">نرسیس اسپوف یک فورواردر محلی اجرا می‌کند که دست‌دهی TLS را با روش‌هایی مثل جعل SNI، فرگمنتیشن و ترفند TTL پنهان می‌کند تا از تشخیص و فیلترینگ DPI عبور کند. آی‌پی واقعی مقصد، یک SNI جعلی و روش موردنظر را پایین انتخاب کنید، سپس یک سرور با آدرس 127.0.0.1 و پورت %1$d بسازید تا از این موتور عبور کند.</string>
+    <string name="title_narcis_spoof_connect_ip">آی‌پی مقصد</string>
+    <string name="summary_narcis_spoof_connect_ip">آدرس واقعی سروری که ترافیک به آن فوروارد می‌شود</string>
+    <string name="title_narcis_spoof_connect_port">پورت مقصد</string>
+    <string name="summary_narcis_spoof_connect_port">پورت واقعی سروری که ترافیک به آن فوروارد می‌شود</string>
+    <string name="title_narcis_spoof_fake_sni">SNI جعلی</string>
+    <string name="summary_narcis_spoof_fake_sni">دامنه‌ای که هنگام دست‌دهی TLS نشان داده می‌شود</string>
+    <string name="title_narcis_spoof_method">روش</string>
+    <string name="category_narcis_spoof_status">وضعیت</string>
+    <string name="title_narcis_spoof_status">وضعیت موتور</string>
+    <string name="title_narcis_spoof_unavailable">موتور بومی روی این دستگاه در دسترس نیست</string>
+    <string name="title_narcis_spoof_start">شروع موتور</string>
+    <string name="title_narcis_spoof_stop">توقف موتور</string>
+    <string name="summary_narcis_spoof_manual_toggle">برای تست تنظیمات، مستقل از اتصال VPN اجرا کنید</string>
+    <string name="title_narcis_spoof_view_log">مشاهده لاگ</string>
+    <string name="summary_narcis_spoof_view_log">نمایش فعالیت‌های اخیر موتور</string>
+    <string name="title_narcis_spoof_log_empty">هنوز لاگی ثبت نشده است</string>
+    <string name="summary_narcis_spoof_footer">در حال گوش‌دادن روی %1$s:%2$d — برای عبور خودکار از نرسیس اسپوف، یک سرور با همین آدرس بسازید.</string>
+    <string name="notify_narcis_spoof_running">در حال اجرای موتور اسپوف محلی…</string>
     <string name="summary_auto_connect_ping_limit_intro">وقتی روی یک سابسکریپشن که هنوز نتیجه‌ی تستی ندارد، گزینه‌ی «خودکار» را می‌زنید، کانفیگ‌های همان سابسکریپشن تست می‌شوند تا به یکی از آن‌ها متصل شوید. نحوه‌ی این کار را از پایین انتخاب کنید.</string>
     <string name="title_auto_connect_ping_limit_enabled">محدود کردن پینگ برای اتصال خودکار</string>
     <string name="summary_auto_connect_ping_limit_enabled">وقتی روشن باشد، به‌محض اینکه کانفیگی با پینگ برابر یا کمتر از مقدار زیر پیدا شود، تست متوقف شده و بلافاصله متصل می‌شود؛ به‌جای اینکه صبر کند تا همه‌ی کانفیگ‌ها تست شوند. در سابسکریپشن‌هایی با کانفیگ زیاد، وقت زیادی صرفه‌جویی می‌شود.</string>
