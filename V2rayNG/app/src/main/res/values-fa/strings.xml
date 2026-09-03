@@ -38,6 +38,7 @@
     <string name="menu_item_import_config_manually_http">افزودن [HTTP]</string>
     <string name="menu_item_import_config_manually_trojan">افزودن [Trojan]</string>
     <string name="menu_item_import_config_manually_wireguard">افزودن [Wireguard]</string>
+    <string name="menu_item_import_config_wow">افزودن [Warp on Warp]</string>
     <string name="menu_item_import_config_manually_hysteria2">افزودن [Hysteria2]</string>
     <string name="confirm_delete_visible_profiles">آیا مطمئن هستید که می‌خواهید همه پروفایل‌های نمایش‌داده‌شده را حذف کنید؟</string>
     <string name="confirm_delete_duplicate_profiles">آیا مطمئن هستید که می‌خواهید همه پروفایل‌های تکراری نمایش‌داده‌شده را حذف کنید؟</string>
@@ -408,6 +409,14 @@
     <string name="server_proxy_chain_members_unselected">لطفا برای هر ردیف زنجیره remark انتخاب کنید</string>
     <string name="server_proxy_chain_members_insufficient">تعداد اعضا کافی نیست</string>
     <string name="server_proxy_chain_members_invalid">اعضای نامعتبر زنجیره: %1$s</string>
+
+    <string name="title_warp_on_warp">Warp on Warp (WoW)</string>
+    <string name="server_wow_default_remarks">Warp on Warp</string>
+    <string name="server_wow_help">یک تونل WireGuard که از داخل تونل WireGuard دیگری رد می‌شود. دو تا از پروفایل‌های WireGuard/AmneziaWG موجودتان را انتخاب کنید: اول لایه بیرونی، بعد لایه داخلی.</string>
+    <string name="server_wow_members">لایه‌های WoW</string>
+    <string name="server_wow_outer_hop">لایه بیرونی (اول وصل می‌شود)</string>
+    <string name="server_wow_inner_hop">لایه داخلی (از داخل لایه بیرونی رد می‌شود)</string>
+    <string name="server_wow_members_invalid">فقط پروفایل‌های WireGuard/AmneziaWG قابل استفاده در Warp on Warp هستند: %1$s</string>
 
     <!-- BackupActivity -->
     <string name="title_configuration_backup_restore">پشتیبان‌گیری و بازیابی</string>

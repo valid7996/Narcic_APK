@@ -269,6 +269,10 @@ fun ImportMenuContent(
         onClick = { onAction(MainAction.ImportManually(EConfigType.WIREGUARD.value)) }
     )
     DropdownMenuItem(
+        text = { Text(stringResource(R.string.menu_item_import_config_wow)) },
+        onClick = { onAction(MainAction.ImportWarpOnWarp) }
+    )
+    DropdownMenuItem(
         text = { Text(stringResource(R.string.menu_item_import_config_manually_hysteria2)) },
         onClick = { onAction(MainAction.ImportManually(EConfigType.HYSTERIA2.value)) }
     )

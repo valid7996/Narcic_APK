@@ -40,6 +40,7 @@
     <string name="menu_item_import_config_manually_http">Add [HTTP]</string>
     <string name="menu_item_import_config_manually_trojan">Add [Trojan]</string>
     <string name="menu_item_import_config_manually_wireguard">Add [Wireguard]</string>
+    <string name="menu_item_import_config_wow">Add [Warp on Warp]</string>
     <string name="menu_item_import_config_manually_hysteria2">Add [Hysteria2]</string>
     <string name="confirm_delete_visible_profiles">Are you sure you want to delete all profiles currently shown?</string>
     <string name="confirm_delete_duplicate_profiles">Are you sure you want to delete all duplicate profiles currently shown?</string>
@@ -444,6 +445,14 @@
     <string name="server_proxy_chain_members_unselected">Please select member for each chain row</string>
     <string name="server_proxy_chain_members_insufficient">Insufficient members</string>
     <string name="server_proxy_chain_members_invalid">Invalid chain members: %1$s</string>
+
+    <string name="title_warp_on_warp">Warp on Warp (WoW)</string>
+    <string name="server_wow_default_remarks">Warp on Warp</string>
+    <string name="server_wow_help">One WireGuard tunnel dialed through another. Pick two existing WireGuard/AmneziaWG profiles below: outer hop first, inner hop second.</string>
+    <string name="server_wow_members">WoW hops</string>
+    <string name="server_wow_outer_hop">Outer hop (dials out first)</string>
+    <string name="server_wow_inner_hop">Inner hop (dialed through outer)</string>
+    <string name="server_wow_members_invalid">Only WireGuard/AmneziaWG profiles can be used in Warp on Warp: %1$s</string>
 
     <!-- BackupActivity -->
     <string name="title_configuration_backup_restore">Backup &amp; Restore</string>

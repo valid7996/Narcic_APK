@@ -222,11 +222,15 @@ object SettingsManager {
     /**
      * Collects non-empty profile remarks while excluding specific config types.
      */
-    fun getProfileRemarks(excludeConfigTypes: Set<EConfigType> = setOf(EConfigType.CUSTOM)): List<String> {
+    fun getProfileRemarks(
+        excludeConfigTypes: Set<EConfigType> = setOf(EConfigType.CUSTOM),
+        includeOnlyConfigTypes: Set<EConfigType>? = null,
+    ): List<String> {
         return decodeAllServerList()
             .asSequence()
             .mapNotNull { guid -> decodeServerConfig(guid) }
             .filter { profile -> profile.configType !in excludeConfigTypes }
+            .filter { profile -> includeOnlyConfigTypes == null || profile.configType in includeOnlyConfigTypes }
             .map { it.remarks.trim() }
             .filter { it.isNotEmpty() }
             .distinct()

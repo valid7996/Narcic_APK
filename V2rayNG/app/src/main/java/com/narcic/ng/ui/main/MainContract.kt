@@ -69,6 +69,14 @@ sealed interface MainAction {
     data object ImportClipboard : MainAction
     data object ImportConfigLocal : MainAction
     data class ImportManually(val type: Int) : MainAction
+    /**
+     * Quick-setup for "Warp on Warp" (WoW): opens the existing generic
+     * Proxy Chain screen pre-configured to chain two WireGuard/AmneziaWG
+     * profiles together (one WireGuard tunnel dialed through another),
+     * instead of making the user find the generic Proxy Chain entry and
+     * work out which profile types are chainable on their own.
+     */
+    data object ImportWarpOnWarp : MainAction
     data object RestartService : MainAction
     data object LocateSelectedServer : MainAction
 

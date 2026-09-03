@@ -64,6 +64,14 @@ class ServerProxyChainActivity : BaseComponentActivity() {
     }
     private val subscriptionId by lazy { intent.getStringExtra("subscriptionId") }
 
+    /**
+     * "Warp on Warp" quick-setup: same underlying Proxy Chain feature, but
+     * scoped to WireGuard/AmneziaWG members only and labeled for what it
+     * actually builds (one WireGuard tunnel dialed through another), so the
+     * user doesn't have to know that chaining is what WoW is under the hood.
+     */
+    private val wowMode by lazy { intent.getBooleanExtra("wowMode", false) }
+
     private lateinit var allRemarks: List<String>
     private lateinit var initialRemarks: String
     private lateinit var initialMembers: List<String>
@@ -72,10 +80,12 @@ class ServerProxyChainActivity : BaseComponentActivity() {
         super.onCreate(savedInstanceState)
 
         allRemarks = SettingsManager.getProfileRemarks(
-            excludeConfigTypes = setOf(EConfigType.CUSTOM, EConfigType.POLICYGROUP, EConfigType.PROXYCHAIN)
+            excludeConfigTypes = setOf(EConfigType.CUSTOM, EConfigType.POLICYGROUP, EConfigType.PROXYCHAIN),
+            includeOnlyConfigTypes = if (wowMode) setOf(EConfigType.WIREGUARD, EConfigType.AMNEZIAWG) else null,
         )
         val config = MmkvManager.decodeServerConfig(editGuid)
-        initialRemarks = config?.remarks ?: ""
+        initialRemarks = config?.remarks
+            ?: if (wowMode) getString(R.string.server_wow_default_remarks) else ""
         initialMembers = config?.proxyChainProfiles?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: listOf("", "")
     }
 
@@ -84,6 +94,7 @@ class ServerProxyChainActivity : BaseComponentActivity() {
         ProxyChainScreen(
             editGuid = editGuid,
             isRunning = isRunning,
+            wowMode = wowMode,
             initialRemarks = initialRemarks,
             initialMembers = initialMembers,
             allRemarks = allRemarks,
@@ -118,13 +129,14 @@ class ServerProxyChainActivity : BaseComponentActivity() {
 
         val invalidMembers = chainMembers.filter { member ->
             val profile = SettingsManager.getServerViaRemarks(member)
-            profile == null || profile.configType.isComplexType()
+            profile == null || profile.configType.isComplexType() ||
+                (wowMode && profile.configType != EConfigType.WIREGUARD && profile.configType != EConfigType.AMNEZIAWG)
         }
 
         if (invalidMembers.isNotEmpty()) {
             toast(
                 getString(
-                    R.string.server_proxy_chain_members_invalid,
+                    if (wowMode) R.string.server_wow_members_invalid else R.string.server_proxy_chain_members_invalid,
                     invalidMembers.joinToString(", ")
                 )
             )
@@ -190,6 +202,7 @@ class ServerProxyChainActivity : BaseComponentActivity() {
 fun ProxyChainScreen(
     editGuid: String,
     isRunning: Boolean,
+    wowMode: Boolean = false,
     initialRemarks: String,
     initialMembers: List<String>,
     allRemarks: List<String>,
@@ -223,7 +236,7 @@ fun ProxyChainScreen(
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
         topBar = {
             AppTopBar(
-                title = EConfigType.PROXYCHAIN.toString(),
+                title = if (wowMode) stringResource(R.string.title_warp_on_warp) else EConfigType.PROXYCHAIN.toString(),
                 onBackClick = onBackClick,
                 actions = {
                     if (showDelete) {
@@ -274,9 +287,22 @@ fun ProxyChainScreen(
                 )
             }
 
+            if (wowMode) {
+                item(key = "wow_help") {
+                    Text(
+                        text = stringResource(R.string.server_wow_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
             item {
                 Text(
-                    text = stringResource(R.string.server_proxy_chain_members),
+                    text = stringResource(
+                        if (wowMode) R.string.server_wow_members else R.string.server_proxy_chain_members
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
                 )
@@ -299,8 +325,13 @@ fun ProxyChainScreen(
                                     .padding(start = 16.dp)
                                     .width(10.dp)
                             )
+                            val rowLabel = when {
+                                wowMode && index == 0 -> stringResource(R.string.server_wow_outer_hop)
+                                wowMode && index == 1 -> stringResource(R.string.server_wow_inner_hop)
+                                else -> stringResource(R.string.server_lab_remarks)
+                            }
                             FormDropdownField(
-                                label = stringResource(R.string.server_lab_remarks),
+                                label = rowLabel,
                                 placeholder = stringResource(R.string.server_proxy_chain_member_unselected),
                                 value = member,
                                 options = allRemarks,

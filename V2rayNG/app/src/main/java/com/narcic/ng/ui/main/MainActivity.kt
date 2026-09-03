@@ -110,6 +110,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
                     is MainAction.ImportManually -> importManually(action.type)
+                    is MainAction.ImportWarpOnWarp -> importWarpOnWarp()
                     MainAction.RestartService -> restartV2Ray()
                     MainAction.LocateSelectedServer -> mainViewModel.triggerLocateSelectedServer()
                     is MainAction.SelectServer -> setSelectServer(action.guid)
@@ -332,6 +333,19 @@ class MainActivity : HelperBaseComponentActivity() {
         }.apply {
             // Manual configurations should have empty subscriptionId, not the selected group ID
             // This ensures edit/pencil and share actions are visible for manual configs
+            putExtra("subscriptionId", "")
+        }
+        profileEditorLauncher.launch(intent)
+    }
+
+    /**
+     * "Warp on Warp" quick-setup: same screen as the generic Proxy Chain
+     * entry (EConfigType.PROXYCHAIN), just pre-scoped to WireGuard/AmneziaWG
+     * members via the "wowMode" extra (see ServerProxyChainActivity).
+     */
+    private fun importWarpOnWarp() {
+        val intent = Intent(this, ServerProxyChainActivity::class.java).apply {
+            putExtra("wowMode", true)
             putExtra("subscriptionId", "")
         }
         profileEditorLauncher.launch(intent)
