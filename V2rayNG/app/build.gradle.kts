@@ -168,7 +168,12 @@ android {
 }
 
 dependencies {
-    // Core Libraries
+dependencies {
+    // Core Libraries. The psiphontunnel AAR in libs/ has been patched locally:
+    // its gomobile bind runtime classes (go.*) were removed from classes.jar
+    // because libv2ray.aar ships the identical ones and Gradle fails on
+    // duplicate classes otherwise (checkPlaystoreReleaseDuplicateClasses).
+    // The patched AAR keeps everything else (ca.psiphon.*, jni libs) intact.
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
     // AmneziaWG native tunnel engine
