@@ -104,9 +104,15 @@ fun MainScreen(
     var showAddSubscription by remember { mutableStateOf(false) }
 
     // "W on N" tab: second tunnel engine (MASQUE / WireGuard / WoW / Psiphon /
-    // Tor / Psiphon over WARP), ported from MSN-GUARD. Its ViewModel is owned
-    // here so the status broadcasts survive tab switches.
-    val wonViewModel: WonViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    // Tor / Psiphon over WARP), ported from MSN-GUARD. Owned here so the status
+    // broadcasts survive tab switches; released when MainScreen leaves composition.
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val wonViewModel = remember(appContext) {
+        WonViewModel(appContext as android.app.Application)
+    }
+    androidx.compose.runtime.DisposableEffect(wonViewModel) {
+        onDispose { wonViewModel.release() }
+    }
 
     // Which bottom-nav tab is active. VPN stays the default; W on N swaps the
     // whole content column for the WonScreen card.

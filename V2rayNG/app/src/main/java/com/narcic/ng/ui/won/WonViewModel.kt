@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import com.narcic.ng.AppConfig
 import com.narcic.ng.won.ConnectionLog
 import com.narcic.ng.won.TorManager
@@ -48,7 +46,12 @@ data class WonUiState(
             status == WonVpnService.STATUS_SCANNING
 }
 
-class WonViewModel(application: android.app.Application) : AndroidViewModel(application) {
+/**
+ * Plain class (not an AndroidViewModel) so the Compose layer can construct it
+ * directly with `remember` — no lifecycle-viewmodel-compose artifact needed.
+ * Call [release] from a DisposableEffect when the screen leaves composition.
+ */
+class WonViewModel(private val app: android.app.Application) {
 
     private val _uiState = MutableStateFlow(WonUiState())
     val uiState: StateFlow<WonUiState> = _uiState.asStateFlow()
@@ -82,7 +85,7 @@ class WonViewModel(application: android.app.Application) : AndroidViewModel(appl
     init {
         val filter = IntentFilter(WonVpnService.ACTION_STATUS)
         ContextCompat.registerReceiver(
-            application,
+            app,
             receiver,
             filter,
             Utils.receiverFlags(),
@@ -141,13 +144,16 @@ class WonViewModel(application: android.app.Application) : AndroidViewModel(appl
 
     /** Tell the service to tear the current tunnel down (dial tap / cancel). */
     fun disconnect() {
-        WonController.disconnect(getApplication())
+        WonController.disconnect(app)
     }
 
     /** Session clock driven off WonVpnService.connectedSinceElapsed() (survives UI recreation). */
     private fun startSessionTimer() {
         logRefreshJob?.cancel()
-        logRefreshJob = viewModelScope.launch {
+        val scope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate
+        )
+        logRefreshJob = scope.launch {
             while (isActive) {
                 val since = WonVpnService.connectedSinceElapsed()
                 val seconds = if (since > 0) (android.os.SystemClock.elapsedRealtime() - since) / 1000 else 0
@@ -169,8 +175,13 @@ class WonViewModel(application: android.app.Application) : AndroidViewModel(appl
         }
     }
 
-    override fun onCleared() {
-        getApplication<android.app.Application>().unregisterReceiver(receiver)
-        super.onCleared()
+    /** Unregister the broadcast receiver and stop the timer. Call from onDispose. */
+    fun release() {
+        logRefreshJob?.cancel()
+        logRefreshJob = null
+        try {
+            app.unregisterReceiver(receiver)
+        } catch (_: Exception) {
+        }
     }
 }

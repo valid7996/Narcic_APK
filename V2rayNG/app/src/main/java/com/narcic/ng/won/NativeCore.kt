@@ -3,9 +3,27 @@ package com.narcic.ng.won
 import org.json.JSONObject
 
 object NativeCore {
-    init {
+    /**
+     * L lazy, failure-tolerant load. Narcic builds without the Rust toolchain by
+     * default, so libaether.so may legitimately be absent — probing must never
+     * take the process down (TunnelStatus.isActive() touches this object on
+     * every card open). Guarded callers get an IllegalStateException (an
+     * Exception, so the service's existing catch blocks report it) instead of
+     * an UnsatisfiedLinkError (an Error, which would crash).
+     */
+    val available: Boolean = try {
         System.loadLibrary("aether")
         System.loadLibrary("aether_jni")
+        true
+    } catch (_: Throwable) {
+        false
+    }
+
+    private fun requireNative() {
+        check(available) {
+            "Rust core (libaether.so) is not bundled in this build — " +
+                "rebuild with -PnarcicBuildAether=true for Masque/WireGuard/WoW"
+        }
     }
 
     data class TunnelAddresses(
@@ -16,6 +34,7 @@ object NativeCore {
     )
 
     fun prepare(config: String): TunnelAddresses {
+        requireNative()
         check(nativePrepare(config) == 0) { nativeLastError() }
         val result = JSONObject(nativeLastResult())
         return TunnelAddresses(
@@ -27,15 +46,20 @@ object NativeCore {
     }
 
     fun requestEmailCode(team: String, email: String) {
+        requireNative()
         check(nativeRequestEmailCode(team, email) == 0) { nativeLastError() }
     }
 
     fun confirmEmailCode(code: String): String {
+        requireNative()
         check(nativeConfirmEmailCode(code) == 0) { nativeLastError() }
         return JSONObject(nativeLastResult()).getString("token")
     }
 
-    fun start(config: String, tunFd: Int): Int = nativeStart(config, tunFd)
+    fun start(config: String, tunFd: Int): Int {
+        requireNative()
+        return nativeStart(config, tunFd)
+    }
 
     /**
      * Start the core with no Android TUN, exposing a local SOCKS5 listener.
@@ -47,14 +71,18 @@ object NativeCore {
      *
      * Blocks until the tunnel exits, like [start] — call it on a worker thread.
      */
-    fun startProxy(config: String): Int = nativeStartProxy(config)
-    fun stop(): Int = nativeStop()
-    fun isRunning(): Boolean = nativeIsRunning()
-    fun isReady(): Boolean = nativeIsReady()
-    fun lastError(): String = nativeLastError()
-    fun lastLog(): String = nativeLastLog()
-    fun attach(service: WonVpnService) = nativeAttach(service)
-    fun detach() = nativeDetach()
+    fun startProxy(config: String): Int {
+        requireNative()
+        return nativeStartProxy(config)
+    }
+
+    fun stop(): Int = if (!available) 0 else nativeStop()
+    fun isRunning(): Boolean = available && nativeIsRunning()
+    fun isReady(): Boolean = available && nativeIsReady()
+    fun lastError(): String = if (!available) "Rust core not bundled in this build" else nativeLastError()
+    fun lastLog(): String = if (!available) "" else nativeLastLog()
+    fun attach(service: WonVpnService) { if (available) nativeAttach(service) }
+    fun detach() { if (available) nativeDetach() }
 
     interface CoreCallback {
         fun onEvent(json: String)
