@@ -37,6 +37,11 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
         android:minSdkVersion="34" />
+    <!-- W on N engine (Psiphon / Tor / MASQUE transports): the ported tunnel
+         service runs as a dataSync foreground service. -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        android:minSdkVersion="34" />
     <!-- <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /> -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -349,6 +354,45 @@
                 <action android:name="com.twofortyfouram.locale.intent.action.EDIT_SETTING" />
             </intent-filter>
         </activity>
+
+        <!-- ===================== W on N engine ===================== -->
+        <!-- Independent whole-device tunnel (MASQUE / WireGuard / WARP-on-WARP /
+             Psiphon / Tor, ported from MSN-GUARD). Runs in the main process on
+             purpose: its JNI core, tun2socks and tor are process-global. Never
+             active at the same time as CoreVpnService — Android allows one VPN. -->
+        <service
+            android:name=".won.WonVpnService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            tools:ignore="VpnServicePolicy">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".won.WonTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_name"
+            android:label="W on N"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Invisible helper so the W on N QS tile can collapse the shade. -->
+        <activity
+            android:name=".won.ShadeCollapseActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/AppThemeDayNight.NoActionBar.Translucent" />
+        <!-- ===================== W on N engine ===================== -->
 
         <receiver
             android:name=".receiver.TaskerReceiver"

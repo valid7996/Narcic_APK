@@ -1,0 +1,179 @@
+name: W on N native binaries
+
+# پورت‌شده از MSN-GUARD: باینری‌های بومی مسیر Tor برای Narcic NG.
+# عمداً بخشی از بیلد معمول APK نیست (کامپایل Tor/OpenSSL حدود ۲۵ دقیقه طول می‌کشد).
+#
+#   libtor.so         خود کلاینت tor — PIE executable با نام lib*.so تا پکیجِ APK
+#                     اجازهٔ اجرا بدهد؛ با ProcessBuilder اجرا می‌شود، هرگز dlopen نمی‌شود
+#   libobfs4proxy.so  lyrebird 0.8.1 — obfs4 + meek_lite + snowflake در یک باینری
+#   geoip             دیتابیس GeoIP فیلترشده برای انتخاب کشور خروجی Tor
+#                     (asset های geoip / geoip6 در V2rayNG/app/src/main/assets)
+#
+# بعد از این workflow:
+#   1) artifact های libtor و lyrebird را در V2rayNG/app/src/main/jniLibs/<abi>/ بگذارید
+#      (libtor.so و libobfs4proxy.so — layout پوشهٔ ABI حفظ شود)
+#   2) artifact های geoip و geoip6 را در V2rayNG/app/src/main/assets/ بگذارید
+# مسیرهای Psiphon / MASQUE / WireGuard / WoW به این باینری‌ها نیاز ندارند.
+# مسیر Rust (libaether.so) جداگانه با -PnarcicBuildAether=true ساخته می‌شود.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'V2rayNG/tools/build-tor.sh'
+      - '.github/workflows/won-native.yml'
+
+jobs:
+  tor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq autoconf automake libtool pkg-config
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'ndk;26.3.11579264'
+
+      - name: Build libtor.so for both ABIs
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+        run: |
+          chmod +x V2rayNG/tools/build-tor.sh
+          set +e
+          bash -x V2rayNG/tools/build-tor.sh arm64-v8a armeabi-v7a > /tmp/tor-build.log 2>&1
+          rc=$?
+          set -e
+          echo "--- script rc=$rc ---"
+          tail -80 /tmp/tor-build.log
+          grep -nE 'No space|space left|Killed|out of memory|undefined reference|ld\.lld: error|collect2' /tmp/tor-build.log | tail -30 || echo "(none)"
+          ls -la V2rayNG/app/src/main/jniLibs/*/ 2>&1 || true
+          exit $rc
+
+      - name: Upload the build log whatever happened
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tor-build-log
+          path: /tmp/tor-build.log
+          if-no-files-found: warn
+
+      - name: Verify GNU_RELRO does not mprotect past its LOAD segment
+        env:
+          NDK: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+        run: |
+          set -euo pipefail
+          READELF="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          for f in V2rayNG/app/src/main/jniLibs/*/libtor.so; do
+            echo "=== $f ==="
+            phdrs=$("$READELF" -lW "$f")
+            RELRO_VADDR=$(awk '$1=="GNU_RELRO" {print $3}' <<< "$phdrs")
+            RELRO_MEMSZ=$(awk '$1=="GNU_RELRO" {print $6}' <<< "$phdrs")
+            LOAD_MEMSZ=$(awk -v v="$RELRO_VADDR" '$1=="LOAD" && $3==v {print $6}' <<< "$phdrs")
+            [ -n "$RELRO_MEMSZ" ] || { echo "ERROR: no PT_GNU_RELRO in $f"; exit 1; }
+            V=$((RELRO_VADDR)); R=$((RELRO_MEMSZ)); L=$((LOAD_MEMSZ))
+            for P in 4096 16384; do
+              REND=$(( ((V + R + P - 1) / P) * P ))
+              LEND=$(( ((V + L + P - 1) / P) * P ))
+              if [ "$REND" -gt "$LEND" ]; then
+                echo "ERROR: RELRO mprotect range exceeds LOAD on ${P}-byte pages ($f)"
+                exit 1
+              fi
+            done
+            echo "OK: $f RELRO fits at 4K and 16K pages"
+          done
+
+      - name: Upload libtor
+        uses: actions/upload-artifact@v4
+        with:
+          name: libtor
+          path: V2rayNG/app/src/main/jniLibs/*/libtor.so
+          if-no-files-found: error
+
+      # دیتابیس GeoIP فیلترشده. بدون آن ExitNodes {cc} هیچ رله‌ای پیدا نمی‌کند و
+      # بوت‌استرپ برای همیشه روی ۴۵-۵۰٪ گیر می‌کند. فیلتر روی کشورهای
+      # TorRegions.kt و ستاپ IPv6 به‌صورت stub (کشورِ رله از IPv4 درمی‌آید).
+      - name: Build filtered GeoIP database
+        run: |
+          set -euo pipefail
+          TOR_VERSION=0.4.9.11
+          EXPECTED=2e6c1720118c812acf0079fd47cf91b6bfaba5d766c321c4d3d2a28d6a11a8ed
+          curl -fL --retry 3 -o tor.tar.gz "https://dist.torproject.org/tor-$TOR_VERSION.tar.gz"
+          echo "$EXPECTED  tor.tar.gz" | sha256sum -c -
+          tar -xzf tor.tar.gz "tor-$TOR_VERSION/src/config/geoip"
+          python3 V2rayNG/tools/filter-geoip.py \
+            "tor-$TOR_VERSION/src/config/geoip" \
+            V2rayNG/app/src/main/java/com/narcic/ng/won/TorRegions.kt \
+            V2rayNG/app/src/main/assets
+          rm -rf tor.tar.gz "tor-$TOR_VERSION"
+          ls -la V2rayNG/app/src/main/assets/geoip V2rayNG/app/src/main/assets/geoip6
+
+      - name: Upload geoip assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: geoip
+          path: |
+            V2rayNG/app/src/main/assets/geoip
+            V2rayNG/app/src/main/assets/geoip6
+
+  lyrebird:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # پین روی تگ، نه برنچ: این باینری مبهم‌سازی ترافیک کاربر را انجام می‌دهد.
+      - name: Clone lyrebird
+        run: |
+          git clone --depth 1 --branch lyrebird-0.8.1 \
+            https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird.git
+          cd lyrebird
+          echo "Pinned commit: $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "0b10edbb61e0ca6fb70c7d57aeaabf315f1fade1" \
+            || { echo "ERROR: lyrebird-0.8.1 does not point at the expected commit"; exit 1; }
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'ndk;26.3.11579264'
+
+      - name: Build lyrebird for both ABIs
+        env:
+          NDK: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+        run: |
+          set -euo pipefail
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          cd lyrebird
+          build() {
+            local ABI="$1" GOARCH="$2" GOARM="${3:-}" CC="$4"
+            local OUT="../out/$ABI/libobfs4proxy.so"
+            mkdir -p "$(dirname "$OUT")"
+            echo "==> $ABI ($GOARCH)"
+            env GOOS=android GOARCH="$GOARCH" ${GOARM:+GOARM=$GOARM} \
+                CGO_ENABLED=1 CC="$TOOLCHAIN/$CC" \
+                go build -trimpath -buildmode=pie \
+                  -ldflags "-s -w -extldflags '-Wl,-z,max-page-size=16384 -Wl,-z,relro -Wl,-z,now'" \
+                  -o "$OUT" ./cmd/lyrebird
+            "$TOOLCHAIN/llvm-strip" --strip-unneeded "$OUT" || true
+            ls -la "$OUT"
+          }
+          build arm64-v8a   arm64 ""  aarch64-linux-android26-clang
+          build armeabi-v7a arm   7   armv7a-linux-androideabi26-clang
+          echo "==> both ABIs built"
+
+      - name: Upload lyrebird
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyrebird
+          path: out/*/libobfs4proxy.so
+          if-no-files-found: error

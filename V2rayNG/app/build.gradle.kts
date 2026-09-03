@@ -82,7 +82,10 @@ android {
 
     sourceSets {
         getByName("main") {
-            jniLibs.srcDirs("libs")
+            // "libs" holds the prebuilt libv2ray AAR + the psiphontunnel AAR
+            // (W on N); src/main/jniLibs holds libtor.so / libobfs4proxy.so
+            // (Tor path) and libaether.so when the Rust core has been built.
+            jniLibs.srcDirs("libs", "src/main/jniLibs")
         }
     }
 
@@ -213,4 +216,52 @@ dependencies {
     testImplementation(libs.org.mockito.mockito.inline)
     testImplementation(libs.mockito.kotlin)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+}
+
+// ---------------------------------------------------------------------------
+// W on N (ported from MSN-GUARD): cross-compiles the Rust core (MASQUE /
+// WireGuard / WARP-on-WARP transports) into src/main/jniLibs/<abi>/libaether.so.
+//
+// Requires a Rust toolchain with the Android targets plus cargo-ndk (see
+// core/build-android.sh). It is opt-in via -PnarcicBuildAether=true so an
+// ordinary Gradle build (which already needs no Rust) never fails on a missing
+// toolchain; CI passes the property on release builds. Alternatively drop a
+// prebuilt libaether.so into src/main/jniLibs/<abi>/ and skip this entirely —
+// the Psiphon and Tor paths do not use the Rust core at all.
+val aetherCargoToml = rootProject.file("core/aether/Cargo.toml")
+if (aetherCargoToml.exists() &&
+    (project.findProperty("narcicBuildAether") as String?)?.toBoolean() == true
+) {
+    val wonAbis = (project.findProperty("targetAbi") as String?)
+        ?.split(',')
+        ?.map(String::trim)
+        ?.filter(String::isNotEmpty)
+        ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+    wonAbis.forEach { abi ->
+        val taskName = "buildAether" + abi.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }
+        tasks.register<Exec>(taskName) {
+            group = "build"
+            description = "Builds the W on N Rust core for Android $abi"
+            val buildScript = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                rootProject.file("core/build-android.ps1")
+            } else {
+                rootProject.file("core/build-android.sh")
+            }
+            if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                commandLine("powershell.exe", "-ExecutionPolicy", "Bypass", "-File", buildScript.absolutePath, "-Abi", abi)
+            } else {
+                commandLine("bash", buildScript.absolutePath, "--abi", abi)
+            }
+            environment("ANDROID_HOME", android.sdkDirectory.absolutePath)
+            inputs.dir(rootProject.file("core/aether/src"))
+            inputs.file(rootProject.file("core/aether/Cargo.toml"))
+            inputs.file(rootProject.file("core/aether/Cargo.lock"))
+            inputs.dir(rootProject.file("core/quiche"))
+            inputs.file(buildScript)
+            val output = file("src/main/jniLibs/$abi/libaether.so")
+            outputs.file(output)
+        }
+        tasks.named("preBuild").configure { dependsOn(taskName) }
+    }
 }

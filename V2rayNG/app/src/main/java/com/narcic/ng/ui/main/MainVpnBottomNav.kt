@@ -29,7 +29,7 @@ import com.narcic.ng.R
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
 
-enum class MainHomeTab { VPN, SUBSCRIPTIONS }
+enum class MainHomeTab { VPN, WON, SUBSCRIPTIONS }
 
 private data class NavItem(
     val icon: Int,
@@ -56,6 +56,9 @@ fun MainVpnBottomNav(
     val isDark = LocalDarkTheme.current
     val accent = Nc.Cyan
     val items = listOf(
+        NavItem(R.drawable.ic_lock_24dp, "W on N", selectedTab == MainHomeTab.WON) {
+            onSelectTab(MainHomeTab.WON)
+        },
         NavItem(R.drawable.ic_subscriptions_24dp, "سابسکریپشن", selectedTab == MainHomeTab.SUBSCRIPTIONS) {
             onSelectTab(MainHomeTab.SUBSCRIPTIONS)
         },

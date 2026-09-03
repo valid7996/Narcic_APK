@@ -53,6 +53,8 @@ import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.SpiderWebCorners
 import com.narcic.ng.ui.compose.StatusPill
 import com.narcic.ng.ui.compose.accentFor
+import com.narcic.ng.ui.won.WonScreen
+import com.narcic.ng.ui.won.WonViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -100,6 +102,15 @@ fun MainScreen(
     // Bottom-nav overlay screens.
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
+
+    // "W on N" tab: second tunnel engine (MASQUE / WireGuard / WoW / Psiphon /
+    // Tor / Psiphon over WARP), ported from MSN-GUARD. Its ViewModel is owned
+    // here so the status broadcasts survive tab switches.
+    val wonViewModel: WonViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+    // Which bottom-nav tab is active. VPN stays the default; W on N swaps the
+    // whole content column for the WonScreen card.
+    var selectedHomeTab by rememberSaveable { mutableStateOf(MainHomeTab.VPN) }
 
     // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
     // "Manage configs" (test/sort/export-all + bulk delete).
@@ -343,8 +354,9 @@ fun MainScreen(
             },
             bottomBar = {
                 MainVpnBottomNav(
-                    selectedTab = MainHomeTab.VPN,
+                    selectedTab = selectedHomeTab,
                     onSelectTab = { tab ->
+                        selectedHomeTab = tab
                         if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
                     },
                     onSettingsClick = { onNavigate("settings") },
@@ -352,6 +364,14 @@ fun MainScreen(
                 )
             },
         ) { innerPadding ->
+            if (selectedHomeTab == MainHomeTab.WON) {
+                // W on N engine tab: its own card, dial and settings; the
+                // VPN server list and ConnectHero below are not rendered.
+                Box(Modifier.fillMaxSize().padding(innerPadding)) {
+                    WonScreen(wonViewModel)
+                }
+                return@Scaffold
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()

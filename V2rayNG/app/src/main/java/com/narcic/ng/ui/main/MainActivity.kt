@@ -56,6 +56,28 @@ class MainActivity : HelperBaseComponentActivity() {
             if (it.resultCode == RESULT_OK) startV2Ray()
         }
 
+    // W on N engine: same consent flow, separate pending config. The dial in
+    // WonScreen hands us the built config, we run VpnService.prepare, and on
+    // OK the service actually starts.
+    private val wonVpnPermission =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == RESULT_OK) {
+                com.narcic.ng.won.WonController.consumePendingConfig()?.let { config ->
+                    com.narcic.ng.won.WonController.connect(this, config)
+                }
+            }
+        }
+
+    private fun prepareWonConnect(config: String) {
+        val intent = VpnService.prepare(this)
+        if (intent != null) {
+            com.narcic.ng.won.WonController.pendingConfig = config
+            wonVpnPermission.launch(intent)
+        } else {
+            com.narcic.ng.won.WonController.connect(this, config)
+        }
+    }
+
     private val profileEditorLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != RESULT_OK) return@registerForActivityResult
@@ -99,9 +121,12 @@ class MainActivity : HelperBaseComponentActivity() {
 
     @Composable
     override fun ScreenContent() {
-        MainScreen(
-            mainViewModel = mainViewModel,
-            onMinimize = { moveTaskToBack(false) },
+        androidx.compose.runtime.CompositionLocalProvider(
+            com.narcic.ng.won.LocalWonVpnPreparer provides { config -> prepareWonConnect(config) },
+        ) {
+            MainScreen(
+                mainViewModel = mainViewModel,
+                onMinimize = { moveTaskToBack(false) },
             onAction = { action ->
                 when (action) {
                     MainAction.ToggleService -> handleFabAction()
@@ -126,7 +151,8 @@ class MainActivity : HelperBaseComponentActivity() {
                 }
             },
             onNavigate = { route -> navigateTo(route) },
-        )
+            )
+        }
     }
 
     private fun shareToClipboard(guid: String) {
