@@ -94,7 +94,7 @@ fun ConfigsHeaderBar(
             HeaderActionButton(
                 icon = {
                     Icon(
-                        painterResource(R.drawable.ic_stats_24dp),
+                        painterResource(R.drawable.narcis_3d_stats),
                         contentDescription = "تست",
                         tint = accent,
                         modifier = Modifier.size(18.dp)

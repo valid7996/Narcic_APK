@@ -180,7 +180,7 @@ fun ScannerScreen(
                         Icon(
                             painterResource(
                                 if (isScanning) R.drawable.ic_stop_24dp
-                                else R.drawable.ic_scan_24dp
+                                else R.drawable.narcis_3d_scan
                             ),
                             contentDescription = if (isScanning) "stop scan" else "start scan"
                         )
@@ -280,7 +280,7 @@ private fun ScannerIdlePlaceholder(onStartClick: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                painter = painterResource(R.drawable.ic_scan_24dp),
+                painter = painterResource(R.drawable.narcis_3d_scan),
                 contentDescription = "Start Scanner",
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary
