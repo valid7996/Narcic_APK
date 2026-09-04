@@ -64,6 +64,19 @@ object NarcisSpoofEngine {
         val currentSni = MmkvManager.decodeSettingsString(MMKV_LAST_SNI, "")
         val currentMethod = MmkvManager.decodeSettingsString(MMKV_LAST_METHOD, "")
 
+        // Cross-process idempotency: another process (main app, VPN daemon,
+        // test daemon) may already be running this engine with the same
+        // settings — the MMKV session id is the shared source of truth.
+        // localSessionId only tracks a session started in THIS process.
+        if (localSessionId == 0L && MmkvManager.decodeSettingsLong(MMKV_SESSION_ID, 0L) != 0L &&
+            currentIp == connectIp && currentPort == connectPort &&
+            currentSni == fakeSni && currentMethod == method
+        ) {
+            // Already running elsewhere with identical settings; adopting it
+            // locally would double-stop it later, so just report success.
+            return true
+        }
+
         if (localSessionId != 0L) {
             if (currentIp == connectIp && currentPort == connectPort &&
                 currentSni == fakeSni && currentMethod == method

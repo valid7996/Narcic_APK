@@ -10,6 +10,8 @@ import com.narcic.ng.extension.isNotNullEmpty
 import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.handler.SpeedtestManager
+import com.narcic.ng.rsta.NarcisSpoofConfig
+import com.narcic.ng.rsta.NarcisSpoofEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -84,12 +86,31 @@ class RealPingWorkerService(
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
+
+        // نرسیس اسپوف: configs pointing at 127.0.0.1:<LISTEN_PORT> need the local
+        // spoof engine alive, otherwise the ping always fails and the user can't
+        // tell a working config from a dead one. Start it (idempotent — no-op if
+        // already running with the same settings) before measuring.
+        val isSpoofConfig = NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)
+        if (isSpoofConfig) {
+            if (!NarcisSpoofConfig.enabled()) return retFailure
+            NarcisSpoofEngine.start(
+                NarcisSpoofConfig.connectIp(),
+                NarcisSpoofConfig.connectPort(),
+                NarcisSpoofConfig.fakeSni(),
+                NarcisSpoofConfig.method()
+            )
+            // give the native listener a beat to bind before the first dial
+            Thread.sleep(150)
+        }
+
         if (!config.configType.isComplexType()
             && config.configType != EConfigType.HYSTERIA2
             && config.configType != EConfigType.WIREGUARD
             && config.alpn?.startsWith("h3") != true
             && config.server.isNotNullEmpty()
             && config.serverPort?.toIntOrNull() != null
+            && !isSpoofConfig   // tcping to 127.0.0.1 is meaningless for spoof configs
         ) {
             val url = config.server.orEmpty()
             val port = config.serverPort.orEmpty().toInt()
@@ -110,6 +131,14 @@ class RealPingWorkerService(
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
+
+        // Spoof configs: a raw TCP connect to 127.0.0.1 only measures the local
+        // listener, not the real remote. Route through the real-ping path instead
+        // (which boots the engine and measures the actual outbound delay).
+        if (NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)) {
+            return startRealPing(guid)
+        }
+
         if (!config.configType.isComplexType()
             && config.configType != EConfigType.HYSTERIA2
             && config.configType != EConfigType.WIREGUARD
