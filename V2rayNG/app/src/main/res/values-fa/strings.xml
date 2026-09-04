@@ -168,6 +168,8 @@
     <string name="title_narcis_spoof_setting">نرسیس اسپوف</string>
     <string name="title_narcis_spoof_setting_subtitle">جعل SNI و فرگمنتیشن TLS به‌صورت محلی</string>
     <string name="title_narcis_spoof_explain">نرسیس اسپوف یک فورواردر محلی اجرا می‌کند که دست‌دهی TLS را با روش‌هایی مثل جعل SNI، فرگمنتیشن و ترفند TTL پنهان می‌کند تا از تشخیص و فیلترینگ DPI عبور کند. آی‌پی واقعی مقصد، یک SNI جعلی و روش موردنظر را پایین انتخاب کنید، سپس یک سرور با آدرس 127.0.0.1 و پورت %1$d بسازید تا از این موتور عبور کند.</string>
+    <string name="title_narcis_spoof_enabled">فعال‌سازی نرسیس اسپوف</string>
+    <string name="summary_narcis_spoof_enabled">روشن یا خاموش کردن موتور اسپوف. وقتی روشن باشد، برای سرورهایی که به 127.0.0.1 اشاره می‌کنند هم به‌صورت خودکار اجرا می‌شود</string>
     <string name="title_narcis_spoof_connect_ip">آی‌پی مقصد</string>
     <string name="summary_narcis_spoof_connect_ip">آدرس واقعی سروری که ترافیک به آن فوروارد می‌شود</string>
     <string name="title_narcis_spoof_connect_port">پورت مقصد</string>

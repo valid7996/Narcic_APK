@@ -186,6 +186,8 @@
     <string name="title_narcis_spoof_setting">Narcis Spoof</string>
     <string name="title_narcis_spoof_setting_subtitle">Local SNI-spoofing / TLS-fragmentation forwarder</string>
     <string name="title_narcis_spoof_explain">Narcis Spoof runs a local forwarder that disguises the TLS handshake (fake SNI, fragmentation, TTL tricks) to help traffic pass through DPI-based filtering. Set the real remote address, a fake SNI, and a method below, then point a server entry at 127.0.0.1:%1$d to route it through this engine.</string>
+    <string name="title_narcis_spoof_enabled">Enable Narcis Spoof</string>
+    <string name="summary_narcis_spoof_enabled">Turn the spoof engine on or off. When on, it also starts automatically for servers pointing at 127.0.0.1</string>
     <string name="title_narcis_spoof_connect_ip">Remote IP</string>
     <string name="summary_narcis_spoof_connect_ip">The real server address to forward to</string>
     <string name="title_narcis_spoof_connect_port">Remote port</string>

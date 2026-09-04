@@ -24,6 +24,11 @@ object NarcisSpoofConfig {
     const val DEFAULT_CONNECT_PORT = "443"
     const val DEFAULT_FAKE_SNI = "cdnjs.cloudflare.com"
     const val DEFAULT_METHOD = "combined"
+    const val DEFAULT_ENABLED = true
+
+    /** Master on/off switch — when false the engine never starts (auto or manual). */
+    fun enabled(): Boolean =
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_NARCIS_SPOOF_ENABLED, DEFAULT_ENABLED)
 
     /** Obfuscation methods supported by the native engine. */
     val METHODS = listOf(

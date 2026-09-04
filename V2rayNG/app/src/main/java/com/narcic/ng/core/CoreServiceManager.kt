@@ -130,7 +130,7 @@ object CoreServiceManager {
         // نرسیس اسپوف (Narcis Spoof): if this server points at the local
         // spoof listener, start the native forwarder before the core config
         // is built so the outbound has somewhere to dial into.
-        if (NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)) {
+        if (NarcisSpoofConfig.enabled() && NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)) {
             val intent = Intent(service, NarcisSpoofService::class.java).apply {
                 action = "START"
                 putExtra("IP", NarcisSpoofConfig.connectIp())

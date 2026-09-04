@@ -212,6 +212,7 @@ object AppConfig {
 
     /** نرسیس اسپوف (Narcis Spoof) — local SNI-spoofing / TLS-fragmentation forwarder. */
     const val NARCIS_SPOOF_LISTEN_PORT = 40443
+    const val PREF_NARCIS_SPOOF_ENABLED = "pref_narcis_spoof_enabled"
     const val PREF_NARCIS_SPOOF_CONNECT_IP = "pref_narcis_spoof_connect_ip"
     const val PREF_NARCIS_SPOOF_CONNECT_PORT = "pref_narcis_spoof_connect_port"
     const val PREF_NARCIS_SPOOF_FAKE_SNI = "pref_narcis_spoof_fake_sni"

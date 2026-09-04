@@ -25,6 +25,7 @@ object NarcisSpoofEngine {
     private const val MMKV_LAST_SNI = "narcis_spoof_last_sni"
     private const val MMKV_LAST_METHOD = "narcis_spoof_last_method"
     private const val MMKV_LAST_ERROR = "narcis_spoof_last_error"
+    private const val MMKV_LOG_BUFFER = "narcis_spoof_log_buffer"
 
     private var localSessionId: Long = 0L
 
@@ -76,6 +77,7 @@ object NarcisSpoofEngine {
             val err = "Native engine unavailable. Load error: ${GoNativeBridge.getLoadError()?.message ?: "unknown"}"
             LogUtil.e(AppConfig.TAG, "NarcisSpoof: $err")
             MmkvManager.encodeSettings(MMKV_LAST_ERROR, err)
+            appendLog(err)
             return false
         }
 
@@ -88,9 +90,11 @@ object NarcisSpoofEngine {
                 val err = "spfStart returned 0 (failed). Port ${NarcisSpoofConfig.LISTEN_PORT} might be in use or native bridge failed."
                 LogUtil.e(AppConfig.TAG, "NarcisSpoof: $err for $remote.")
                 MmkvManager.encodeSettings(MMKV_LAST_ERROR, err)
+                appendLog(err)
                 false
             } else {
                 localSessionId = id
+                clearLog()
                 MmkvManager.encodeSettings(MMKV_SESSION_ID, id)
                 MmkvManager.encodeSettings(MMKV_LAST_IP, connectIp)
                 MmkvManager.encodeSettings(MMKV_LAST_PORT, connectPort)
@@ -106,6 +110,7 @@ object NarcisSpoofEngine {
             val err = t.message ?: t.javaClass.simpleName
             LogUtil.e(AppConfig.TAG, "NarcisSpoof: failed to start", t)
             MmkvManager.encodeSettings(MMKV_LAST_ERROR, err)
+            appendLog("failed to start: $err")
             false
         }
     }
@@ -133,7 +138,16 @@ object NarcisSpoofEngine {
         "unknown"
     }
 
-    fun recentLogLines(): List<String> = synchronized(logLock) { logBuffer.toList() }
+    /**
+     * Log lines are persisted through MMKV (multi-process mode) because the
+     * engine runs in :NarcisSpoofProcess while the settings screen runs in the
+     * main process — an in-memory buffer would always look empty there.
+     */
+    fun recentLogLines(): List<String> =
+        MmkvManager.decodeSettingsString(MMKV_LOG_BUFFER, "")
+            ?.split('\n')
+            ?.filter { it.isNotBlank() }
+            .orEmpty()
 
     private fun appendLog(line: String) {
         synchronized(logLock) {
@@ -141,6 +155,14 @@ object NarcisSpoofEngine {
             while (logBuffer.size > LOG_BUFFER_MAX_LINES) {
                 logBuffer.removeFirst()
             }
+            MmkvManager.encodeSettings(MMKV_LOG_BUFFER, logBuffer.joinToString("\n"))
+        }
+    }
+
+    private fun clearLog() {
+        synchronized(logLock) {
+            logBuffer.clear()
+            MmkvManager.encodeSettings(MMKV_LOG_BUFFER, "")
         }
     }
 

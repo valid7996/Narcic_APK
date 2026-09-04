@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
+import com.narcic.ng.handler.MmkvManager.rememberMmkvBool
 import com.narcic.ng.handler.MmkvManager.rememberMmkvString
 import com.narcic.ng.rsta.NarcisSpoofConfig
 import com.narcic.ng.rsta.NarcisSpoofEngine
@@ -37,6 +38,7 @@ import com.narcic.ng.ui.compose.AppTopBar
 import com.narcic.ng.ui.compose.SettingsEditItem
 import com.narcic.ng.ui.compose.SettingsListItem
 import com.narcic.ng.ui.compose.SettingsMenuItem
+import com.narcic.ng.ui.compose.SettingsSwitchItem
 import kotlinx.coroutines.delay
 
 /**
@@ -69,22 +71,15 @@ fun NarcisSpoofSettingScreen(onBackClick: () -> Unit) {
     var connectPort by rememberMmkvString(AppConfig.PREF_NARCIS_SPOOF_CONNECT_PORT, NarcisSpoofConfig.DEFAULT_CONNECT_PORT)
     var fakeSni by rememberMmkvString(AppConfig.PREF_NARCIS_SPOOF_FAKE_SNI, NarcisSpoofConfig.DEFAULT_FAKE_SNI)
     var method by rememberMmkvString(AppConfig.PREF_NARCIS_SPOOF_METHOD, NarcisSpoofConfig.DEFAULT_METHOD)
+    var enabled by rememberMmkvBool(AppConfig.PREF_NARCIS_SPOOF_ENABLED, NarcisSpoofConfig.DEFAULT_ENABLED)
 
     var statusText by remember { mutableStateOf("") }
-    var isAvailable by remember { mutableStateOf(false) }
-    var isRunning by remember { mutableStateOf(false) }
     var showLogDialog by remember { mutableStateOf(false) }
 
     // Poll status every second while this screen is visible.
     LaunchedEffect(Unit) {
         while (true) {
-            isAvailable = NarcisSpoofEngine.isAvailable()
-            isRunning = NarcisSpoofEngine.isRunning
-            statusText = if (isAvailable) {
-                NarcisSpoofEngine.statusSummary()
-            } else {
-                context.getString(R.string.title_narcis_spoof_unavailable)
-            }
+            statusText = NarcisSpoofEngine.statusSummary()
             delay(1000)
         }
     }
@@ -148,22 +143,18 @@ fun NarcisSpoofSettingScreen(onBackClick: () -> Unit) {
                 onClick = {}
             )
 
-            SettingsMenuItem(
-                title = if (isRunning) {
-                    stringResource(R.string.title_narcis_spoof_stop)
-                } else {
-                    stringResource(R.string.title_narcis_spoof_start)
-                },
-                subtitle = stringResource(R.string.summary_narcis_spoof_manual_toggle),
-                onClick = {
+            SettingsSwitchItem(
+                title = stringResource(R.string.title_narcis_spoof_enabled),
+                summary = stringResource(R.string.summary_narcis_spoof_enabled),
+                checked = enabled,
+                onCheckedChange = { on ->
+                    enabled = on
                     val intent = Intent(context, NarcisSpoofService::class.java)
-                    if (isRunning) {
-                        intent.action = "STOP"
-                        context.startService(intent)
-                    } else {
+                    if (on) {
                         val port = connectPort.toIntOrNull()
                         if (port == null || port !in 1..65535) {
-                            return@SettingsMenuItem
+                            enabled = false
+                            return@SettingsSwitchItem
                         }
                         intent.action = "START"
                         intent.putExtra("IP", connectIp)
@@ -171,6 +162,9 @@ fun NarcisSpoofSettingScreen(onBackClick: () -> Unit) {
                         intent.putExtra("SNI", fakeSni)
                         intent.putExtra("METHOD", method)
                         ContextCompat.startForegroundService(context, intent)
+                    } else {
+                        intent.action = "STOP"
+                        context.startService(intent)
                     }
                 }
             )

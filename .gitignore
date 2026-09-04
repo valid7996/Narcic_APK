@@ -30,6 +30,8 @@ signing.properties
 
 # Ignore shared object files
 *.so
+# ...except the Narcis Spoof native engine (MUST be packaged into the APK)
+!V2rayNG/app/libs/**/*.so
 
 # Ignore Google services JSON
 V2rayNG/app/google-services.json
