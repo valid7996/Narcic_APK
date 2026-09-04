@@ -182,14 +182,14 @@ private fun StatSummaryCard(title: String, stat: DailyTrafficStat) {
         ) {
             MetricChip(
                 modifier = Modifier.weight(1f),
-                icon = R.drawable.narcis_3d_download,
+                icon = R.drawable.ic_arrow_downward_24dp,
                 accent = Nc.Cyan,
                 label = "دانلود",
                 value = stat.downloadBytes.toTrafficString(),
             )
             MetricChip(
                 modifier = Modifier.weight(1f),
-                icon = R.drawable.narcis_3d_upload,
+                icon = R.drawable.ic_arrow_upward_24dp,
                 accent = Nc.Violet,
                 label = "آپلود",
                 value = stat.uploadBytes.toTrafficString(),
@@ -202,7 +202,7 @@ private fun StatSummaryCard(title: String, stat: DailyTrafficStat) {
         ) {
             MetricChip(
                 modifier = Modifier.weight(1f),
-                icon = R.drawable.narcis_3d_stats,
+                icon = R.drawable.ic_stats_24dp,
                 accent = Nc.Amber,
                 label = "مجموع مصرف",
                 value = stat.totalBytes.toTrafficString(),

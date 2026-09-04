@@ -91,7 +91,7 @@ fun SettingsHubScreen(
                 onClick = onOpenAutoConnectSettings
             )
             SettingsMenuItem(
-                icon = painterResource(R.drawable.narcis_3d_shield),
+                icon = painterResource(R.drawable.ic_lock_24dp),
                 title = stringResource(R.string.title_narcis_spoof_setting),
                 subtitle = stringResource(R.string.title_narcis_spoof_setting_subtitle),
                 onClick = onOpenNarcisSpoofSettings

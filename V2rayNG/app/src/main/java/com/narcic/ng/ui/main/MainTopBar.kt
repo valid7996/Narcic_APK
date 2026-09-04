@@ -30,7 +30,7 @@ fun MainTopBar(
         },
         actions = {
             IconButton(onClick = onFetchConfig) {
-                Icon(painterResource(R.drawable.narcis_3d_download), contentDescription = "Get configs")
+                Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = "Get configs")
             }
         }
     )

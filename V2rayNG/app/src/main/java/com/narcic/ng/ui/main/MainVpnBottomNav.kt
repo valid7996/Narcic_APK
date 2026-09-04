@@ -56,13 +56,13 @@ fun MainVpnBottomNav(
     val isDark = LocalDarkTheme.current
     val accent = Nc.Cyan
     val items = listOf(
-        NavItem(R.drawable.narcis_3d_subscriptions, "سابسکریپشن", selectedTab == MainHomeTab.SUBSCRIPTIONS) {
+        NavItem(R.drawable.ic_subscriptions_24dp, "سابسکریپشن", selectedTab == MainHomeTab.SUBSCRIPTIONS) {
             onSelectTab(MainHomeTab.SUBSCRIPTIONS)
         },
-        NavItem(R.drawable.narcis_3d_power, "وی‌پی‌ان", selectedTab == MainHomeTab.VPN) {
+        NavItem(R.drawable.ic_power_24dp, "وی‌پی‌ان", selectedTab == MainHomeTab.VPN) {
             onSelectTab(MainHomeTab.VPN)
         },
-        NavItem(R.drawable.narcis_3d_stats, "آمار", false, onStatisticsClick),
+        NavItem(R.drawable.ic_stats_24dp, "آمار", false, onStatisticsClick),
         NavItem(R.drawable.ic_settings_24dp, "تنظیمات", false, onSettingsClick),
     )
 
