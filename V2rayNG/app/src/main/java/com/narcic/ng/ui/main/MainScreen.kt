@@ -178,12 +178,14 @@ fun MainScreen(
     // ---- "Connecting..." handshake state (UI-local) ----------------------
     // The ViewModel doesn't expose a dedicated handshake flag, only the
     // eventual isRunning flip -- so this just bridges tap-to-actually-up.
-    // Auto-clears after a timeout in case a start attempt fails silently.
+    // Auto-clears after a timeout in case a start attempt fails silently;
+    // the service now also reports MSG_STATE_NOT_RUNNING on a failed start,
+    // which clears isRunning-independent state sooner.
     var isConnectingLocal by remember { mutableStateOf(false) }
     LaunchedEffect(isRunning) { if (isRunning) isConnectingLocal = false }
     LaunchedEffect(isConnectingLocal) {
         if (isConnectingLocal) {
-            delay(20_000)
+            delay(15_000)
             isConnectingLocal = false
         }
     }
@@ -405,7 +407,9 @@ fun MainScreen(
                                 onAction(MainAction.ToggleService)
                             }
                             isConnectingLocal -> {
-                                // Tapping again mid-handshake cancels the attempt.
+                                // Tapping again mid-handshake cancels the attempt:
+                                // clear the spinner AND send a hard stop so a
+                                // half-started service doesn't keep the user stuck.
                                 isConnectingLocal = false
                                 onAction(MainAction.ToggleService)
                             }

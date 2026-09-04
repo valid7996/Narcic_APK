@@ -18,6 +18,9 @@ object AppConfig {
 
     // Default subscription ID for ungrouped servers
     const val DEFAULT_SUBSCRIPTION_ID = "__default_subscription__"
+    /** Built-in subscription for the Narcis Spoof configs (points at the local spoof listener). */
+    const val NARCIS_SPOOF_SUB_ID = "__narcis_spoof_sub__"
+    const val NARCIS_SPOOF_SUB_URL = "https://raw.githubusercontent.com/validbv7996/Narcic_APK/refs/heads/main/Narcic-Spoof.txt"
 
     /** Preferences mapped to MMKV storage. */
     const val PREF_SNIFFING_ENABLED = "pref_sniffing_enabled"

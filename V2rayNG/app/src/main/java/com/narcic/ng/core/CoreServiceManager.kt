@@ -102,6 +102,7 @@ object CoreServiceManager {
             val message = e.message?.takeUnless { it.isBlank() } ?: e.javaClass.simpleName
             LogUtil.e(AppConfig.TAG, "StartCore-Manager: $message", e)
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_NOT_RUNNING, "")
             NotificationManager.cancelNotification()
             return false
         }

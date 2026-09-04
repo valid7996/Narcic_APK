@@ -34,13 +34,12 @@ object NotificationManager {
     private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
 
-    // While the screen is on, poll every 3s for a responsive live-speed display.
-    // While it's off, nobody can see the notification or the in-app UI, so we
-    // back off to once a minute - just often enough that the daily/weekly
-    // Statistics totals (TrafficStatsManager) stay accurate and don't lump a
-    // whole night's usage into a single burst whenever the screen comes back on.
+    // Poll cadence for the traffic-polling loop. The notification (with live
+    // upload/download speeds) stays visible on the lock screen while the
+    // screen is off, so the cadence must stay fast there too - a slow idle
+    // interval made the numbers look frozen until the user unlocked.
     private const val QUERY_INTERVAL_ACTIVE_MS = 3000L
-    private const val QUERY_INTERVAL_IDLE_MS = 60_000L
+    private const val QUERY_INTERVAL_IDLE_MS = 3000L
     private const val MIN_QUERY_INTERVAL_MS = 500L
 
     private var lastQueryTime = 0L
@@ -155,26 +154,22 @@ object NotificationManager {
     }
 
     /**
-     * Called when the screen turns back on. Switches the polling loop back
-     * to its fast, responsive cadence and resumes live notification/UI updates.
+     * Called when the screen turns back on. The polling loop never slowed
+     * down while the screen was off (the notification with live speeds stays
+     * visible on the lock screen), so nothing to switch back here anymore.
      */
     fun onScreenOn() {
         isScreenOn = true
     }
 
     /**
-     * Called when the screen turns off. The polling loop is NOT stopped -
-     * unlike before, it keeps running so traffic-stats accounting (the
-     * Statistics screen) stays accurate - but it drops to a much slower
-     * cadence and stops repainting the notification/UI, since neither is
-     * visible while the screen is off anyway.
+     * Called when the screen turns off. The loop keeps its fast cadence and
+     * keeps painting the notification, because that notification (with the
+     * live upload/download numbers) is exactly what the user sees on the
+     * lock screen - freezing it looked like the VPN had stalled.
      */
     fun onScreenOff() {
         isScreenOn = false
-        updateNotification("", 0, 0)
-        getService()?.let { service ->
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_TRAFFIC_UPDATE, "0|0")
-        }
     }
 
     /**
@@ -299,11 +294,13 @@ object NotificationManager {
             connectedMillis = sinceLastQueryIn,
         )
 
-        // Nothing is visible while the screen is off, and the user may have
-        // turned the live speed display off entirely - either way, skip the
-        // notification/UI work below, but keep the loop (and stats recording
-        // above) running for the rest of the session.
-        val showLiveSpeed = isScreenOn && MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true)
+        // The notification stays visible on the lock screen, so the live
+        // speed text must keep updating while the screen is off too - only
+        // skip the painting when the user turned the speed display off
+        // entirely. The in-app UI chips (which ARE invisible with the screen
+        // off) are still updated below; MessageHelper is cheap and keeps the
+        // UI correct for when the screen comes back on.
+        val showLiveSpeed = MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true)
         if (!showLiveSpeed) {
             lastQueryTime = queryTime
             return zeroSpeed

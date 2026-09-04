@@ -34,12 +34,22 @@ class CoreVpnService : VpnService(), ServiceControl {
     private var tun2SocksService: Tun2SocksControl? = null
     private val isStartingLock = AtomicBoolean(false)
 
+    companion object {
+        /** Set in onCreate, cleared in onDestroy. Lets the UI distinguish
+         *  "no attempt at all" from "service exists but core not up yet"
+         *  so a second tap during the handshake can act as a hard stop. */
+        @Volatile
+        var isServiceAlive: Boolean = false
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service created")
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         CoreServiceManager.serviceControl = SoftReference(this)
+        isServiceAlive = true
     }
 
     override fun onRevoke() {
@@ -55,6 +65,7 @@ class CoreVpnService : VpnService(), ServiceControl {
     override fun onDestroy() {
         super.onDestroy()
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service destroyed")
+        isServiceAlive = false
 
         // Ensure VPN interface is properly closed when the service is destroyed without
         // going through stopAllService() (e.g. when killed unexpectedly). isRunning is
@@ -104,6 +115,8 @@ class CoreVpnService : VpnService(), ServiceControl {
     override fun startService() {
         if (!::mInterface.isInitialized) {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Interface not initialized")
+            unlockStart()
+            stopAllService()
             return
         }
         if (!CoreServiceManager.startCoreLoop(mInterface)) {

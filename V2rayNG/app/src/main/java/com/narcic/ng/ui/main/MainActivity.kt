@@ -12,6 +12,7 @@ import com.narcic.ng.AngApplication
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.core.LauncherManager
+import com.narcic.ng.service.CoreVpnService
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.enums.PermissionType
@@ -186,6 +187,14 @@ class MainActivity : HelperBaseComponentActivity() {
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
+            // A tap while a start attempt is still settling (service alive but
+            // core not yet running) is a cancel, not a new start: send a hard
+            // stop so the half-started service is torn down instead of the
+            // user having to wait out the whole handshake again.
+            if (CoreVpnService.isServiceAlive()) {
+                LauncherManager.stopService(this)
+                return
+            }
             proceedToConnect()
         }
     }

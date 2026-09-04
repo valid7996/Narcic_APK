@@ -45,6 +45,27 @@ object SettingsManager {
         initRoutingRulesets(context)
         migrateServerListToSubscriptions()
         migrateHysteria2PinSHA256()
+        ensureNarcisSpoofSubscription()
+    }
+
+    /**
+     * Seeds the built-in "Narcis Spoof" subscription (English name on purpose,
+     * shown alongside the regular V2Ray subscriptions) exactly once. The sub
+     * serves vless configs that dial 127.0.0.1:40443 - the local Narcis Spoof
+     * listener - so its entries only work when the spoof engine is enabled.
+     */
+    private fun ensureNarcisSpoofSubscription() {
+        if (MmkvManager.decodeSubscription(AppConfig.NARCIS_SPOOF_SUB_ID) != null) {
+            return
+        }
+        val sub = SubscriptionItem(
+            remarks = "Narcis Spoof",
+            url = AppConfig.NARCIS_SPOOF_SUB_URL,
+            enabled = true,
+            autoUpdate = false,
+        )
+        MmkvManager.encodeSubscription(AppConfig.NARCIS_SPOOF_SUB_ID, sub)
+        LogUtil.i(AppConfig.TAG, "SettingsManager: seeded built-in Narcis Spoof subscription")
     }
 
     /**

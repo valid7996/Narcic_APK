@@ -20,9 +20,9 @@ object NarcisSpoofConfig {
     val LISTEN_HOST: String = AppConfig.LOOPBACK
     val LISTEN_PORT: Int = AppConfig.NARCIS_SPOOF_LISTEN_PORT
 
-    const val DEFAULT_CONNECT_IP = "104.18.38.202"
+    const val DEFAULT_CONNECT_IP = "104.21.33.58"
     const val DEFAULT_CONNECT_PORT = "443"
-    const val DEFAULT_FAKE_SNI = "cdnjs.cloudflare.com"
+    const val DEFAULT_FAKE_SNI = "www.sciencedirect.com"
     const val DEFAULT_METHOD = "combined"
     const val DEFAULT_ENABLED = true
 
