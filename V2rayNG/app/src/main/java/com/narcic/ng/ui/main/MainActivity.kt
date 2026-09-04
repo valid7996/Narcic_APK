@@ -191,7 +191,7 @@ class MainActivity : HelperBaseComponentActivity() {
             // core not yet running) is a cancel, not a new start: send a hard
             // stop so the half-started service is torn down instead of the
             // user having to wait out the whole handshake again.
-            if (CoreVpnService.isServiceAlive()) {
+            if (CoreVpnService.isServiceAlive) {
                 LauncherManager.stopService(this)
                 return
             }
