@@ -48,6 +48,12 @@ object PsiphonController {
             val port = if (requested.toString() == config.socksPort) findFreePort() else requested
             psiphonPort = port
             try {
+                // ca.psiphon classes + their gomobile libgojni.so. NOTE: the
+                // packaging keeps only ONE libgojni (Xray's); the Psiphon AAR
+                // is stripped of its own in CI. loadLibrary below will throw
+                // UnsatisfiedLinkError (an Error, not Exception) there — catch
+                // Throwable so the chain degrades with a clear log line
+                // instead of crashing the app.
                 val clazz = Class.forName("ca.psiphon.PsiphonTunnel")
                 val hostServiceClass = Class.forName("ca.psiphon.PsiphonTunnel\$HostService")
                 val hostService = java.lang.reflect.Proxy.newProxyInstance(
@@ -108,15 +114,17 @@ object PsiphonController {
                 running = true
                 LogRepository.i("Psiphon started on 127.0.0.1:$psiphonPort", "Psiphon")
                 true
-            } catch (e: Exception) {
-                val reason = e.message ?: "unknown error"
+            } catch (e: Throwable) {
+                // Throwable (not Exception): a stripped/missing libgojni throws
+                // UnsatisfiedLinkError — degrade cleanly, never crash.
+                val reason = e.message ?: e.javaClass.simpleName
                 LogRepository.w("Psiphon library not found or start failed ($reason), psiphon disabled", "Psiphon")
                 running = false
                 connected = false
                 false
             }
-        } catch (e: Exception) {
-            val reason = e.message ?: "unknown error"
+        } catch (e: Throwable) {
+            val reason = e.message ?: e.javaClass.simpleName
             LogRepository.e("Psiphon start exception: $reason", "Psiphon")
             false
         }
