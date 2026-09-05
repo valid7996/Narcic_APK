@@ -27,6 +27,9 @@ object NarcisSpoofEngine {
     private const val MMKV_LAST_ERROR = "narcis_spoof_last_error"
     private const val MMKV_LOG_BUFFER = "narcis_spoof_log_buffer"
 
+    /** RFC-1123-ish hostname (labels of letters/digits/hyphen, dot-separated). */
+    private val HOSTNAME_REGEX = Regex("""^(?=.{1,253}${'$'})(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}${'$'}""")
+
     private var localSessionId: Long = 0L
 
     private var pollJob: Job? = null
@@ -44,6 +47,28 @@ object NarcisSpoofEngine {
         false
     }
 
+    /**
+     * Validates the connection parameters before they reach the native
+     * bridge. Returns null when the inputs are usable, otherwise a short
+     * human-readable reason. Mirrors the clamping [NarcisSpoofConfig] applies
+     * on its own read path so an intent replay can't smuggle ":0"/empty SNI
+     * into spfStart.
+     */
+    fun validate(ip: String, port: Int, sni: String, method: String): String? {
+        if (ip.isBlank()) return "remote IP is empty"
+        val ipOk = android.util.Patterns.IP_ADDRESS.matcher(ip).matches() ||
+            HOSTNAME_REGEX.matches(ip)
+        if (!ipOk) return "remote IP/hostname is not valid: $ip"
+        if (port !in 1..65535) return "remote port out of range: $port"
+        if (sni.isBlank()) return "fake SNI is empty"
+        if (!HOSTNAME_REGEX.matches(sni)) return "fake SNI is not a valid hostname: $sni"
+        if (method !in NarcisSpoofConfig.METHODS) return "unknown method: $method"
+        return null
+    }
+
+    /** Public hook so the service can record rejected intents in the shared log. */
+    fun appendPublicLog(line: String) = appendLog(line)
+
     fun statusSummary(): String {
         if (isRunning) {
             val ip = MmkvManager.decodeSettingsString(MMKV_LAST_IP, "")
@@ -59,6 +84,16 @@ object NarcisSpoofEngine {
 
     @Synchronized
     fun start(connectIp: String, connectPort: Int, fakeSni: String, method: String): Boolean {
+        // Defensive re-validation: the service path validates too, but start()
+        // is also callable directly (CoreServiceManager, RealPingWorker).
+        validate(connectIp, connectPort, fakeSni, method)?.let { reason ->
+            val err = "rejected: $reason"
+            LogUtil.e(AppConfig.TAG, "NarcisSpoof: $err")
+            MmkvManager.encodeSettings(MMKV_LAST_ERROR, err)
+            appendLog(err)
+            return false
+        }
+
         val currentIp = MmkvManager.decodeSettingsString(MMKV_LAST_IP, "")
         val currentPort = MmkvManager.decodeSettingsInt(MMKV_LAST_PORT, 0)
         val currentSni = MmkvManager.decodeSettingsString(MMKV_LAST_SNI, "")
@@ -98,9 +133,9 @@ object NarcisSpoofEngine {
             val remote = "$connectIp:$connectPort"
             LogUtil.i(AppConfig.TAG, "NarcisSpoof: Starting engine for $remote (sni=$fakeSni, method=$method)")
 
-            val id = GoNativeBridge.spfStart(NarcisSpoofConfig.LISTEN_PORT, remote, fakeSni, method)
+            val id = GoNativeBridge.spfStart(NarcisSpoofConfig.listenPort, remote, fakeSni, method)
             if (id == 0L) {
-                val err = "spfStart returned 0 (failed). Port ${NarcisSpoofConfig.LISTEN_PORT} might be in use or native bridge failed."
+                val err = "spfStart returned 0 (failed). Port ${NarcisSpoofConfig.listenPort} might be in use or native bridge failed."
                 LogUtil.e(AppConfig.TAG, "NarcisSpoof: $err for $remote.")
                 MmkvManager.encodeSettings(MMKV_LAST_ERROR, err)
                 appendLog(err)
@@ -115,7 +150,7 @@ object NarcisSpoofEngine {
                 MmkvManager.encodeSettings(MMKV_LAST_METHOD, method)
                 MmkvManager.encodeSettings(MMKV_LAST_ERROR, "")
 
-                appendLog("started: listen=127.0.0.1:${NarcisSpoofConfig.LISTEN_PORT} -> $remote sni=$fakeSni method=$method")
+                appendLog("started: listen=127.0.0.1:${NarcisSpoofConfig.listenPort} -> $remote sni=$fakeSni method=$method")
                 startPolling()
                 true
             }

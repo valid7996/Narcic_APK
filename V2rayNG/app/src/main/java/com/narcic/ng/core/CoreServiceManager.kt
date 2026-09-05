@@ -24,6 +24,7 @@ import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.handler.SpeedtestManager
 import com.narcic.ng.helper.MessageHelper
 import com.narcic.ng.rsta.NarcisSpoofConfig
+import com.narcic.ng.rsta.NarcisSpoofEngine
 import com.narcic.ng.service.DialerNativeService
 import com.narcic.ng.service.DialerWebviewService
 import com.narcic.ng.service.NarcisSpoofService
@@ -129,9 +130,24 @@ object CoreServiceManager {
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
 
         // نرسیس اسپوف (Narcis Spoof): if this server points at the local
-        // spoof listener, start the native forwarder before the core config
-        // is built so the outbound has somewhere to dial into.
-        if (NarcisSpoofConfig.enabled() && NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)) {
+        // spoof listener, start the native forwarder SYNCHRONOUSLY (same
+        // daemon process, idempotent) before the core config is built so the
+        // outbound has somewhere to dial into. Fire-and-forget through the
+        // service intent would leave the core dialing a dead loopback when
+        // the engine fails to start. The :NarcisSpoofProcess owner is told to
+        // adopt the session; if the engine cannot start here, abort with a
+        // surfaced error instead of a silent black hole.
+        val spoofTarget = NarcisSpoofConfig.enabled() && NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)
+        if (spoofTarget) {
+            val started = NarcisSpoofEngine.start(
+                NarcisSpoofConfig.connectIp(),
+                NarcisSpoofConfig.connectPort(),
+                NarcisSpoofConfig.fakeSni(),
+                NarcisSpoofConfig.method(),
+            )
+            if (!started) {
+                error("Narcis Spoof engine failed to start — check its log. Connection aborted so traffic does not black-hole.")
+            }
             val intent = Intent(service, NarcisSpoofService::class.java).apply {
                 action = "START"
                 putExtra("IP", NarcisSpoofConfig.connectIp())

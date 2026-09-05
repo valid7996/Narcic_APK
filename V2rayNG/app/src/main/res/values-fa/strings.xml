@@ -511,4 +511,12 @@
         <item>WebDAV</item>
     </string-array>
 
+    <!-- ویجت AetherST (پورت‌شده) -->
+    <string name="widget_title">تونل Aether</string>
+    <string name="widget_status_disconnected">قطع شده</string>
+    <string name="proto_masque">ماسک</string>
+    <string name="proto_wire">وایرگارد</string>
+    <string name="proto_gool">گول</string>
+    <string name="widget_button_desc">تغییر وضعیت اتصال Aether</string>
+
 </resources>

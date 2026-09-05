@@ -24,6 +24,8 @@ V2rayNG/local.properties
 # Ignore APK and AAR files
 *.apk
 *.aar
+# ...except the Psiphon tunnel AAR required by the Aether engine
+!V2rayNG/app/libs/*.aar
 
 # Ignore signing properties
 signing.properties

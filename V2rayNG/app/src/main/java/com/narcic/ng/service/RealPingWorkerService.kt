@@ -1,6 +1,8 @@
 package com.narcic.ng.service
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import com.narcic.ng.core.CoreConfigManager
 import com.narcic.ng.core.CoreNativeManager
 import com.narcic.ng.dto.RealPingEvent
@@ -17,6 +19,7 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
@@ -87,21 +90,33 @@ class RealPingWorkerService(
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
 
-        // نرسیس اسپوف: configs pointing at 127.0.0.1:<LISTEN_PORT> need the local
-        // spoof engine alive, otherwise the ping always fails and the user can't
-        // tell a working config from a dead one. Start it (idempotent — no-op if
-        // already running with the same settings) before measuring.
+        // نرسیس اسپوف: configs pointing at the local spoof listener need the
+        // engine alive before measuring. The engine's native listener is owned
+        // by :NarcisSpoofProcess (the service), so ask the SERVICE to start —
+        // not the in-process engine — otherwise two processes race to bind the
+        // same port and one spfStart silently loses. Wait for the MMKV
+        // isRunning flag (shared, MULTI_PROCESS_MODE) before measuring.
         val isSpoofConfig = NarcisSpoofConfig.isSpoofTarget(config.server, config.serverPort)
         if (isSpoofConfig) {
             if (!NarcisSpoofConfig.enabled()) return retFailure
-            NarcisSpoofEngine.start(
-                NarcisSpoofConfig.connectIp(),
-                NarcisSpoofConfig.connectPort(),
-                NarcisSpoofConfig.fakeSni(),
-                NarcisSpoofConfig.method()
-            )
-            // give the native listener a beat to bind before the first dial
-            Thread.sleep(150)
+            val startIntent = Intent(context, NarcisSpoofService::class.java).apply {
+                action = "START"
+                putExtra("IP", NarcisSpoofConfig.connectIp())
+                putExtra("PORT", NarcisSpoofConfig.connectPort())
+                putExtra("SNI", NarcisSpoofConfig.fakeSni())
+                putExtra("METHOD", NarcisSpoofConfig.method())
+            }
+            ContextCompat.startForegroundService(context, startIntent)
+
+            // Wait (cancellable) for the shared MMKV session flag to flip on,
+            // bounded so a dead engine doesn't stall the whole test batch.
+            val deadline = System.currentTimeMillis() + 3_000L
+            while (!NarcisSpoofEngine.isRunning && System.currentTimeMillis() < deadline && isActive) {
+                delay(100)
+            }
+            if (!NarcisSpoofEngine.isRunning) {
+                return retFailure
+            }
         }
 
         if (!config.configType.isComplexType()

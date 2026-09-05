@@ -34,12 +34,14 @@ object NotificationManager {
     private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
 
-    // Poll cadence for the traffic-polling loop. The notification (with live
-    // upload/download speeds) stays visible on the lock screen while the
-    // screen is off, so the cadence must stay fast there too - a slow idle
-    // interval made the numbers look frozen until the user unlocked.
+    // Poll cadence for the traffic-polling loop. Screen-on keeps a fast 3s
+    // cadence for the live speed display. Screen-off still polls (the
+    // notification stays visible on the lock screen and the stats accounting
+    // must keep draining the core counters) but at a gentler 12s cadence:
+    // stats granularity stays reasonable without the 20x battery cost of a
+    // fully-live 3s loop nobody is watching.
     private const val QUERY_INTERVAL_ACTIVE_MS = 3000L
-    private const val QUERY_INTERVAL_IDLE_MS = 3000L
+    private const val QUERY_INTERVAL_IDLE_MS = 12_000L
     private const val MIN_QUERY_INTERVAL_MS = 500L
 
     private var lastQueryTime = 0L
@@ -294,13 +296,12 @@ object NotificationManager {
             connectedMillis = sinceLastQueryIn,
         )
 
-        // The notification stays visible on the lock screen, so the live
-        // speed text must keep updating while the screen is off too - only
-        // skip the painting when the user turned the speed display off
-        // entirely. The in-app UI chips (which ARE invisible with the screen
-        // off) are still updated below; MessageHelper is cheap and keeps the
-        // UI correct for when the screen comes back on.
-        val showLiveSpeed = MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true)
+        // Live-speed painting (notification text + in-app chips) only runs
+        // while the screen is on — that is the only time the numbers are
+        // actually being watched. With the screen off the loop still runs at
+        // the 12s idle cadence above so recordUsage keeps draining the core
+        // counters (stats stay accurate), but repaint work is skipped.
+        val showLiveSpeed = isScreenOn && MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, true)
         if (!showLiveSpeed) {
             lastQueryTime = queryTime
             return zeroSpeed
