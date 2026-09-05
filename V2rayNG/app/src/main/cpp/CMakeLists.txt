@@ -25,7 +25,11 @@ target_link_libraries(narcicdesync PRIVATE android log)
 set(AETHER_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- cloak (shared lib, JNI class io/github/immaghzbad/.../CloakNative) ---
+# Mirrors cloak/Android.mk: only cloak.c is part of libcloak. cloakscan.c is a
+# standalone CLI (has its own main()) and must not be linked into the .so —
+# otherwise two main() symbols collide at link time.
 file(GLOB CLOAK_SOURCES cloak/*.c)
+list(FILTER CLOAK_SOURCES EXCLUDE REGEX "cloakscan\\.c$")
 add_library(cloak SHARED ${CLOAK_SOURCES})
 target_compile_options(cloak PRIVATE -O2 -Wall -D__ANDROID__ -Wno-unused-parameter -Wno-deprecated-declarations)
 target_link_libraries(cloak PRIVATE log)
