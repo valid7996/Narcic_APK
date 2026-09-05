@@ -37,21 +37,43 @@ set(HEV_DIR ${AETHER_DIR}/third_party/hev-socks5-tunnel)
 file(GLOB_RECURSE YAML_SOURCES ${HEV_DIR}/third-part/yaml/src/*.c)
 add_library(yaml STATIC ${YAML_SOURCES})
 target_include_directories(yaml PUBLIC ${HEV_DIR}/third-part/yaml/include)
+# Version macros come from third-part/yaml/configs.mk in the ndk-build tree —
+# CMake must define them (api.c reads YAML_VERSION_STRING/MAJOR/MINOR/PATCH
+# and no header in the yaml tree declares them).
+target_compile_definitions(yaml PRIVATE
+    YAML_VERSION_MAJOR=0
+    YAML_VERSION_MINOR=2
+    YAML_VERSION_PATCH=5
+    YAML_VERSION_STRING="0.2.5")
 
 file(GLOB_RECURSE LWIP_SOURCES
     ${HEV_DIR}/third-part/lwip/src/api/*.c
     ${HEV_DIR}/third-part/lwip/src/core/*.c
     ${HEV_DIR}/third-part/lwip/src/netif/*.c
-    ${HEV_DIR}/third-part/lwip/src/ports/unix/port/*.c)
+    ${HEV_DIR}/third-part/lwip/src/ports/unix/lib/*.c
+    ${HEV_DIR}/third-part/lwip/src/ports/unix/netif/*.c)
 add_library(lwip STATIC ${LWIP_SOURCES})
 target_include_directories(lwip PUBLIC
     ${HEV_DIR}/third-part/lwip/src/include
-    ${HEV_DIR}/third-part/lwip/src/ports/unix/port
+    ${HEV_DIR}/third-part/lwip/src/ports/unix/include
     ${HEV_DIR}/third-part/lwip/src/ports/include)
+# Mirrors third-part/lwip/Android.mk LOCAL_CFLAGS.
+target_compile_definitions(lwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
 
 file(GLOB_RECURSE HTS_SOURCES ${HEV_DIR}/third-part/hev-task-system/*.c)
 add_library(hev-task-system STATIC ${HTS_SOURCES})
 target_include_directories(hev-task-system PUBLIC ${HEV_DIR}/third-part/hev-task-system/include)
+# Mirrors third-part/hev-task-system/configs.mk CONFIG_CFLAGS (defaults).
+target_compile_definitions(hev-task-system PRIVATE
+    ENABLE_STACK_OVERFLOW_DETECTION
+    ENABLE_MEMALLOC_SLICE
+    ENABLE_IO_SPLICE_SYSCALL
+    CONFIG_STACK_BACKEND=STACK_MMAP
+    CONFIG_STACK_OVERFLOW_DETECTION=1
+    CONFIG_MEMALLOC_SLICE_ALIGN=16
+    CONFIG_MEMALLOC_SLICE_MAX_SIZE=4096
+    CONFIG_MEMALLOC_SLICE_MAX_COUNT=1000
+    CONFIG_SCHED_CLOCK=CLOCK_NONE)
 
 file(GLOB_RECURSE HEV_TUNNEL_SOURCES
     ${HEV_DIR}/src/*.c
@@ -66,7 +88,7 @@ target_include_directories(hev-socks5-tunnel-static PRIVATE
     ${HEV_DIR}/third-part/yaml/include
     ${HEV_DIR}/third-part/lwip/src/include
     ${HEV_DIR}/third-part/lwip/src/ports/include
-    ${HEV_DIR}/third-part/lwip/src/ports/unix/port
+    ${HEV_DIR}/third-part/lwip/src/ports/unix/include
     ${HEV_DIR}/third-part/hev-task-system/include)
 target_compile_definitions(hev-socks5-tunnel-static PRIVATE
     FD_SET_DEFINED SOCKLEN_T_DEFINED ENABLE_LIBRARY COMMIT_ID="aether")
