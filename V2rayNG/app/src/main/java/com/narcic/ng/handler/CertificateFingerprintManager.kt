@@ -9,7 +9,7 @@ import com.narcic.ng.util.HttpUtil
 import com.narcic.ng.util.JsonUtil
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
-import com.narcic.ng.bind.Libv2ray
+import com.narcic.ng.bind.Xray
 
 object CertificateFingerprintManager {
     private const val TIMEOUT_MS = 5000L
@@ -17,9 +17,9 @@ object CertificateFingerprintManager {
     fun fetchForManualFill(profile: ProfileItem): String? {
         val request = buildRequest(profile) ?: return null
         val result = if (profile.configType == EConfigType.HYSTERIA2) {
-            fetch("quic", request) { Libv2ray.fetchQuicCertSha256(it) }
+            fetch("quic", request) { Xray.fetchQuicCertSha256(it) }
         } else {
-            fetch("tls", request) { Libv2ray.fetchTlsCertSha256(it) }
+            fetch("tls", request) { Xray.fetchTlsCertSha256(it) }
         }
 
         return result

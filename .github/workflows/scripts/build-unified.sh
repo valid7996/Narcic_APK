@@ -68,6 +68,181 @@ EOF
 # dummy go file so the module resolves:
 echo 'package bind' > "$WRAPPER/bind.go"
 
+# --- bindable wrapper packages (REAL upstream API, delegated) ---
+# gobind can only bind packages that are part of the module graph AND expose
+# bindable exported symbols. The upstream repo roots are outside this module,
+# so we wrap them: package "xray" delegates to libv2ray, package "psib"
+# delegates to psi. Only functions/types with gobind-supported signatures are
+# declared — everything below mirrors the real upstream APIs exactly.
+
+mkdir -p "$WRAPPER/xray" "$WRAPPER/psib"
+
+cat > "$WRAPPER/xray/xray.go" <<'EOF'
+package xray
+
+// Bindable facade over AndroidLibXrayLite (package libv2ray).
+// Every symbol below delegates 1:1 to the real upstream API
+// (github.com/2dust/AndroidLibXrayLite).
+import libv2ray "github.com/2dust/AndroidLibXrayLite"
+
+// CoreCallbackHandler mirrors libv2ray.CoreCallbackHandler.
+type CoreCallbackHandler interface {
+	Startup() int
+	Shutdown() int
+	OnEmitStatus(int, string) int
+}
+
+// ProcessFinder mirrors libv2ray.ProcessFinder.
+type ProcessFinder interface {
+	FindProcessByConnection(network, srcIP string, srcPort int, destIP string, destPort int) int
+}
+
+// CoreController mirrors libv2ray.CoreController (bound by reference).
+type CoreController = libv2ray.CoreController
+
+// CheckVersionX mirrors libv2ray.CheckVersionX.
+func CheckVersionX() string { return libv2ray.CheckVersionX() }
+
+// InitCoreEnv mirrors libv2ray.InitCoreEnv.
+func InitCoreEnv(envPath string, key string) { libv2ray.InitCoreEnv(envPath, key) }
+
+// NewCoreController mirrors libv2ray.NewCoreController.
+func NewCoreController(s CoreCallbackHandler) *CoreController {
+	return libv2ray.NewCoreController(s)
+}
+
+// MeasureOutboundDelay mirrors libv2ray.MeasureOutboundDelay.
+func MeasureOutboundDelay(configJSON string, url string) (int64, error) {
+	return libv2ray.MeasureOutboundDelay(configJSON, url)
+}
+
+// ReconcileBrowserDialer mirrors libv2ray.ReconcileBrowserDialer.
+func ReconcileBrowserDialer(dialerAddr string) { libv2ray.ReconcileBrowserDialer(dialerAddr) }
+
+// FetchTlsCertSha256 mirrors libv2ray.FetchTlsCertSha256.
+func FetchTlsCertSha256(requestJSON string) string { return libv2ray.FetchTlsCertSha256(requestJSON) }
+
+// FetchQuicCertSha256 mirrors libv2ray.FetchQuicCertSha256.
+func FetchQuicCertSha256(requestJSON string) string { return libv2ray.FetchQuicCertSha256(requestJSON) }
+EOF
+
+cat > "$WRAPPER/psib/psib.go" <<'EOF'
+package psib
+
+// Bindable facade over psiphon-tunnel-core MobileLibrary/psi (package psi).
+// Every symbol delegates 1:1 to the real upstream API.
+import psiapi "github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/psi"
+
+// PsiphonProvider mirrors psi.PsiphonProvider.
+type PsiphonProvider = psiapi.PsiphonProvider
+
+// PsiphonProviderFeedbackHandler mirrors psi.PsiphonProviderFeedbackHandler.
+type PsiphonProviderFeedbackHandler = psiapi.PsiphonProviderFeedbackHandler
+
+// PsiphonProviderNetwork mirrors psi.PsiphonProviderNetwork.
+type PsiphonProviderNetwork = psiapi.PsiphonProviderNetwork
+
+// PsiphonProviderNoticeHandler mirrors psi.PsiphonProviderNoticeHandler.
+type PsiphonProviderNoticeHandler = psiapi.PsiphonProviderNoticeHandler
+
+// Start mirrors psi.Start.
+func Start(
+	configJSON string,
+	embeddedServerEntryList string,
+	embeddedServerEntryListFilename string,
+	provider PsiphonProvider,
+	useDeviceBinder bool,
+	useIPv6Synthesizer bool,
+	useHasIPv6RouteGetter bool,
+) error {
+	return psiapi.Start(
+		configJSON,
+		embeddedServerEntryList,
+		embeddedServerEntryListFilename,
+		provider,
+		useDeviceBinder,
+		useIPv6Synthesizer,
+		useHasIPv6RouteGetter,
+	)
+}
+
+// Stop mirrors psi.Stop.
+func Stop() { psiapi.Stop() }
+
+// NoticeUserLog mirrors psi.NoticeUserLog.
+func NoticeUserLog(message string) { psiapi.NoticeUserLog(message) }
+
+// HomepageFilePath mirrors psi.HomepageFilePath.
+func HomepageFilePath(rootDataDirectoryPath string) string {
+	return psiapi.HomepageFilePath(rootDataDirectoryPath)
+}
+
+// NoticesFilePath mirrors psi.NoticesFilePath.
+func NoticesFilePath(rootDataDirectoryPath string) string {
+	return psiapi.NoticesFilePath(rootDataDirectoryPath)
+}
+
+// UpgradeDownloadFilePath mirrors psi.UpgradeDownloadFilePath.
+func UpgradeDownloadFilePath(rootDataDirectoryPath string) string {
+	return psiapi.UpgradeDownloadFilePath(rootDataDirectoryPath)
+}
+
+// ReconnectTunnel mirrors psi.ReconnectTunnel.
+func ReconnectTunnel() { psiapi.ReconnectTunnel() }
+
+// NetworkChanged mirrors psi.NetworkChanged.
+func NetworkChanged() { psiapi.NetworkChanged() }
+
+// AppResumed mirrors psi.AppResumed.
+func AppResumed() { psiapi.AppResumed() }
+
+// DropPacketTunnelTraffic mirrors psi.DropPacketTunnelTraffic.
+func DropPacketTunnelTraffic(drop bool) { psiapi.DropPacketTunnelTraffic(drop) }
+
+// ExportExchangePayload mirrors psi.ExportExchangePayload.
+func ExportExchangePayload() string { return psiapi.ExportExchangePayload() }
+
+// ImportExchangePayload mirrors psi.ImportExchangePayload.
+func ImportExchangePayload(payload string) bool { return psiapi.ImportExchangePayload(payload) }
+
+// ImportPushPayload mirrors psi.ImportPushPayload.
+func ImportPushPayload(payload []byte) bool { return psiapi.ImportPushPayload(payload) }
+
+// GetDSLAccessToken mirrors psi.GetDSLAccessToken.
+func GetDSLAccessToken() string { return psiapi.GetDSLAccessToken() }
+
+// StartSendFeedback mirrors psi.StartSendFeedback.
+func StartSendFeedback(
+	configJSON string,
+	diagnosticsJSON string,
+	uploadPath string,
+	feedbackHandler PsiphonProviderFeedbackHandler,
+	networkInfoProvider PsiphonProviderNetwork,
+	noticeHandler PsiphonProviderNoticeHandler,
+	useIPv6Synthesizer bool,
+	useHasIPv6RouteGetter bool,
+) error {
+	return psiapi.StartSendFeedback(
+		configJSON,
+		diagnosticsJSON,
+		uploadPath,
+		feedbackHandler,
+		networkInfoProvider,
+		noticeHandler,
+		useIPv6Synthesizer,
+		useHasIPv6RouteGetter,
+	)
+}
+
+// StopSendFeedback mirrors psi.StopSendFeedback.
+func StopSendFeedback() { psiapi.StopSendFeedback() }
+
+// WriteRuntimeProfiles mirrors psi.WriteRuntimeProfiles.
+func WriteRuntimeProfiles(outputDirectory string, cpuSampleDurationSeconds, blockSampleDurationSeconds int) {
+	psiapi.WriteRuntimeProfiles(outputDirectory, cpuSampleDurationSeconds, blockSampleDurationSeconds)
+}
+EOF
+
 echo "[4/6] resolve dependencies (go mod tidy)"
 cd "$WRAPPER"
 # gomobile bind REQUIRES golang.org/x/mobile in the target module's graph
@@ -91,21 +266,54 @@ go list -m golang.org/x/mobile >/dev/null 2>&1 || {
 }
 
 echo "[5/6] gomobile bind (single libgojni, both engines)"
+# Bind against the WRAPPER packages that live inside this module (relative
+# paths) — the upstream repo dirs are outside the module graph and gobind
+# fails on them with "no exported names" (it cannot resolve their packages
+# from another module). The wrapper packages delegate to the real engines.
+# Class names emitted (gobind convention <Pkg><Type> with -javapkg):
+#   com.narcic.ng.bind.Xray*            (package xray)
+#   com.narcic.ng.bind.Psi*             (package psib)
 gomobile bind -v \
   -target=android/arm64,android/arm \
   -androidapi 24 \
   -javapkg=com.narcic.ng.bind \
   -o "$WORK/narcic-unified.aar" \
-  "$XRAYLITE" "$PSICORE/MobileLibrary/psi"
+  ./xray ./psib
 
 echo "[6/6] build ca.psiphon.PsiphonTunnel wrapper against relocated classes"
-# The upstream wrapper imports psi.*; relocate those imports to the new
-# namespace (com.narcic.ng.bind.psi.*) and compile it against the unified
-# classes.jar. The class name stays ca.psiphon.PsiphonTunnel so the app code
-# (Class.forName) is unchanged.
+# The upstream wrapper imports psi.*; relocate those imports to the gobind
+# output of the unified bind. gobind names classes <Pkg><Type> under -javapkg:
+#   psi.Psi                                -> com.narcic.ng.bind.psib.Psi
+#   psi.PsiphonProvider*                   -> com.narcic.ng.bind.Psib*
+# (package "psib" + -javapkg=com.narcic.ng.bind). The wrapper class name
+# stays ca.psiphon.PsiphonTunnel so the app code (Class.forName) is unchanged.
 git -C "$PSICORE" archive HEAD MobileLibrary/Android/PsiphonTunnel | tar -x -C "$WORK"
 WRAPPER_JAVA="$WORK/MobileLibrary/Android/PsiphonTunnel/PsiphonTunnel.java"
-sed -i 's/^import psi\./import com.narcic.ng.bind.psi./' "$WRAPPER_JAVA"
+sed -i \
+  -e 's/^import psi\.Psi;/import com.narcic.ng.bind.psib.Psi;/' \
+  -e 's/^import psi\.PsiphonProvider;/import com.narcic.ng.bind.PsibPsiphonProvider;/' \
+  -e 's/^import psi\.PsiphonProviderFeedbackHandler;/import com.narcic.ng.bind.PsibPsiphonProviderFeedbackHandler;/' \
+  -e 's/^import psi\.PsiphonProviderNetwork;/import com.narcic.ng.bind.PsibPsiphonProviderNetwork;/' \
+  -e 's/^import psi\.PsiphonProviderNoticeHandler;/import com.narcic.ng.bind.PsibPsiphonProviderNoticeHandler;/' \
+# gobind lowers the first letter of Go exported funcs for java methods
+# (verified via javap on libv2ray.aar: CheckVersionX -> checkVersionX), so
+# every Psi.Xxx( static call maps to bind.psib.Psi.xxx(:
+sed -i \
+  -e 's/\bPsi\.Start(/com.narcic.ng.bind.psib.Psi.start(/g' \
+  -e 's/\bPsi\.Stop(/com.narcic.ng.bind.psib.Psi.stop(/g' \
+  -e 's/\bPsi\.AppResumed(/com.narcic.ng.bind.psib.Psi.appResumed(/g' \
+  -e 's/\bPsi\.NetworkChanged(/com.narcic.ng.bind.psib.Psi.networkChanged(/g' \
+  -e 's/\bPsi\.ReconnectTunnel(/com.narcic.ng.bind.psib.Psi.reconnectTunnel(/g' \
+  -e 's/\bPsi\.DropPacketTunnelTraffic(/com.narcic.ng.bind.psib.Psi.dropPacketTunnelTraffic(/g' \
+  -e 's/\bPsi\.UpgradeDownloadFilePath(/com.narcic.ng.bind.psib.Psi.upgradeDownloadFilePath(/g' \
+  -e 's/\bPsi\.ExportExchangePayload(/com.narcic.ng.bind.psib.Psi.exportExchangePayload(/g' \
+  -e 's/\bPsi\.ImportExchangePayload(/com.narcic.ng.bind.psib.Psi.importExchangePayload(/g' \
+  -e 's/\bPsi\.ImportPushPayload(/com.narcic.ng.bind.psib.Psi.importPushPayload(/g' \
+  -e 's/\bPsi\.GetDSLAccessToken(/com.narcic.ng.bind.psib.Psi.getDSLAccessToken(/g' \
+  -e 's/\bPsi\.StartSendFeedback(/com.narcic.ng.bind.psib.Psi.startSendFeedback(/g' \
+  -e 's/\bPsi\.StopSendFeedback(/com.narcic.ng.bind.psib.Psi.stopSendFeedback(/g' \
+  -e 's/\bPsi\.WriteRuntimeProfiles(/com.narcic.ng.bind.psib.Psi.writeRuntimeProfiles(/g' \
+  "$WRAPPER_JAVA"
 
 unzip -o -q "$WORK/narcic-unified.aar" classes.jar -d "$WORK/unified-classes"
 ANDROID_JAR="$(ls "$ANDROID_SDK/platforms"/android-3*/android.jar 2>/dev/null | sort -V | tail -1)"

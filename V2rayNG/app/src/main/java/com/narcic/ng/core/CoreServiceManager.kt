@@ -35,15 +35,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.jvm.Volatile
-import com.narcic.ng.bind.Libv2rayCoreCallbackHandler
-import com.narcic.ng.bind.Libv2rayCoreController
-import com.narcic.ng.bind.Libv2rayProcessFinder
+import com.narcic.ng.bind.XrayCoreCallbackHandler
+import com.narcic.ng.bind.XrayCoreController
+import com.narcic.ng.bind.XrayProcessFinder
 import java.lang.ref.SoftReference
 import java.net.InetSocketAddress
 
 object CoreServiceManager {
 
-    private val coreController: Libv2rayCoreController = CoreNativeManager.newCoreController(CoreCallback())
+    private val coreController: XrayCoreController = CoreNativeManager.newCoreController(CoreCallback())
     private val mMsgReceive = ReceiveMessageHandler()
     private var currentConfig: ProfileItem? = null
     private var processFinder: XrayProcessFinder? = null
@@ -409,7 +409,7 @@ object CoreServiceManager {
      * Core callback handler implementation for handling V2Ray core events.
      * Handles startup, shutdown, socket protection, and status emission.
      */
-    private class CoreCallback : Libv2rayCoreCallbackHandler {
+    private class CoreCallback : XrayCoreCallbackHandler {
         /**
          * Called when V2Ray core starts up.
          * @return 0 for success, any other value for failure.
@@ -448,7 +448,7 @@ object CoreServiceManager {
      * Process finder implementation for Xray core.
      * Uses ConnectivityManager to find the owning UID of a connection based on network parameters.
      */
-    private class XrayProcessFinder(context: Context) : Libv2rayProcessFinder {
+    private class XrayProcessFinder(context: Context) : XrayProcessFinder {
         private val cm: ConnectivityManager? = context.getSystemService(ConnectivityManager::class.java)
 
         override fun findProcessByConnection(network: String, srcIP: String, srcPort: Long, destIP: String, destPort: Long): Long {
@@ -461,7 +461,7 @@ object CoreServiceManager {
             }
 
             if (destIP.isBlank() || destPort == 0L) {
-                LogUtil.d(AppConfig.TAG, "Libv2rayProcessFinder: Find $network connection from $srcIP:$srcPort to :$destPort, (no dest)")
+                LogUtil.d(AppConfig.TAG, "XrayProcessFinder: Find $network connection from $srcIP:$srcPort to :$destPort, (no dest)")
                 return -1L
             }
 
@@ -471,8 +471,8 @@ object CoreServiceManager {
                     InetSocketAddress(srcIP, srcPort.toInt()),
                     InetSocketAddress(destIP, destPort.toInt())
                 ).toLong()
-                LogUtil.d(AppConfig.TAG, "Libv2rayProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid")
-                //LogUtil.d(AppConfig.TAG, "Libv2rayProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid,${PackageUidResolver.uidToPackageName(uid.toString())}")
+                LogUtil.d(AppConfig.TAG, "XrayProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid")
+                //LogUtil.d(AppConfig.TAG, "XrayProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid,${PackageUidResolver.uidToPackageName(uid.toString())}")
 
                 uid
             } catch (_: Exception) {

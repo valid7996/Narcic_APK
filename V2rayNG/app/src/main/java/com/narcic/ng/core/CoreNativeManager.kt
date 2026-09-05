@@ -5,15 +5,15 @@ import com.narcic.ng.AppConfig
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
 import go.Seq
-import com.narcic.ng.bind.Libv2rayCoreCallbackHandler
-import com.narcic.ng.bind.Libv2rayCoreController
-import com.narcic.ng.bind.Libv2ray
+import com.narcic.ng.bind.XrayCoreCallbackHandler
+import com.narcic.ng.bind.XrayCoreController
+import com.narcic.ng.bind.Xray
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * V2Ray Native Library Manager
  *
- * Thread-safe singleton wrapper for Libv2ray native methods.
+ * Thread-safe singleton wrapper for Xray native methods.
  * Provides initialization protection and unified API for V2Ray core operations.
  */
 object CoreNativeManager {
@@ -31,7 +31,7 @@ object CoreNativeManager {
                 Seq.setContext(context?.applicationContext)
                 val assetPath = Utils.userAssetPath(context)
                 val deviceId = Utils.getDeviceIdForXUDPBaseKey()
-                Libv2ray.initCoreEnv(assetPath, deviceId)
+                Xray.initCoreEnv(assetPath, deviceId)
                 LogUtil.i(AppConfig.TAG, "V2Ray core environment initialized successfully")
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.TAG, "Failed to initialize V2Ray core environment", e)
@@ -45,7 +45,7 @@ object CoreNativeManager {
 
     fun reconcileBrowserDialer(dialerAddr: String) {
         try {
-            Libv2ray.reconcileBrowserDialer(dialerAddr)
+            Xray.reconcileBrowserDialer(dialerAddr)
             LogUtil.i(AppConfig.TAG, "Browser dialer reconciled successfully with address: $dialerAddr")
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to reconcile browser dialer with address: $dialerAddr", e)
@@ -60,7 +60,7 @@ object CoreNativeManager {
      */
     fun getLibVersion(): String {
         return try {
-            Libv2ray.checkVersionX()
+            Xray.checkVersionX()
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to check V2Ray version", e)
             "Unknown"
@@ -76,7 +76,7 @@ object CoreNativeManager {
      */
     fun measureOutboundDelay(config: String, testUrl: String): Long {
         return try {
-            Libv2ray.measureOutboundDelay(config, testUrl)
+            Xray.measureOutboundDelay(config, testUrl)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to measure outbound delay", e)
             -1L
@@ -87,11 +87,11 @@ object CoreNativeManager {
      * Create a new core controller instance.
      *
      * @param handler The callback handler for core events
-     * @return A new Libv2rayCoreController instance
+     * @return A new XrayCoreController instance
      */
-    fun newCoreController(handler: Libv2rayCoreCallbackHandler): Libv2rayCoreController {
+    fun newCoreController(handler: XrayCoreCallbackHandler): XrayCoreController {
         return try {
-            Libv2ray.newCoreController(handler)
+            Xray.newCoreController(handler)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to create core controller", e)
             throw e
