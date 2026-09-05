@@ -5,9 +5,9 @@ import com.narcic.ng.AppConfig
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
 import go.Seq
-import libv2ray.CoreCallbackHandler
-import libv2ray.CoreController
-import libv2ray.Libv2ray
+import com.narcic.ng.bind.Libv2rayCoreCallbackHandler
+import com.narcic.ng.bind.Libv2rayCoreController
+import com.narcic.ng.bind.Libv2ray
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -87,9 +87,9 @@ object CoreNativeManager {
      * Create a new core controller instance.
      *
      * @param handler The callback handler for core events
-     * @return A new CoreController instance
+     * @return A new Libv2rayCoreController instance
      */
-    fun newCoreController(handler: CoreCallbackHandler): CoreController {
+    fun newCoreController(handler: Libv2rayCoreCallbackHandler): Libv2rayCoreController {
         return try {
             Libv2ray.newCoreController(handler)
         } catch (e: Exception) {

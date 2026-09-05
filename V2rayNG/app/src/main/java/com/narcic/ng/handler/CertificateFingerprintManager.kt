@@ -9,7 +9,7 @@ import com.narcic.ng.util.HttpUtil
 import com.narcic.ng.util.JsonUtil
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
-import libv2ray.Libv2ray
+import com.narcic.ng.bind.Libv2ray
 
 object CertificateFingerprintManager {
     private const val TIMEOUT_MS = 5000L

@@ -60,39 +60,57 @@ jobs:
         run: |
           cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
 
-      - name: Download libv2ray
-        uses: robinraju/release-downloader@v1.13
+
+      # libv2ray.aar (Xray) and psiphontunnel-2.0.41.aar BOTH ship a gomobile
+      # runtime under the shared `go.*` Java namespace + a native libgojni.so
+      # with DIFFERENT content. An APK can hold only one libgojni.so and only
+      # one definition of each go.* class, and the two runtimes cannot be
+      # merged after the fact (the native .so calls Java_go_Seq_* symbols and
+      # FindClass("go/...") directly). The correct fix is to REBUILD both Go
+      # libraries into ONE unified gomobile bind so a single libgojni.so
+      # carries both the Xray and the Psiphon bindings with one shared go.*
+      # runtime, under the private com.narcic.ng.bind.* namespace.
+      #
+      # Outputs consumed by the app build:
+      #   V2rayNG/app/libs/narcic-unified.aar  — go.* runtime + ONE libgojni.so
+      #       (Xray + Psiphon native) + com.narcic.ng.bind.xray / bind.psi
+      #       bindings
+      #   V2rayNG/app/libs/psiphon-java.aar    — ca.psiphon.PsiphonTunnel java
+      #       wrapper compiled against the relocated psi classes (no native,
+      #       no go.*)
+      # The upstream libv2ray.aar / psiphontunnel-2.0.41.aar files are removed
+      # from libs/ so no duplicate classes or libs remain.
+      - name: Setup Go for unified gomobile bind
+        uses: actions/setup-go@v5
         with:
-          repository: 'patterniha/AndroidLibXrayLite'
-          latest: true
-          fileName: 'libv2ray.aar'
-          out-file-path: V2rayNG/app/libs/
+          go-version: '1.26.x'
+          cache: false
 
-      # libv2ray.aar (Xray core) and psiphontunnel AAR both ship a gomobile
-      # libgojni.so with DIFFERENT content (MD5-verified; zero shared bind
-      # refs) — an APK can hold only one file of that name and the two bind
-      # sets cannot be merged without a gomobile rebuild. Keep the Xray one
-      # (core VPN engine); strip it from the Psiphon AAR so packaging never
-      # sees a duplicate. Psiphon chain degrades cleanly at runtime:
-      # PsiphonController loads ca.psiphon classes reflectively and reports a
-      # clear connect-time error instead of crashing the app.
-      - name: Deduplicate libgojni (keep Xray)
-        run: |
-          cd V2rayNG/app/libs
-          mkdir -p /tmp/psi_patch
-          cd /tmp/psi_patch
-          unzip -o -q "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" -d psi
-          rm -f psi/jni/*/libgojni.so
-          rm -f "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar"
-          cd psi && zip -qr "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" . && cd ..
-          echo "psiphon AAR libgojni count (expect 0):"
-          unzip -l "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" | grep -c "libgojni" || true
-
-      - name: Setup Java
+      - name: Setup Java for unified bind (javac for the psiphon wrapper)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      - name: Build unified Xray+Psiphon gomobile AAR
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          NDK_VERSION: ${{ env.NDK_HOME }}
+        run: |
+          bash .github/workflows/scripts/build-unified.sh \
+            "$GITHUB_WORKSPACE/V2rayNG/app/libs" \
+            "${ANDROID_HOME:-/usr/local/lib/android/sdk}" \
+            "${NDK_VERSION##*/}"
+
+      # Remove the two upstream AARs: their java classes are superseded by the
+      # unified bind (com.narcic.ng.bind.xray / bind.psi) and the psiphon java
+      # wrapper lives in psiphon-java.aar. Keeping them would reintroduce the
+      # duplicate go.* classes and the duplicate libgojni.so.
+      - name: Swap upstream AARs for unified artifacts
+        run: |
+          cd V2rayNG/app/libs
+          rm -f libv2ray.aar psiphontunnel-2.0.41.aar
+          ls -la
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4

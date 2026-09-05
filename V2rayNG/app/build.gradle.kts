@@ -151,14 +151,11 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
-            // libv2ray.aar (Xray core) and psiphontunnel-2.0.41.aar both ship a
-            // gomobile-built libgojni.so with DIFFERENT content (verified: MD5s
-            // differ, zero shared bind refs). The APK can only carry one file
-            // with that name, so pick the Xray one — it powers the core VPN
-            // engine. Psiphon chain degrades gracefully: PsiphonController
-            // binds ca.psiphon classes reflectively and reports a clear error
-            // at connect time instead of crashing the app.
-            pickFirsts += "lib/*/libgojni.so"
+            // NOTE: no pickFirst for libgojni.so — the unified gomobile bind
+            // (narcic-unified.aar, built in CI) is the SINGLE native provider
+            // carrying both the Xray and the Psiphon engines, and the upstream
+            // libv2ray.aar / psiphontunnel AARs are replaced at packaging time
+            // in the workflow, so no duplicate can appear.
         }
     }
 
