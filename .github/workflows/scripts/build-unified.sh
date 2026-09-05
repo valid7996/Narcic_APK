@@ -28,6 +28,9 @@ NDK_VERSION="${3:?ndk version required}"
 export GO111MODULE=on
 export GOPATH="${GOPATH:-$HOME/go}"
 export GOBIN="$GOPATH/bin"
+# allow go commands to update go.mod/go.sum as needed (gomobile bind writes
+# generated bind packages into the module and may add missing requires):
+export GOFLAGS=-mod=mod
 export PATH="$PATH:$GOBIN"
 export ANDROID_HOME="$ANDROID_SDK"
 export ANDROID_NDK_HOME="$ANDROID_SDK/ndk/$NDK_VERSION"
@@ -55,6 +58,7 @@ go 1.26
 require (
 	github.com/2dust/AndroidLibXrayLite v0.0.0
 	github.com/Psiphon-Labs/psiphon-tunnel-core v0.0.0
+	golang.org/x/mobile v0.0.0-20260709172247-6129f5bee9d5
 )
 
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
@@ -64,9 +68,27 @@ EOF
 # dummy go file so the module resolves:
 echo 'package bind' > "$WRAPPER/bind.go"
 
-echo "[4/6] go mod tidy"
+echo "[4/6] resolve dependencies (go mod tidy)"
 cd "$WRAPPER"
+# gomobile bind REQUIRES golang.org/x/mobile in the target module's graph
+# (it generates imports of gobind runtime packages into the bind sources).
+# Pin the SAME x/mobile version AndroidLibXrayLite already uses so both
+# share one runtime, then let tidy finalize go.sum. The explicit require +
+# tidy order keeps x/mobile in the graph (tidy only drops deps nothing
+# imports — gobind's generated bind files import it at bind time, so an
+# empty-module tidy would remove it; therefore tidy runs BEFORE the bind and
+# the require is written into go.mod above, which tidy preserves because the
+# module graph carries it via the replace targets that themselves require
+# x/mobile).
 go mod tidy
+# Ensure x/mobile survived tidy (it must — AndroidLibXrayLite requires it);
+# if tidy somehow dropped it, re-add explicitly:
+if ! grep -q "golang.org/x/mobile" go.mod; then
+  go get golang.org/x/mobile@v0.0.0-20260709172247-6129f5bee9d5
+fi
+go list -m golang.org/x/mobile >/dev/null 2>&1 || {
+  echo "FATAL: golang.org/x/mobile missing from module graph"; exit 1;
+}
 
 echo "[5/6] gomobile bind (single libgojni, both engines)"
 gomobile bind -v \
