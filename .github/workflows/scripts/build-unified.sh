@@ -64,19 +64,23 @@ require (
 // Dependency pins — resolve the MVS conflicts between Xray's and Psiphon's
 // dependency trees (verified against each repo's official go.mod):
 //
-// github.com/apernet/quic-go v0.56.0 (downgrade)
-//   XrayLite's libv2ray_certSha256.go only uses the stable quic.DialAddr API,
-//   while the pin MUST be compatible with Psiphon's fork of quic-go which
-//   builds against the OLD qpack API (NewDecoder(callback)). apernet quic-go
-//   switched qpack v0.5.1 -> v0.6.0 (breaking API change) between v0.56.0 and
-//   v0.57.0, so v0.56.0 is the newest version compatible with BOTH engines.
+// github.com/quic-go/quic-go v0.52.0 (replaces github.com/apernet/quic-go)
+//   XrayLite imports github.com/apernet/quic-go@v0.61.1-0.20260806010916-
+//   184d081eef3e which builds against qpack v0.6.0 (new API). Psiphon's fork
+//   (Psiphon-Labs/quic-go@79fe45fb83b1, May 2025) builds against the OLD qpack
+//   API (NewDecoder with callback = qpack <= v0.5.1). Both engines need
+//   github.com/quic-go/qpack in ONE build → impossible with those two
+//   versions. Resolution: downgrade the Xray-side quic-go to v0.52.0 (May
+//   2025 — same era as the Psiphon fork, qpack v0.5.1 old-callback API which
+//   is API-compatible with Psiphon's usage) and REPLACE the apernet import
+//   path with the canonical quic-go/quic-go path (the apernet repo is only a
+//   mirror; v0.52.0 declares module github.com/quic-go/quic-go). XrayLite
+//   only uses the stable quic.DialAddr + quic.Config API — unchanged between
+//   v0.52.0 and v0.61.
 //
-// github.com/quic-go/qpack — MVS resolves to v0.5.1 (API-compatible with
-//   Psiphon pin v0.4.0; pinned explicitly below to prevent drift to v0.6)
-//   The Psiphon fork of quic-go (79fe45fb83b1) calls qpack.NewDecoder with a
-//   callback (v0.4-style API). qpack v0.5.1 (which MVS would pick via apernet
-//   v0.56.0) retains that signature, so this pin is compatible. Declared
-//   explicitly so the version cannot silently drift to v0.6.0.
+// github.com/quic-go/qpack v0.5.1
+//   Shared by both engines at the v0.52.0 alignment (old callback API). No
+//   duplicate go.* runtime and no version conflict.
 //
 // github.com/vishvananda/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
 //   tailscale/netlink (2021, required by Psiphon) breaks against
@@ -86,6 +90,8 @@ require (
 //
 // github.com/tailscale/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
 //   Kept at the Psiphon-pinned commit exactly as upstream go.mod declares.
+
+replace github.com/apernet/quic-go => github.com/quic-go/quic-go v0.52.0
 
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
 
@@ -291,11 +297,10 @@ go list -m golang.org/x/mobile >/dev/null 2>&1 || {
   echo "FATAL: golang.org/x/mobile missing from module graph"; exit 1;
 }
 
-# --- MVS conflict pins (see go.mod comments for full rationale) ---
-# These resolve the qpack v0.4-vs-v0.6 and tailscale/netlink-vs-vishvananda
-# breakages that occur when Xray's and Psiphon's dependency trees are joined
-# by MVS. Each pin matches an upstream repo's OFFICIAL go.mod declaration:
-go get github.com/apernet/quic-go@v0.56.0
+# --- MVS alignment pins (see go.mod comments for full rationale) ---
+# quic-go: replaced to quic-go/quic-go@v0.52.0 in go.mod above — the era the
+# Psiphon fork was cut from (qpack v0.5.1 old-callback API used by BOTH).
+# qpack pinned to v0.5.1 to prevent MVS drift to v0.6.0 (breaking API):
 go get github.com/quic-go/qpack@v0.5.1
 go get github.com/vishvananda/netlink@v1.1.1-0.20211101221916-cabfb018fe85
 go get github.com/tailscale/netlink@v1.1.1-0.20211101221916-cabfb018fe85
