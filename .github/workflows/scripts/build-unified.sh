@@ -61,6 +61,32 @@ require (
 	golang.org/x/mobile v0.0.0-20260709172247-6129f5bee9d5
 )
 
+// Dependency pins — resolve the MVS conflicts between Xray's and Psiphon's
+// dependency trees (verified against each repo's official go.mod):
+//
+// github.com/apernet/quic-go v0.56.0 (downgrade)
+//   XrayLite's libv2ray_certSha256.go only uses the stable quic.DialAddr API,
+//   while the pin MUST be compatible with Psiphon's fork of quic-go which
+//   builds against the OLD qpack API (NewDecoder(callback)). apernet quic-go
+//   switched qpack v0.5.1 -> v0.6.0 (breaking API change) between v0.56.0 and
+//   v0.57.0, so v0.56.0 is the newest version compatible with BOTH engines.
+//
+// github.com/quic-go/qpack — MVS resolves to v0.5.1 (API-compatible with
+//   Psiphon pin v0.4.0; pinned explicitly below to prevent drift to v0.6)
+//   The Psiphon fork of quic-go (79fe45fb83b1) calls qpack.NewDecoder with a
+//   callback (v0.4-style API). qpack v0.5.1 (which MVS would pick via apernet
+//   v0.56.0) retains that signature, so this pin is compatible. Declared
+//   explicitly so the version cannot silently drift to v0.6.0.
+//
+// github.com/vishvananda/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
+//   tailscale/netlink (2021, required by Psiphon) breaks against
+//   vishvananda/netlink v1.3.1 (Quantum type change, ToIPNet signature).
+//   netlink is only an INDIRECT dep in XrayLite (via wireguard, unused on
+//   Android), so pinning the Psiphon version is safe.
+//
+// github.com/tailscale/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
+//   Kept at the Psiphon-pinned commit exactly as upstream go.mod declares.
+
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
 
 replace github.com/Psiphon-Labs/psiphon-tunnel-core => $PSICORE
@@ -243,7 +269,7 @@ func WriteRuntimeProfiles(outputDirectory string, cpuSampleDurationSeconds, bloc
 }
 EOF
 
-echo "[4/6] resolve dependencies (go mod tidy)"
+echo "[4/6] resolve dependencies (go mod tidy + MVS conflict pins)"
 cd "$WRAPPER"
 # gomobile bind REQUIRES golang.org/x/mobile in the target module's graph
 # (it generates imports of gobind runtime packages into the bind sources).
@@ -264,6 +290,16 @@ fi
 go list -m golang.org/x/mobile >/dev/null 2>&1 || {
   echo "FATAL: golang.org/x/mobile missing from module graph"; exit 1;
 }
+
+# --- MVS conflict pins (see go.mod comments for full rationale) ---
+# These resolve the qpack v0.4-vs-v0.6 and tailscale/netlink-vs-vishvananda
+# breakages that occur when Xray's and Psiphon's dependency trees are joined
+# by MVS. Each pin matches an upstream repo's OFFICIAL go.mod declaration:
+go get github.com/apernet/quic-go@v0.56.0
+go get github.com/quic-go/qpack@v0.5.1
+go get github.com/vishvananda/netlink@v1.1.1-0.20211101221916-cabfb018fe85
+go get github.com/tailscale/netlink@v1.1.1-0.20211101221916-cabfb018fe85
+go mod tidy
 
 echo "[5/6] gomobile bind (single libgojni, both engines)"
 # Bind against the WRAPPER packages that live inside this module (relative
