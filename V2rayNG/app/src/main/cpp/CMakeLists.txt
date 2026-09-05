@@ -64,9 +64,18 @@ target_include_directories(lwip PUBLIC
 # Mirrors third-part/lwip/Android.mk LOCAL_CFLAGS.
 target_compile_definitions(lwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
 
-file(GLOB_RECURSE HTS_SOURCES ${HEV_DIR}/third-part/hev-task-system/*.c)
+# Mirrors third-part/hev-task-system/Android.mk: SRCFILES rwildcards
+# $(SRCDIR) = hev-task-system/src only — apps/ (curl.c etc.) and tests/ are
+# NOT part of libhev-task-system upstream (curl.c needs libcurl, which the
+# Android build never ships). Includes are $(SRCDIR) + include/.
+# build.mk also picks up *.S assembly (per-arch task entry) like the original.
+file(GLOB_RECURSE HTS_SOURCES
+    ${HEV_DIR}/third-part/hev-task-system/src/*.c
+    ${HEV_DIR}/third-part/hev-task-system/src/*.S)
 add_library(hev-task-system STATIC ${HTS_SOURCES})
-target_include_directories(hev-task-system PUBLIC ${HEV_DIR}/third-part/hev-task-system/include)
+target_include_directories(hev-task-system PUBLIC
+    ${HEV_DIR}/third-part/hev-task-system/src
+    ${HEV_DIR}/third-part/hev-task-system/include)
 # Mirrors third-part/hev-task-system/configs.mk CONFIG_CFLAGS (defaults).
 target_compile_definitions(hev-task-system PRIVATE
     ENABLE_STACK_OVERFLOW_DETECTION
