@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(narcicdesync C)
+# ASM is required for hev-task-system's per-arch task entry
+# (src/kern/task/hev-task-execute.S -> hev_task_execute symbol); with only
+# the C language enabled CMake silently skips .S sources and the link fails
+# with "undefined symbol: hev_task_execute".
+project(narcicdesync C ASM)
 
 # Embedded, rootless DPI-desync engine (ciadpi/byedpi, MIT licensed),
 # built as a local SOCKS proxy that Xray's outbound dials through.
@@ -64,18 +68,53 @@ target_include_directories(lwip PUBLIC
 # Mirrors third-part/lwip/Android.mk LOCAL_CFLAGS.
 target_compile_definitions(lwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
 
-# Mirrors third-part/hev-task-system/Android.mk: SRCFILES rwildcards
-# $(SRCDIR) = hev-task-system/src only — apps/ (curl.c etc.) and tests/ are
-# NOT part of libhev-task-system upstream (curl.c needs libcurl, which the
-# Android build never ships). Includes are $(SRCDIR) + include/.
-# build.mk also picks up *.S assembly (per-arch task entry) like the original.
-file(GLOB_RECURSE HTS_SOURCES
-    ${HEV_DIR}/third-part/hev-task-system/src/*.c
-    ${HEV_DIR}/third-part/hev-task-system/src/*.S)
+# Mirrors third-part/hev-task-system/Android.mk + build.mk EXACTLY:
+# SRCFILES = rwildcard($(SRCDIR)/, *.c *.S) with SRCDIR = <hts>/src — an
+# explicit file list (not a broad GLOB) so apps/ (curl.c needs libcurl) and
+# tests/ can never leak into the library, regardless of build caching.
+# Includes = $(SRCDIR) + include/ — resolves both "lib/misc/hev-compiler.h"
+# and "mem/api/hev-memory-allocator-api.h" include forms used by src files.
+set(HTS_DIR ${HEV_DIR}/third-part/hev-task-system)
+set(HTS_SOURCES
+    ${HTS_DIR}/src/kern/aide/hev-task-aide.c
+    ${HTS_DIR}/src/kern/core/hev-task-system-schedule.c
+    ${HTS_DIR}/src/kern/core/hev-task-system.c
+    ${HTS_DIR}/src/kern/io/hev-task-io-reactor-epoll.c
+    ${HTS_DIR}/src/kern/io/hev-task-io-reactor-iocp.c
+    ${HTS_DIR}/src/kern/io/hev-task-io-reactor-kqueue.c
+    ${HTS_DIR}/src/kern/itc/hev-task-channel-select.c
+    ${HTS_DIR}/src/kern/itc/hev-task-channel.c
+    ${HTS_DIR}/src/kern/sync/hev-task-cond.c
+    ${HTS_DIR}/src/kern/sync/hev-task-mutex.c
+    ${HTS_DIR}/src/kern/task/hev-task-call.c
+    ${HTS_DIR}/src/kern/task/hev-task-executer.c
+    ${HTS_DIR}/src/kern/task/hev-task-stack-heap.c
+    ${HTS_DIR}/src/kern/task/hev-task-stack-mmap.c
+    ${HTS_DIR}/src/kern/task/hev-task-execute.S
+    ${HTS_DIR}/src/kern/task/hev-task.c
+    ${HTS_DIR}/src/kern/time/hev-task-timer.c
+    ${HTS_DIR}/src/lib/dns/hev-task-dns-proxy.c
+    ${HTS_DIR}/src/lib/dns/hev-task-dns.c
+    ${HTS_DIR}/src/lib/io/basic/hev-task-io.c
+    ${HTS_DIR}/src/lib/io/buffer/hev-circular-buffer.c
+    ${HTS_DIR}/src/lib/io/pipe/hev-task-io-pipe.c
+    ${HTS_DIR}/src/lib/io/poll/hev-task-io-poll.c
+    ${HTS_DIR}/src/lib/io/socket/hev-task-io-socket.c
+    ${HTS_DIR}/src/lib/list/hev-list.c
+    ${HTS_DIR}/src/lib/misc/hev-debugger.c
+    ${HTS_DIR}/src/lib/misc/hev-task-stack-detector.c
+    ${HTS_DIR}/src/lib/object/hev-object-atomic.c
+    ${HTS_DIR}/src/lib/object/hev-object.c
+    ${HTS_DIR}/src/lib/rbtree/hev-rbtree-cached.c
+    ${HTS_DIR}/src/lib/rbtree/hev-rbtree.c
+    ${HTS_DIR}/src/mem/api/hev-memory-allocator-api.c
+    ${HTS_DIR}/src/mem/base/hev-memory-allocator.c
+    ${HTS_DIR}/src/mem/simple/hev-memory-allocator-simple.c
+    ${HTS_DIR}/src/mem/slice/hev-memory-allocator-slice.c)
 add_library(hev-task-system STATIC ${HTS_SOURCES})
 target_include_directories(hev-task-system PUBLIC
-    ${HEV_DIR}/third-part/hev-task-system/src
-    ${HEV_DIR}/third-part/hev-task-system/include)
+    ${HTS_DIR}/src
+    ${HTS_DIR}/include)
 # Mirrors third-part/hev-task-system/configs.mk CONFIG_CFLAGS (defaults).
 target_compile_definitions(hev-task-system PRIVATE
     ENABLE_STACK_OVERFLOW_DETECTION
