@@ -426,7 +426,7 @@ sed -i \
   -e 's/^import psi\.PsiphonProvider;/import com.narcic.ng.bind.PsibPsiphonProvider;/' \
   -e 's/^import psi\.PsiphonProviderFeedbackHandler;/import com.narcic.ng.bind.PsibPsiphonProviderFeedbackHandler;/' \
   -e 's/^import psi\.PsiphonProviderNetwork;/import com.narcic.ng.bind.PsibPsiphonProviderNetwork;/' \
-  -e 's/^import psi\.PsiphonProviderNoticeHandler;/import com.narcic.ng.bind.PsibPsiphonProviderNoticeHandler;/' \
+  -e 's/^import psi\.PsiphonProviderNoticeHandler;/import com.narcic.ng.bind.PsibPsiphonProviderNoticeHandler;/' "$WRAPPER_JAVA"
 # gobind lowers the first letter of Go exported funcs for java methods
 # (verified via javap on libv2ray.aar: CheckVersionX -> checkVersionX), so
 # every Psi.Xxx( static call maps to bind.psib.Psi.xxx(:
