@@ -243,17 +243,45 @@ package psib
 // Every symbol delegates 1:1 to the real upstream API.
 import psiapi "github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/psi"
 
-// PsiphonProvider mirrors psi.PsiphonProvider.
-type PsiphonProvider = psiapi.PsiphonProvider
-
-// PsiphonProviderFeedbackHandler mirrors psi.PsiphonProviderFeedbackHandler.
-type PsiphonProviderFeedbackHandler = psiapi.PsiphonProviderFeedbackHandler
-
-// PsiphonProviderNetwork mirrors psi.PsiphonProviderNetwork.
-type PsiphonProviderNetwork = psiapi.PsiphonProviderNetwork
+// The four provider interfaces below MUST be declared as independent
+// interfaces in THIS package (not `type X = psiapi.X` aliases): gobind only
+// generates Java bindings for named types whose package is part of the bind
+// set, and type aliases resolve to psiapi types outside the bind set — those
+// are silently skipped, so Psi.Start/StartSendFeedback and every provider
+// interface would vanish from classes.jar. Go interfaces are structural, so
+// any Java-proxied value implementing these satisfies the upstream psiapi
+// interfaces at the psiapi.Start call sites below.
 
 // PsiphonProviderNoticeHandler mirrors psi.PsiphonProviderNoticeHandler.
-type PsiphonProviderNoticeHandler = psiapi.PsiphonProviderNoticeHandler
+type PsiphonProviderNoticeHandler interface {
+	Notice(noticeJSON string)
+}
+
+// PsiphonProviderFeedbackHandler mirrors psi.PsiphonProviderFeedbackHandler.
+type PsiphonProviderFeedbackHandler interface {
+	SendFeedbackCompleted(err error)
+}
+
+// PsiphonProviderNetwork mirrors psi.PsiphonProviderNetwork.
+type PsiphonProviderNetwork interface {
+	HasNetworkConnectivity() int
+	GetNetworkID() string
+	IPv6Synthesize(IPv4Addr string) string
+	HasIPv6Route() int
+}
+
+// PsiphonProvider mirrors psi.PsiphonProvider (embedded NoticeHandler and
+// Network sub-interfaces, exactly as upstream declares).
+type PsiphonProvider interface {
+	PsiphonProviderNoticeHandler
+	PsiphonProviderNetwork
+	BindToDevice(fileDescriptor int) (string, error)
+
+	// GetDNSServersAsString must return a comma-delimited list of DNS server
+	// addresses. A single string return value is used since gobind does not
+	// support string slice types.
+	GetDNSServersAsString() string
+}
 
 // Start mirrors psi.Start.
 func Start(
