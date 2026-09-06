@@ -370,9 +370,22 @@ go list -m golang.org/x/mobile >/dev/null 2>&1 || {
 #   (both engines aligned to the same qpack API — no MVS drift):
 # qpack pinned to v0.6.0:
 go get github.com/quic-go/qpack@v0.6.0
-go get github.com/vishvananda/netlink@v1.1.1-0.20211101221916-cabfb018fe85
-go get github.com/tailscale/netlink@v1.1.1-0.20211101221916-cabfb018fe85
+
+# tailscale/netlink: the pinned pseudo-version commit (cabfb018fe85…) is NOT
+# cached on proxy.golang.org (@v/list only knows v1.0.0/v1.1.0), so the proxy
+# 404s and go reports "unknown revision". Fix: fetch DIRECTLY from git with
+# the FULL 40-char commit SHA (verified on upstream: "Add Rule.Type to
+# support RTN_UNREACHABLE etc rules").
+go get github.com/tailscale/netlink@cabfb018fe8589d5c1d9d29e805943fb400ee782
+# vishvananda/netlink: pin to the same commit for graph consistency (matches
+# the Psiphon go.sum graph).
+go get github.com/vishvananda/netlink@cabfb018fe8589d5c1d9d29e805943fb400ee782
+# Finalize go.sum AFTER the direct-fetch pins:
 go mod tidy
+# Final verification:
+go list -m github.com/tailscale/netlink github.com/vishvananda/netlink || {
+  echo "FATAL: netlink modules missing from module graph"; exit 1;
+}
 
 echo "[5/6] gomobile bind (single libgojni, both engines)"
 # Bind against the WRAPPER packages that live inside this module (relative
