@@ -65,7 +65,6 @@ package http3
 // The v0.5-era API (NewDecoder(callback), Write, DecodeFull, Close) is
 // re-implemented on top of the v0.6 iterator API (NewDecoder + Decode).
 import (
-	"errors"
 	"io"
 
 	"github.com/quic-go/qpack"
@@ -103,11 +102,16 @@ func QpackDecodeFull(d *qpack.Decoder, p []byte) ([]qpack.HeaderField, error) {
 EOF
 
 # 2) mechanically redirect the v0.5 calls to the compat shims:
+# IMPORTANT: longest-match patterns (c.decoder, s.decoder) MUST run BEFORE
+# the generic `decoder` pattern — sed processes -e expressions in order, and
+# without this ordering the generic pattern matches the `decoder` substring
+# inside `c.decoder`/`s.decoder`, producing `c.QpackDecodeFull(decoder, ...)`
+# with an undefined `decoder` variable.
 sed -i \
   -e 's/qpack\.NewDecoder(func(hf qpack\.HeaderField) {})/QpackNewDecoderCompat(func(hf qpack.HeaderField) {})/g' \
-  -e 's/decoder\.DecodeFull(/QpackDecodeFull(decoder, /g' \
   -e 's/c\.decoder\.DecodeFull(/QpackDecodeFull(c.decoder, /g' \
   -e 's/s\.decoder\.DecodeFull(/QpackDecodeFull(s.decoder, /g' \
+  -e 's/decoder\.DecodeFull(/QpackDecodeFull(decoder, /g' \
   "$WORK/psiquic/http3/client.go" \
   "$WORK/psiquic/http3/conn.go" \
   "$WORK/psiquic/http3/http_stream.go" \
