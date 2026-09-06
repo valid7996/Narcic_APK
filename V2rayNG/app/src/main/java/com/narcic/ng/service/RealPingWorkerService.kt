@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -85,7 +86,7 @@ class RealPingWorkerService(
         }
     }
 
-    private fun startRealPing(guid: String): Long {
+    private suspend fun startRealPing(guid: String): Long {
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
@@ -111,7 +112,7 @@ class RealPingWorkerService(
             // Wait (cancellable) for the shared MMKV session flag to flip on,
             // bounded so a dead engine doesn't stall the whole test batch.
             val deadline = System.currentTimeMillis() + 3_000L
-            while (!NarcisSpoofEngine.isRunning && System.currentTimeMillis() < deadline && isActive) {
+            while (!NarcisSpoofEngine.isRunning && System.currentTimeMillis() < deadline && currentCoroutineContext().isActive) {
                 delay(100)
             }
             if (!NarcisSpoofEngine.isRunning) {
