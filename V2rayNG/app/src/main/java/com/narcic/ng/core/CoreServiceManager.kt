@@ -35,18 +35,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.jvm.Volatile
-import com.narcic.ng.bind.XrayCoreCallbackHandler
-import com.narcic.ng.bind.XrayCoreController
-import com.narcic.ng.bind.XrayProcessFinder
+import com.narcic.ng.bind.xray.CoreCallbackHandler
+import com.narcic.ng.bind.xray.CoreController
+import com.narcic.ng.bind.xray.ProcessFinder
 import java.lang.ref.SoftReference
 import java.net.InetSocketAddress
 
 object CoreServiceManager {
 
-    private val coreController: XrayCoreController = CoreNativeManager.newCoreController(CoreCallback())
+    private val coreController: CoreController = CoreNativeManager.newCoreController(CoreCallback())
     private val mMsgReceive = ReceiveMessageHandler()
     private var currentConfig: ProfileItem? = null
-    private var processFinder: XrayProcessFinder? = null
+    private var processFinder: ProcessFinder? = null
     private var browserDialer: IDialerService? = null
     private var networkMonitor: NetworkMonitor? = null
 
@@ -448,7 +448,7 @@ object CoreServiceManager {
      * Process finder implementation for Xray core.
      * Uses ConnectivityManager to find the owning UID of a connection based on network parameters.
      */
-    private class XrayProcessFinder(context: Context) : XrayProcessFinder {
+    private class XrayProcessFinder(context: Context) : ProcessFinder {
         private val cm: ConnectivityManager? = context.getSystemService(ConnectivityManager::class.java)
 
         override fun findProcessByConnection(network: String, srcIP: String, srcPort: Long, destIP: String, destPort: Long): Long {

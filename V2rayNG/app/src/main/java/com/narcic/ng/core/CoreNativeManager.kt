@@ -5,9 +5,9 @@ import com.narcic.ng.AppConfig
 import com.narcic.ng.util.LogUtil
 import com.narcic.ng.util.Utils
 import go.Seq
-import com.narcic.ng.bind.XrayCoreCallbackHandler
-import com.narcic.ng.bind.XrayCoreController
-import com.narcic.ng.bind.Xray
+import com.narcic.ng.bind.xray.CoreCallbackHandler
+import com.narcic.ng.bind.xray.CoreController
+import com.narcic.ng.bind.xray.Xray
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -89,7 +89,7 @@ object CoreNativeManager {
      * @param handler The callback handler for core events
      * @return A new XrayCoreController instance
      */
-    fun newCoreController(handler: XrayCoreCallbackHandler): XrayCoreController {
+    fun newCoreController(handler: CoreCallbackHandler): CoreController {
         return try {
             Xray.newCoreController(handler)
         } catch (e: Exception) {

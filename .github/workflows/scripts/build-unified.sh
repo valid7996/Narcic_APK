@@ -193,7 +193,11 @@ package xray
 // Bindable facade over AndroidLibXrayLite (package libv2ray).
 // Every symbol below delegates 1:1 to the real upstream API
 // (github.com/2dust/AndroidLibXrayLite).
-import libv2ray "github.com/2dust/AndroidLibXrayLite"
+import (
+	"errors"
+
+	libv2ray "github.com/2dust/AndroidLibXrayLite"
+)
 
 // CoreCallbackHandler mirrors libv2ray.CoreCallbackHandler.
 type CoreCallbackHandler interface {
@@ -207,8 +211,63 @@ type ProcessFinder interface {
 	FindProcessByConnection(network, srcIP string, srcPort int, destIP string, destPort int) int
 }
 
-// CoreController mirrors libv2ray.CoreController (bound by reference).
-type CoreController = libv2ray.CoreController
+// CoreController MUST be a named struct in THIS package (not
+// `type CoreController = libv2ray.CoreController`): gobind only generates
+// Java bindings for named types whose package is part of the bind set, and a
+// type alias resolves to the libv2ray type outside the bind set — the alias
+// and NewCoreController would silently vanish from classes.jar. libv2ray's
+// own methods take/return types of ITS package, so this wrapper re-exports
+// the same surface with psib-independent types. Go interfaces are
+// structural, so Java proxies of xray.ProcessFinder satisfy
+// libv2ray.ProcessFinder at the delegate call sites.
+type CoreController struct {
+	controller *libv2ray.CoreController
+}
+
+func (c *CoreController) StartLoop(configContent string, tunFd int32) error {
+	if c == nil || c.controller == nil {
+		return errors.New("controller not initialized")
+	}
+	return c.controller.StartLoop(configContent, tunFd)
+}
+
+func (c *CoreController) StopLoop() error {
+	if c == nil || c.controller == nil {
+		return nil
+	}
+	return c.controller.StopLoop()
+}
+
+// GetIsRunning exposes the upstream IsRunning FIELD (libv2ray has no
+// GetIsRunning method); gobind maps this to the java getIsRunning() the
+// Kotlin code reads as coreController.isRunning.
+func (c *CoreController) GetIsRunning() bool {
+	if c == nil || c.controller == nil {
+		return false
+	}
+	return c.controller.IsRunning
+}
+
+func (c *CoreController) RegisterProcessFinder(finder ProcessFinder) {
+	if c == nil || c.controller == nil {
+		return
+	}
+	c.controller.RegisterProcessFinder(finder)
+}
+
+func (c *CoreController) QueryAllOutboundTrafficStats() string {
+	if c == nil || c.controller == nil {
+		return ""
+	}
+	return c.controller.QueryAllOutboundTrafficStats()
+}
+
+func (c *CoreController) MeasureDelay(url string) (int64, error) {
+	if c == nil || c.controller == nil {
+		return -1, errors.New("controller not initialized")
+	}
+	return c.controller.MeasureDelay(url)
+}
 
 // CheckVersionX mirrors libv2ray.CheckVersionX.
 func CheckVersionX() string { return libv2ray.CheckVersionX() }
@@ -218,7 +277,9 @@ func InitCoreEnv(envPath string, key string) { libv2ray.InitCoreEnv(envPath, key
 
 // NewCoreController mirrors libv2ray.NewCoreController.
 func NewCoreController(s CoreCallbackHandler) *CoreController {
-	return libv2ray.NewCoreController(s)
+	return &CoreController{
+		controller: libv2ray.NewCoreController(s),
+	}
 }
 
 // MeasureOutboundDelay mirrors libv2ray.MeasureOutboundDelay.
