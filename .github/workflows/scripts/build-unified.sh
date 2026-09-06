@@ -130,6 +130,7 @@ go 1.26
 require (
 	github.com/2dust/AndroidLibXrayLite v0.0.0
 	github.com/Psiphon-Labs/psiphon-tunnel-core v0.0.0
+	github.com/Psiphon-Labs/quic-go v0.0.0
 	golang.org/x/mobile v0.0.0-20260709172247-6129f5bee9d5
 )
 
