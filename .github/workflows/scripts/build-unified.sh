@@ -422,29 +422,12 @@ echo "[6/6] build ca.psiphon.PsiphonTunnel wrapper against relocated classes"
 git -C "$PSICORE" archive HEAD MobileLibrary/Android/PsiphonTunnel | tar -x -C "$WORK"
 WRAPPER_JAVA="$WORK/MobileLibrary/Android/PsiphonTunnel/PsiphonTunnel.java"
 sed -i \
-  -e 's/^import psi\.Psi;/import com.narcic.ng.bind.psib.Psi;/' \
-  -e 's/^import psi\.PsiphonProvider;/import com.narcic.ng.bind.PsibPsiphonProvider;/' \
-  -e 's/^import psi\.PsiphonProviderFeedbackHandler;/import com.narcic.ng.bind.PsibPsiphonProviderFeedbackHandler;/' \
-  -e 's/^import psi\.PsiphonProviderNetwork;/import com.narcic.ng.bind.PsibPsiphonProviderNetwork;/' \
-  -e 's/^import psi\.PsiphonProviderNoticeHandler;/import com.narcic.ng.bind.PsibPsiphonProviderNoticeHandler;/' "$WRAPPER_JAVA"
-# gobind lowers the first letter of Go exported funcs for java methods
-# (verified via javap on libv2ray.aar: CheckVersionX -> checkVersionX), so
-# every Psi.Xxx( static call maps to bind.psib.Psi.xxx(:
-sed -i \
-  -e 's/\bPsi\.Start(/com.narcic.ng.bind.psib.Psi.start(/g' \
-  -e 's/\bPsi\.Stop(/com.narcic.ng.bind.psib.Psi.stop(/g' \
-  -e 's/\bPsi\.AppResumed(/com.narcic.ng.bind.psib.Psi.appResumed(/g' \
-  -e 's/\bPsi\.NetworkChanged(/com.narcic.ng.bind.psib.Psi.networkChanged(/g' \
-  -e 's/\bPsi\.ReconnectTunnel(/com.narcic.ng.bind.psib.Psi.reconnectTunnel(/g' \
-  -e 's/\bPsi\.DropPacketTunnelTraffic(/com.narcic.ng.bind.psib.Psi.dropPacketTunnelTraffic(/g' \
-  -e 's/\bPsi\.UpgradeDownloadFilePath(/com.narcic.ng.bind.psib.Psi.upgradeDownloadFilePath(/g' \
-  -e 's/\bPsi\.ExportExchangePayload(/com.narcic.ng.bind.psib.Psi.exportExchangePayload(/g' \
-  -e 's/\bPsi\.ImportExchangePayload(/com.narcic.ng.bind.psib.Psi.importExchangePayload(/g' \
-  -e 's/\bPsi\.ImportPushPayload(/com.narcic.ng.bind.psib.Psi.importPushPayload(/g' \
-  -e 's/\bPsi\.GetDSLAccessToken(/com.narcic.ng.bind.psib.Psi.getDSLAccessToken(/g' \
-  -e 's/\bPsi\.StartSendFeedback(/com.narcic.ng.bind.psib.Psi.startSendFeedback(/g' \
-  -e 's/\bPsi\.StopSendFeedback(/com.narcic.ng.bind.psib.Psi.stopSendFeedback(/g' \
-  -e 's/\bPsi\.WriteRuntimeProfiles(/com.narcic.ng.bind.psib.Psi.writeRuntimeProfiles(/g' \
+  -e 's/^import psi\.Psi;/import com.narcic.ng.bind.psib.Psib;/' \
+  -e 's/^import psi\.PsiphonProvider;/import com.narcic.ng.bind.psib.PsiphonProvider;/' \
+  -e 's/^import psi\.PsiphonProviderFeedbackHandler;/import com.narcic.ng.bind.psib.PsiphonProviderFeedbackHandler;/' \
+  -e 's/^import psi\.PsiphonProviderNetwork;/import com.narcic.ng.bind.psib.PsiphonProviderNetwork;/' \
+  -e 's/^import psi\.PsiphonProviderNoticeHandler;/import com.narcic.ng.bind.psib.PsiphonProviderNoticeHandler;/' \
+  -e 's/\bPsi\./Psib./g' \
   "$WRAPPER_JAVA"
 
 unzip -o -q "$WORK/narcic-unified.aar" classes.jar -d "$WORK/unified-classes"
@@ -462,12 +445,13 @@ cp "$WORK/narcic-unified.aar" "$UNIFIED_OUT/narcic-unified.aar"
 
 mkdir -p "$WORK/psijava/classes"
 cp -r "$WORK/wrapper-out"/* "$WORK/psijava/classes/"
+jar cf "$WORK/psijava/classes.jar" -C "$WORK/wrapper-out" .
 cp "$WORK/MobileLibrary/Android/PsiphonTunnel/AndroidManifest.xml" "$WORK/psijava/" 2>/dev/null || true
 echo "-keep class ca.psiphon.** { *; }" > "$WORK/psijava/proguard.txt"
 (
   cd "$WORK/psijava"
   rm -f "$UNIFIED_OUT/psiphon-java.aar"
-  zip -qr "$UNIFIED_OUT/psiphon-java.aar" AndroidManifest.xml classes proguard.txt
+  zip -qr "$UNIFIED_OUT/psiphon-java.aar" AndroidManifest.xml classes.jar classes proguard.txt
 )
 
 echo "=== DONE ==="
@@ -478,6 +462,6 @@ echo "--- unified AAR java top-level packages (expect bind + go only) ---"
 unzip -p "$UNIFIED_OUT/narcic-unified.aar" classes.jar > "$WORK/u.jar"
 unzip -l "$WORK/u.jar" | awk '{print $4}' | grep "\.class" | cut -d/ -f1 | sort -u
 echo "--- relocated psi classes present? ---"
-unzip -l "$WORK/u.jar" | grep -c "bind/psi"
+unzip -l "$WORK/u.jar" | grep -c "bind/psi" || true
 echo "--- relocated xray classes present? ---"
-unzip -l "$WORK/u.jar" | grep -c "Libv2ray"
+unzip -l "$WORK/u.jar" | grep -c "bind/xray" || true
