@@ -147,14 +147,15 @@ require (
 //   touched; psi engine source is unchanged), then qpack is pinned to v0.6.0
 //   for BOTH engines.
 //
-// github.com/vishvananda/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
+// github.com/vishvananda/netlink v1.2.1-beta.2 (Psiphon official pin)
 //   tailscale/netlink (2021, required by Psiphon) breaks against
 //   vishvananda/netlink v1.3.1 (Quantum type change, ToIPNet signature).
-//   netlink is only an INDIRECT dep in XrayLite (via wireguard, unused on
-//   Android), so pinning the Psiphon version is safe.
+//   Locked to v1.2.1-beta.2 via replace below — the exact Psiphon version.
 //
 // github.com/tailscale/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
 //   Kept at the Psiphon-pinned commit exactly as upstream go.mod declares.
+
+replace github.com/vishvananda/netlink => github.com/vishvananda/netlink v1.2.1-beta.2
 
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
 
@@ -371,16 +372,11 @@ go list -m golang.org/x/mobile >/dev/null 2>&1 || {
 # qpack pinned to v0.6.0:
 go get github.com/quic-go/qpack@v0.6.0
 
-# tailscale/netlink: the pinned pseudo-version commit (cabfb018fe85…) is NOT
-# cached on proxy.golang.org (@v/list only knows v1.0.0/v1.1.0), so the proxy
-# 404s and go reports "unknown revision". Fix: fetch DIRECTLY from git with
-# the FULL 40-char commit SHA (verified on upstream: "Add Rule.Type to
-# support RTN_UNREACHABLE etc rules").
-go get github.com/tailscale/netlink@cabfb018fe8589d5c1d9d29e805943fb400ee782
-# vishvananda/netlink: pin to the same commit for graph consistency (matches
-# the Psiphon go.sum graph).
-go get github.com/vishvananda/netlink@cabfb018fe8589d5c1d9d29e805943fb400ee782
-# Finalize go.sum AFTER the direct-fetch pins:
+# vishvananda/netlink is locked to v1.2.1-beta.2 via the `replace` directive
+# in go.mod above (exact Psiphon version — resolves the tailscale/netlink
+# v1.2.1 vs v1.3.1 API incompatibility structurally, no go get needed).
+# tailscale/netlink stays at the Psiphon-pinned pseudo-version:
+go get github.com/tailscale/netlink@v1.1.1-0.20211101221916-cabfb018fe85
 go mod tidy
 # Final verification:
 go list -m github.com/tailscale/netlink github.com/vishvananda/netlink || {
