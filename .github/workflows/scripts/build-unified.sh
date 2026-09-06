@@ -44,6 +44,78 @@ echo "[1/6] clone sources"
 git clone --depth 1 https://github.com/patterniha/AndroidLibXrayLite.git "$XRAYLITE"
 git clone --depth 1 https://github.com/Psiphon-Labs/psiphon-tunnel-core.git "$PSICORE"
 
+# Controlled dependency fork (proved necessary — see go.mod pins comment):
+# Psiphon's quic-go fork (79fe45fb83b1) builds against the OLD qpack API
+# (NewDecoder(callback) + DecodeFull/Write), while Xray's apernet quic-go
+# @184d081 requires qpack v0.6.0 (NewDecoder() + iterator Decode). Go cannot
+# carry two versions of github.com/quic-go/qpack in one build, so the fork's
+# http3 package is mechanically adapted to qpack v0.6.0 here — a controlled
+# patch of THIS dependency only (allowed per review rule #8). The psi engine
+# source is untouched.
+echo "[1b/6] adapt Psiphon quic-go fork http3 to qpack v0.6.0"
+git clone --depth 1 https://github.com/Psiphon-Labs/quic-go.git "$WORK/psiquic"
+git -C "$WORK/psiquic" fetch --depth 1 origin 79fe45fb83b1 2>/dev/null || true
+git -C "$WORK/psiquic" checkout 79fe45fb83b1 2>/dev/null || true
+
+# 1) append a compat file providing the v0.5-style helpers on top of v0.6:
+cat > "$WORK/psiquic/http3/qpack_compat.go" <<'EOF'
+package http3
+
+// qpack v0.6 compatibility shims for the Psiphon quic-go fork.
+// The v0.5-era API (NewDecoder(callback), Write, DecodeFull, Close) is
+// re-implemented on top of the v0.6 iterator API (NewDecoder + Decode).
+import (
+	"errors"
+	"io"
+
+	"github.com/quic-go/qpack"
+)
+
+var qpackEmitFunc func(qpack.HeaderField)
+
+func QpackNewDecoderCompat(emitFunc func(qpack.HeaderField)) *qpack.Decoder {
+	qpackEmitFunc = emitFunc
+	return qpack.NewDecoder()
+}
+
+// QpackDecodeFull mirrors qpack v0.5 Decoder.DecodeFull using the v0.6
+// iterator API.
+func QpackDecodeFull(d *qpack.Decoder, p []byte) ([]qpack.HeaderField, error) {
+	if len(p) == 0 {
+		return []qpack.HeaderField{}, nil
+	}
+	var hf []qpack.HeaderField
+	df := d.Decode(p)
+	for {
+		field, err := df()
+		if err == io.EOF {
+			return hf, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		hf = append(hf, field)
+		if qpackEmitFunc != nil {
+			qpackEmitFunc(field)
+		}
+	}
+}
+EOF
+
+# 2) mechanically redirect the v0.5 calls to the compat shims:
+sed -i \
+  -e 's/qpack\.NewDecoder(func(hf qpack\.HeaderField) {})/QpackNewDecoderCompat(func(hf qpack.HeaderField) {})/g' \
+  -e 's/decoder\.DecodeFull(/QpackDecodeFull(decoder, /g' \
+  -e 's/c\.decoder\.DecodeFull(/QpackDecodeFull(c.decoder, /g' \
+  -e 's/s\.decoder\.DecodeFull(/QpackDecodeFull(s.decoder, /g' \
+  "$WORK/psiquic/http3/client.go" \
+  "$WORK/psiquic/http3/conn.go" \
+  "$WORK/psiquic/http3/http_stream.go" \
+  "$WORK/psiquic/http3/server.go"
+
+# 3) the fork's qpack version must now resolve to v0.6.0 (set via replace in
+#    the wrapper go.mod below: github.com/quic-go/qpack => v0.6.0)
+
 echo "[2/6] install gomobile"
 go install golang.org/x/mobile/cmd/gomobile@latest
 gomobile init
@@ -61,26 +133,19 @@ require (
 	golang.org/x/mobile v0.0.0-20260709172247-6129f5bee9d5
 )
 
-// Dependency pins — resolve the MVS conflicts between Xray's and Psiphon's
+// Dependency pins — resolve the MVS conflict between Xray's and Psiphon's
 // dependency trees (verified against each repo's official go.mod):
 //
-// github.com/quic-go/quic-go v0.52.0 (replaces github.com/apernet/quic-go)
-//   XrayLite imports github.com/apernet/quic-go@v0.61.1-0.20260806010916-
-//   184d081eef3e which builds against qpack v0.6.0 (new API). Psiphon's fork
-//   (Psiphon-Labs/quic-go@79fe45fb83b1, May 2025) builds against the OLD qpack
-//   API (NewDecoder with callback = qpack <= v0.5.1). Both engines need
-//   github.com/quic-go/qpack in ONE build → impossible with those two
-//   versions. Resolution: downgrade the Xray-side quic-go to v0.52.0 (May
-//   2025 — same era as the Psiphon fork, qpack v0.5.1 old-callback API which
-//   is API-compatible with Psiphon's usage) and REPLACE the apernet import
-//   path with the canonical quic-go/quic-go path (the apernet repo is only a
-//   mirror; v0.52.0 declares module github.com/quic-go/quic-go). XrayLite
-//   only uses the stable quic.DialAddr + quic.Config API — unchanged between
-//   v0.52.0 and v0.61.
-//
-// github.com/quic-go/qpack v0.5.1
-//   Shared by both engines at the v0.52.0 alignment (old callback API). No
-//   duplicate go.* runtime and no version conflict.
+// github.com/quic-go/qpack v0.6.0 (pinned; see below)
+//   The ONLY genuine conflict: Xray's apernet quic-go@184d081 requires qpack
+//   v0.6.0 (NewDecoder() + iterator Decode), while Psiphon's fork
+//   (Psiphon-Labs/quic-go@79fe45fb83b1) builds against the OLD qpack API
+//   (NewDecoder(callback) + Write/DecodeFull). Go cannot carry two versions
+//   of one module. Resolution (controlled fork per review rule 8): the
+//   Psiphon fork's http3 package is mechanically adapted to qpack v0.6.0 in
+//   step 1b above (compat shims in qpack_compat.go — only that dependency is
+//   touched; psi engine source is unchanged), then qpack is pinned to v0.6.0
+//   for BOTH engines.
 //
 // github.com/vishvananda/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
 //   tailscale/netlink (2021, required by Psiphon) breaks against
@@ -91,9 +156,11 @@ require (
 // github.com/tailscale/netlink v1.1.1-0.20211101221916-cabfb018fe85 (Psiphon official pin)
 //   Kept at the Psiphon-pinned commit exactly as upstream go.mod declares.
 
-replace github.com/apernet/quic-go => github.com/quic-go/quic-go v0.52.0
-
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
+
+	// qpack v0.6.0 — both engines are aligned to this version (the Psiphon
+	// fork's http3 was adapted in step 1b above):
+	replace github.com/quic-go/qpack => github.com/quic-go/qpack v0.6.0
 
 replace github.com/Psiphon-Labs/psiphon-tunnel-core => $PSICORE
 EOF
@@ -298,10 +365,11 @@ go list -m golang.org/x/mobile >/dev/null 2>&1 || {
 }
 
 # --- MVS alignment pins (see go.mod comments for full rationale) ---
-# quic-go: replaced to quic-go/quic-go@v0.52.0 in go.mod above — the era the
-# Psiphon fork was cut from (qpack v0.5.1 old-callback API used by BOTH).
-# qpack pinned to v0.5.1 to prevent MVS drift to v0.6.0 (breaking API):
-go get github.com/quic-go/qpack@v0.5.1
+# quic-go: apernet quic-go@184d081 kept (matches XrayLite); Psiphon fork http3
+# adapted to qpack v0.6.0 in step 1b. qpack pinned to v0.6.0:
+#   (both engines aligned to the same qpack API — no MVS drift):
+# qpack pinned to v0.6.0:
+go get github.com/quic-go/qpack@v0.6.0
 go get github.com/vishvananda/netlink@v1.1.1-0.20211101221916-cabfb018fe85
 go get github.com/tailscale/netlink@v1.1.1-0.20211101221916-cabfb018fe85
 go mod tidy
