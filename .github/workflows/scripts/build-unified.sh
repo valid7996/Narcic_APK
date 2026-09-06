@@ -157,6 +157,11 @@ require (
 
 replace github.com/vishvananda/netlink => github.com/vishvananda/netlink v1.2.1-beta.2
 
+// github.com/Psiphon-Labs/quic-go MUST resolve to the ADAPTED clone
+// (step 1b above) — without this replace, gomobile bind compiles the
+// upstream unpatched fork and the qpack v0.6 adaptation never applies.
+replace github.com/Psiphon-Labs/quic-go => $WORK/psiquic
+
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
 
 	// qpack v0.6.0 — both engines are aligned to this version (the Psiphon
