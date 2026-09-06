@@ -401,10 +401,14 @@ echo "[5/6] gomobile bind (single libgojni, both engines)"
 # Class names emitted (gobind convention <Pkg><Type> with -javapkg):
 #   com.narcic.ng.bind.Xray*            (package xray)
 #   com.narcic.ng.bind.Psi*             (package psib)
+# -checklinkname=0: anet (Psiphon dep) uses //go:linkname to net.zoneCache,
+#   which the Go 1.23+ linker rejects by default — same flag Psiphon's own
+#   MobileLibrary/Android/make.bash passes.
 gomobile bind -v \
   -target=android/arm64,android/arm \
   -androidapi 24 \
   -javapkg=com.narcic.ng.bind \
+  -ldflags="-checklinkname=0 -s -w" \
   -o "$WORK/narcic-unified.aar" \
   ./xray ./psib
 
