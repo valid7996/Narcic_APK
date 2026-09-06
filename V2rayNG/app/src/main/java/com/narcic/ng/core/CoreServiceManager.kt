@@ -409,7 +409,7 @@ object CoreServiceManager {
      * Core callback handler implementation for handling V2Ray core events.
      * Handles startup, shutdown, socket protection, and status emission.
      */
-    private class CoreCallback : XrayCoreCallbackHandler {
+    private class CoreCallback : CoreCallbackHandler {
         /**
          * Called when V2Ray core starts up.
          * @return 0 for success, any other value for failure.
