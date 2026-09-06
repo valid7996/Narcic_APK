@@ -475,11 +475,18 @@ mkdir -p "$WORK/psijava/classes"
 cp -r "$WORK/wrapper-out"/* "$WORK/psijava/classes/"
 jar cf "$WORK/psijava/classes.jar" -C "$WORK/wrapper-out" .
 cp "$WORK/MobileLibrary/Android/PsiphonTunnel/AndroidManifest.xml" "$WORK/psijava/" 2>/dev/null || true
+# The Psiphon manifest references @xml/ca_psiphon_psiphontunnel_backup_rules
+# (android:fullBackupContent) — ship the upstream resource, exactly as the
+# original psiphontunnel AAR did (res/xml/ + an empty R.txt), or AAPT fails
+# with "resource xml/ca_psiphon_psiphontunnel_backup_rules not found".
+mkdir -p "$WORK/psijava/res/xml"
+cp "$WORK/MobileLibrary/Android/PsiphonTunnel/ca_psiphon_psiphontunnel_backup_rules.xml" "$WORK/psijava/res/xml/" 2>/dev/null || true
+touch "$WORK/psijava/R.txt"
 echo "-keep class ca.psiphon.** { *; }" > "$WORK/psijava/proguard.txt"
 (
   cd "$WORK/psijava"
   rm -f "$UNIFIED_OUT/psiphon-java.aar"
-  zip -qr "$UNIFIED_OUT/psiphon-java.aar" AndroidManifest.xml classes.jar classes proguard.txt
+  zip -qr "$UNIFIED_OUT/psiphon-java.aar" AndroidManifest.xml classes.jar classes res R.txt proguard.txt
 )
 
 echo "=== DONE ==="
