@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.narcic.ng.aether.service.AetherVpnService
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.extension.isComplexType
@@ -58,6 +59,12 @@ object LauncherManager {
 
     @Throws(Exception::class)
     private fun startContextService(context: Context) {
+        // VPN engines are mutually exclusive (one TUN interface per app): stop
+        // the other two before taking ownership so no stale engine keeps
+        // reporting CONNECTED.
+        AetherVpnService.stopVpn(context)
+        runCatching { com.narcic.ng.awg.AwgManager.disconnect() }
+
         // Note: isRunning check is removed here to avoid loading Native libraries in the UI process.
         // The check is performed in CoreServiceManager when the service starts in the daemon process.
 

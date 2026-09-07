@@ -260,6 +260,11 @@ class MainActivity : HelperBaseComponentActivity() {
      * it tries up to 5 times (checking handshake for 5s each cycle) until good connection is established.
      */
     private fun startAwgTunnel(configText: String) {
+        // VPN engines are mutually exclusive (one TUN interface per app): stop
+        // V2Ray and Aether before taking ownership so no stale engine keeps
+        // reporting CONNECTED.
+        LauncherManager.stopService(this)
+        com.narcic.ng.aether.service.AetherVpnService.stopVpn(this)
         mainViewModel.setAwgConnectingState(true, "در حال اتصال، لطفاً صبر کنید...")
         lifecycleScope.launch(Dispatchers.IO) {
             val error = com.narcic.ng.awg.AwgManager.connectWithAutoRetry(

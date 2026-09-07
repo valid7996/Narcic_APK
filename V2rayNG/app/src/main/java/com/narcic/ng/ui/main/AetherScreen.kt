@@ -1,6 +1,10 @@
 package com.narcic.ng.ui.main
 
+import android.app.Activity
 import android.content.Intent
+import android.net.VpnService
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,6 +58,8 @@ import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.model.SessionTraffic
 import com.narcic.ng.aether.shared.platform.Bridge
 import com.narcic.ng.aether.shared.util.CountryNames
+import com.narcic.ng.awg.AwgManager
+import com.narcic.ng.core.LauncherManager
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
 import kotlinx.coroutines.delay
@@ -103,6 +109,29 @@ private fun flagFor(countryCode: String): String {
 
 // endregion
 
+// region engine ownership (mutual exclusion)
+
+/**
+ * The three VPN engines (Aether / V2Ray / AmneziaWG) are mutually exclusive —
+ * Android grants only one TUN interface per app, and each engine keeps its own
+ * UI state, so a stale engine would keep showing CONNECTED. Stop the other two
+ * BEFORE taking ownership.
+ */
+private fun stopOtherEngines(context: android.content.Context) {
+    // V2Ray (Xray core) — asynchronous stop message to the daemon process.
+    LauncherManager.stopService(context)
+    // AmneziaWG — synchronous in-process teardown; blocks until settled DOWN.
+    runCatching { AwgManager.disconnect() }
+}
+
+private fun startAetherService(context: android.content.Context) {
+    stopOtherEngines(context)
+    val intent = Intent(context, AetherVpnService::class.java).apply { action = AetherVpnService.ACTION_START }
+    ContextCompat.startForegroundService(context, intent)
+}
+
+// endregion
+
 @Composable
 fun AetherScreen() {
     val context = LocalContext.current
@@ -136,6 +165,17 @@ fun AetherScreen() {
     val psiphonLinked = connected && !psiphonStageActive && chainOn && PsiphonController.isConnected()
 
     val scope = rememberCoroutineScope()
+
+    // Fresh-install VPN permission: AetherVpnService is a Service and cannot
+    // show the system dialog itself — request it here, from the Activity
+    // context, then start the service only after the user grants access.
+    val vpnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            startAetherService(context)
+        }
+    }
 
     // Live pollers: duration/traffic come through Bridge flows already, but the
     // IP/ping lookups must be triggered when the tunnel comes up (same cadence
@@ -408,9 +448,13 @@ fun AetherScreen() {
                     )
                     .border(2.dp, if (running) accent.copy(alpha = .6f) else stroke, RoundedCornerShape(50))
                     .clickable {
-                        val action = if (running) AetherVpnService.ACTION_STOP else AetherVpnService.ACTION_START
-                        val intent = Intent(context, AetherVpnService::class.java).apply { this.action = action }
-                        if (running) context.startService(intent) else ContextCompat.startForegroundService(context, intent)
+                        if (running) {
+                            val intent = Intent(context, AetherVpnService::class.java).apply { action = AetherVpnService.ACTION_STOP }
+                            context.startService(intent)
+                        } else {
+                            val prep = VpnService.prepare(context)
+                            if (prep != null) vpnPermissionLauncher.launch(prep) else startAetherService(context)
+                        }
                     },
                 contentAlignment = Alignment.Center,
             ) {

@@ -1,6 +1,11 @@
 # Ignore data and key store files
 *.dat
 *.jks
+# ...except the bundled Xray geo databases required by a fresh install
+# (SettingsManager.initAssets copies them into app storage on first run)
+!V2rayNG/app/src/main/assets/geoip.dat
+!V2rayNG/app/src/main/assets/geosite.dat
+!V2rayNG/app/src/main/assets/geoip-only-cn-private.dat
 
 # Ignore output JSON file
 V2rayNG/app/release/output.json
