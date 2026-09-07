@@ -326,6 +326,7 @@ fun AetherScreen() {
             status = status,
             psiphonStageActive = psiphonStageActive,
             connected = connected,
+            psiphonLinked = psiphonLinked,
             directInfo = ipInfo,
             exitInfo = ipInfo,
             card = card,
@@ -473,7 +474,7 @@ private fun IpCard(
                 !viaTunnel && info.ip.isEmpty() && !info.isLoading -> "برای دریافت، لمس کنید"
                 else -> "بروزرسانی: لمس"
             },
-            color = accent.copy(alpha = .8f),
+            color = Nc.Cyan.copy(alpha = .8f),
             fontSize = 10.sp,
             modifier = Modifier.clickable {
                 // re-triggered by the LaunchedEffect poller path in the scope below
@@ -510,6 +511,7 @@ private fun ChainCard(
     status: ConnectionStatus,
     psiphonStageActive: Boolean,
     connected: Boolean,
+    psiphonLinked: Boolean,
     directInfo: IpInfo,
     exitInfo: IpInfo,
     card: Color,
