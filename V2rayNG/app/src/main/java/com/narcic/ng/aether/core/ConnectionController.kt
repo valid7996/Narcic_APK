@@ -139,6 +139,9 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                 }
             }
             val psiphonSupported = PsiphonController.isSupported(effectiveConfig)
+            if (psiphonSupported) {
+                effectiveConfig = effectiveConfig.copy(httpProxyEnabled = true)
+            }
             val bindHost = if (effectiveConfig.shareHotspot) "0.0.0.0" else "127.0.0.1"
             val bindAddress = "$bindHost:${effectiveConfig.socksPort}"
             if (bindHost != "127.0.0.1") {
@@ -727,13 +730,9 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                 runCatching { cleanup(attemptId) }
                 return
             }
-            if (runner.connectionStatus.value != ConnectionStatus.RUNNING) {
-                LogRepository.e("[Controller] Startup failed: ${e.localizedMessage}")
-                cleanup(attemptId)
-                notifyStatusChanged(appContext, ConnectionStatus.ERROR)
-            } else {
-                LogRepository.w("[Controller] Startup check failed but core is running: ${e.localizedMessage}")
-            }
+            LogRepository.e("[Controller] Startup failed: ${e.localizedMessage}")
+            cleanup(attemptId)
+            notifyStatusChanged(appContext, ConnectionStatus.ERROR)
         }
     }
 
