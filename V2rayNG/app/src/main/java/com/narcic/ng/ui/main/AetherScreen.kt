@@ -200,7 +200,7 @@ fun AetherScreen() {
                 Text("Aether Tunnel", color = Nc.Txt, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    formatDuration(durationSeconds),
+                    formatDuration(durationSeconds ?: 0L),
                     color = Nc.Sub,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
