@@ -46,7 +46,9 @@ class CoreVpnService : VpnService(), ServiceControl {
         @JvmStatic
         var isServiceAlive: Boolean
             get() = MmkvManager.decodeSettingsBool(MMKV_CORE_ALIVE, false)
-            private set(value) = MmkvManager.encodeSettings(MMKV_CORE_ALIVE, value)
+            private set(value) {
+                MmkvManager.encodeSettings(MMKV_CORE_ALIVE, value)
+            }
     }
 
     override fun onCreate() {
