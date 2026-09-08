@@ -198,7 +198,7 @@ class AetherProxyService : Service() {
         val stopIntent = PendingIntent.getService(this, 1, Intent(this, AetherProxyService::class.java).apply { action = ACTION_STOP }, flags)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("AetherST Proxy")
+            .setContentTitle("Narcic PS Proxy")
             .setContentText(statusText)
             .setSmallIcon(R.drawable.ic_stat_aether)
             .setOngoing(true)
@@ -212,7 +212,7 @@ class AetherProxyService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(CHANNEL_ID, "AetherST Proxy", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        val channel = NotificationChannel(CHANNEL_ID, "Narcic PS Proxy", NotificationManager.IMPORTANCE_DEFAULT).apply {
             setSound(null, null)
             enableVibration(false)
             enableLights(false)

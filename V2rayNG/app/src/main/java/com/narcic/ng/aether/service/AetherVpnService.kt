@@ -479,7 +479,7 @@ class AetherVpnService : VpnService() {
             .addAddress("fd00::1", 120)
             .addRoute("0.0.0.0", 0)
             .setMtu(effectiveMtu)
-            .setSession("AetherST Tunnel")
+            .setSession("Narcic PS Tunnel")
             .setConfigureIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), pendingFlags))
 
         if (engine == TunnelEngine.HEV_TUN2SOCKS) {
@@ -1000,7 +1000,7 @@ class AetherVpnService : VpnService() {
         val stopIntent = PendingIntent.getService(this, 1, Intent(this, AetherVpnService::class.java).apply { action = ACTION_STOP }, flags)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("AetherST Tunnel")
+            .setContentTitle("Narcic PS Tunnel")
             .setContentText(statusText)
             .setSmallIcon(R.drawable.ic_stat_aether)
             .setOngoing(true)
@@ -1028,7 +1028,7 @@ class AetherVpnService : VpnService() {
                 .setContentText("Connection lost unexpectedly. Tap to reconnect.")
                 .setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("AetherST Tunnel was disconnected unexpectedly.\nReason: $reason\n\nTap 'Reconnect' to restore your secure connection.")
+                        .bigText("Narcic PS Tunnel was disconnected unexpectedly.\nReason: $reason\n\nTap 'Reconnect' to restore your secure connection.")
                 )
                 .setSmallIcon(R.drawable.ic_stat_aether)
                 .setAutoCancel(true)
@@ -1048,13 +1048,13 @@ class AetherVpnService : VpnService() {
     }
 
     private fun createNotificationChannel() {
-        val statusChannel = NotificationChannel(CHANNEL_ID, "AetherST Tunnel", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        val statusChannel = NotificationChannel(CHANNEL_ID, "Narcic PS Tunnel", NotificationManager.IMPORTANCE_DEFAULT).apply {
             setSound(null, null)
             enableVibration(false)
             enableLights(false)
             setShowBadge(false)
         }
-        val alertChannel = NotificationChannel(ALERT_CHANNEL_ID, "AetherST Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+        val alertChannel = NotificationChannel(ALERT_CHANNEL_ID, "Narcic PS Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "Notifications for unexpected disconnections"
             enableVibration(true)
             enableLights(true)

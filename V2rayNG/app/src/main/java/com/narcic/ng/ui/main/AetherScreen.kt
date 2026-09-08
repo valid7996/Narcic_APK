@@ -237,7 +237,7 @@ fun AetherScreen() {
                         )
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Aether Tunnel", color = Nc.Txt, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Narcic PS", color = Nc.Txt, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.weight(1f))
                 Text(
                     formatDuration(durationSeconds ?: 0L),
