@@ -41,6 +41,7 @@ class SettingsHubActivity : BaseComponentActivity() {
         SettingsHubScreen(
             onBackClick = { finish() },
             onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
+            onOpenNarcicPsSettings = { startActivity(Intent(this, NarcicPsSettingsActivity::class.java)) },
             onOpenAutoConnectSettings = { startActivity(Intent(this, AutoConnectSettingsActivity::class.java)) },
             onOpenNarcisSpoofSettings = { startActivity(Intent(this, NarcisSpoofSettingActivity::class.java)) },
             onOpenPerAppProxy = { startActivity(Intent(this, PerAppProxyActivity::class.java)) },
@@ -56,6 +57,7 @@ class SettingsHubActivity : BaseComponentActivity() {
 fun SettingsHubScreen(
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenNarcicPsSettings: () -> Unit,
     onOpenAutoConnectSettings: () -> Unit,
     onOpenNarcisSpoofSettings: () -> Unit,
     onOpenPerAppProxy: () -> Unit,
@@ -78,12 +80,18 @@ fun SettingsHubScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.ic_settings_24dp),
-                title = stringResource(R.string.title_settings),
-                subtitle = stringResource(R.string.title_settings_hub_settings_subtitle),
-                onClick = onOpenSettings
-            )
+        SettingsMenuItem(
+            icon = painterResource(R.drawable.ic_settings_24dp),
+            title = stringResource(R.string.title_settings),
+            subtitle = stringResource(R.string.title_settings_hub_settings_subtitle),
+            onClick = onOpenSettings
+        )
+        SettingsMenuItem(
+            icon = painterResource(R.drawable.ic_power_24dp),
+            title = stringResource(R.string.title_narcic_ps_settings),
+            subtitle = stringResource(R.string.subtitle_narcic_ps_settings),
+            onClick = onOpenNarcicPsSettings
+        )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_flash_on_24dp),
                 title = stringResource(R.string.title_auto_connect_settings),

@@ -133,6 +133,9 @@
             android:name=".ui.settings.SettingsHubActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.settings.NarcicPsSettingsActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.settings.AutoConnectSettingsActivity"
             android:exported="false" />
         <activity
