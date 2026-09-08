@@ -222,6 +222,149 @@
     <string name="nps_dns_custom">سرورهای DNS سفارشی (با کاما جدا کنید)</string>
     <string name="nps_generic_error">اسکن ناموفق: %1$s</string>
 
+    <!-- v45.1 hardening strings -->
+    <string name="nps_network_open">آزاد (بدون محدودیت)</string>
+    <string name="nps_network_restricted">محدود (فیلترشده)</string>
+    <string name="nps_reconnect_banner">اتصال فعال است — برای اعمال تغییرات، تونل را یک‌بار قطع و وصل کنید</string>
+    <string name="nps_reset_confirm_title">بازنشانی تنظیمات</string>
+    <string name="nps_reset_confirm_msg">تمام تنظیمات نارسیس پی‌اس به حالت پیش‌فرض کارخانه بازمی‌گردد. ادامه می‌دهید؟</string>
+    <string name="nps_reset_confirm_yes">بازنشانی</string>
+    <string name="nps_reset_done">تنظیمات به حالت پیش‌فرض بازگشت</string>
+    <string name="nps_backup_exported">فایل پشتیبان ذخیره شد</string>
+    <string name="nps_backup_export_failed">خطا در ذخیره فایل پشتیبان</string>
+    <string name="nps_backup_restored">پیکربندی با موفقیت بازیابی شد</string>
+    <string name="nps_backup_restore_invalid">فایل پشتیبان نامعتبر یا آسیب‌دیده است</string>
+    <string name="nps_routing_rules_title">قوانین مسیریابی دامنه و آی‌پی</string>
+    <string name="nps_routing_rules_none">هنوز قانون سفارشی وجود ندارد</string>
+    <string name="nps_routing_rules_count">%1$d قانون مسیریابی فعال</string>
+    <string name="nps_routing_rules_hint">ویرایشگر قوانین به‌زودی اضافه می‌شود — قوانین فعلی از فایل پشتیبان حفظ می‌شوند</string>
+    <string name="nps_group_listeners">شنونده‌های محلی</string>
+    <string name="nps_group_dns">تنظیمات دی‌ان‌اس</string>
+    <string name="nps_group_endpoints">اندپوینت‌ها و زمان‌بندی پروتکل</string>
+    <string name="nps_hev_advanced_title">تنظیمات پیشرفته موتور HEV</string>
+    <string name="nps_hev_advanced_sub">پارامترهای سطح پایین tun2socks — فقط برای عیب‌یابی تغییر دهید</string>
+    <string name="nps_section_tools_sub">اسکن شبکه و رتبه‌بندی سرورهای DNS</string>
+    <!-- profile names -->
+    <string name="nps_profile_turbo">توربو</string>
+    <string name="nps_profile_turbo_sub">سریع‌ترین پروفایل ماسک · MTU 1320</string>
+    <string name="nps_profile_thorough">پایدار</string>
+    <string name="nps_profile_thorough_sub">پروفایل ماسک پایدار · MTU 1320</string>
+    <string name="nps_profile_stealth">مخفی‌کار</string>
+    <string name="nps_profile_stealth_sub">گوول دولایه · MTU 1330</string>
+    <string name="nps_profile_ironclad">نفوذناپذیر</string>
+    <string name="nps_profile_ironclad_sub">وایرگارد تک‌لایه · MTU 1330</string>
+    <string name="nps_profile_custom">سفارشی</string>
+    <string name="nps_profile_custom_sub">تنظیمات دستی کاربر</string>
+    <!-- protocol page -->
+    <string name="nps_proto_h2">فال‌بک HTTP/2</string>
+    <string name="nps_proto_fragment">تکه‌تکه‌سازی پکت‌ها</string>
+    <string name="nps_proto_ech">ECH (کلاینت‌هلوی رمزنگاری‌شده)</string>
+    <string name="nps_proto_masque_mtu">MTU داخلی ماسک</string>
+    <string name="nps_proto_no_data_check">غیرفعال‌سازی راستی‌آزمایی دیتا</string>
+    <string name="nps_proto_noise">مبهم‌سازی و نویز ضد فیلترینگ</string>
+    <string name="nps_proto_scan_mode">استراتژی سرعت (حالت اسکن)</string>
+    <string name="nps_proto_mtu">MTU سفارشی</string>
+    <string name="nps_proto_tls_groups">گروه‌های کلید TLS</string>
+    <string name="nps_cloak_title">ترافیک فیک دکوی کلواک</string>
+    <string name="nps_cloak_sni">لیست SNI دکوی</string>
+    <string name="nps_cloak_ttl">لیست TTL</string>
+    <string name="nps_cloak_fragment">تکه‌تکه‌کردن ClientHello واقعی</string>
+    <string name="nps_cloak_adaptive">آمار انطباقی</string>
+    <string name="nps_cloak_random_sni">تصادفی‌سازی حروف SNI</string>
+    <string name="nps_cloak_ports">پورت‌های رزرو فال‌بک</string>
+    <!-- chain page -->
+    <string name="nps_chain_enable">فعال‌سازی زنجیره سایفون</string>
+    <string name="nps_chain_enable_sub">عبور ترافیک تونل از هاپ دوم سایفون</string>
+    <string name="nps_chain_mode">حالت زنجیره</string>
+    <string name="nps_chain_region">کشور خروجی (کد ISO، خالی = خودکار)</string>
+    <string name="nps_chain_socks_port">پورت SOCKS سایفون</string>
+    <string name="nps_chain_via_tunnel">بوت‌استرپ از داخل تونل</string>
+    <!-- zero trust page -->
+    <string name="nps_zt_team">نام سازمان</string>
+    <string name="nps_zt_email">ایمیل دسترسی</string>
+    <string name="nps_zt_gateway">استفاده از کلودفلر گیت‌وی</string>
+    <string name="nps_zt_stay">حفظ حالت ورود</string>
+    <string name="nps_zt_token_id">شناسه سرویس توکن</string>
+    <string name="nps_zt_token_secret">رمز سرویس توکن</string>
+    <string name="nps_zt_jwt">توکن دسترسی (JWT)</string>
+    <!-- split page -->
+    <string name="nps_split_whole">هدایت کل دستگاه</string>
+    <string name="nps_split_whole_sub">عبور ترافیک همه برنامه‌ها از تونل</string>
+    <string name="nps_split_hotspot">اشتراک‌گذاری با هات‌اسپات</string>
+    <string name="nps_split_hotspot_sub">در دسترس‌قرار دادن پروکسی SOCKS محلی برای کلاینت‌های هات‌اسپات</string>
+    <!-- network page -->
+    <string name="nps_net_socks_host">هاست SOCKS</string>
+    <string name="nps_net_socks_port">پورت SOCKS</string>
+    <string name="nps_net_http_port">پورت HTTP</string>
+    <string name="nps_net_http_proxy">پروکسی HTTP داخلی</string>
+    <string name="nps_net_http_proxy_locked">هنگام فعال‌بودن زنجیره سایفون قفل است</string>
+    <string name="nps_net_custom_dns">DNS سفارشی</string>
+    <string name="nps_net_dns_list">لیست سرورهای DNS</string>
+    <string name="nps_net_forced_peer">آی‌پی اجباری اندپوینت (مثلاً 1.2.3.4:443)</string>
+    <string name="nps_net_wg_peer">اندپوینت پیر وایرگارد</string>
+    <string name="nps_net_wiw_outer">اندپوینت لایه بیرونی WiW</string>
+    <string name="nps_net_wiw_inner">اندپوینت لایه درونی WiW</string>
+    <string name="nps_net_wiw_scan">اسکن اندپوینت WiW</string>
+    <string name="nps_net_keepalive">پکت‌های کیپ‌الایو</string>
+    <string name="nps_net_keepalive_interval">فاصله کیپ‌الایو (ثانیه)</string>
+    <string name="nps_net_cooldown">خنک‌سازی اندپوینت (ثانیه)</string>
+    <string name="nps_net_validate">فاصله اعتبارسنجی (ثانیه)</string>
+    <string name="nps_net_reconnect_interval">فاصله تلاش مجدد (ثانیه)</string>
+    <!-- security page -->
+    <string name="nps_sec_strict_ks">کلید قطع اکید</string>
+    <string name="nps_sec_ks">کلید قطع اضطراری</string>
+    <string name="nps_sec_ipv6">محافظت از نشت IPv6</string>
+    <string name="nps_sec_smart_reconnect">اتصال مجدد هوشمند</string>
+    <string name="nps_sec_max_retries">حداکثر تلاش مجدد</string>
+    <string name="nps_sec_reprovision">دریافت مجدد پروفایل در خطای احراز</string>
+    <!-- diagnostics page -->
+    <string name="nps_diag_ping_url">نشانی تست پینگ</string>
+    <string name="nps_diag_app_log">سطح لاگ برنامه</string>
+    <string name="nps_diag_core_log">سطح لاگ هسته</string>
+    <string name="nps_diag_perf">پروفایل بازدهی</string>
+    <string name="nps_diag_upstream">پروکسی بالادستی خارجی</string>
+    <string name="nps_diag_upstream_url">نشانی پروکسی بالادستی</string>
+    <string name="nps_diag_sniffing">اسنیف دامنه</string>
+    <string name="nps_diag_sniff_timeout">تایم‌اوت اسنیف (میلی‌ثانیه)</string>
+    <string name="nps_diag_quick_reconnect">اتصال مجدد سریع</string>
+    <string name="nps_diag_profile_lock">قفل اکید پروفایل (بدون تلاش مجدد)</string>
+    <string name="nps_hev_log_level">سطح لاگ HEV</string>
+    <string name="nps_hev_connect_timeout">تایم‌اوت اتصال HEV (میلی‌ثانیه)</string>
+    <string name="nps_hev_rw_timeout">تایم‌اوت خواندن/نوشتن HEV (میلی‌ثانیه)</string>
+    <string name="nps_hev_max_sessions">حداکثر نشست‌های HEV (۰ = نامحدود)</string>
+    <string name="nps_hev_mapdns">اندازه کش mapdns های HEV</string>
+    <string name="nps_hev_udp_mode">حالت انتقال UDP در HEV</string>
+    <!-- system page -->
+    <string name="nps_sys_export">خروجی پشتیبان کامل (.astf)</string>
+    <string name="nps_sys_export_sub">ذخیره کل پیکربندی PS در یک فایل</string>
+    <string name="nps_sys_restore">بازیابی پشتیبان کامل</string>
+    <string name="nps_sys_restore_sub">ورود فایل .astf خروجی‌گرفته‌شده قبلی</string>
+    <string name="nps_sys_reset">بازنشانی به پیش‌فرض کارخانه</string>
+    <string name="nps_sys_reset_sub">بازگردانی همه تنظیمات PS به مقدار پیش‌فرض</string>
+    <!-- auto detect step localization -->
+    <string name="nps_step_checking_net">بررسی اتصال اینترنت…</string>
+    <string name="nps_step_checking_ipv6">بررسی اتصال IPv6…</string>
+    <string name="nps_step_checking_ipv6_attempt">بررسی IPv6… تلاش %1$d از 3</string>
+    <string name="nps_step_checking_dpi">بررسی محدودیت‌های DPI…</string>
+    <string name="nps_step_detecting_isp">شناسایی ISP…</string>
+    <string name="nps_step_detecting_isp_attempt">شناسایی ISP… تلاش %1$d از 2</string>
+    <string name="nps_step_fingerprint_done">فینگرپرینت شبکه کامل شد</string>
+    <string name="nps_step_protocol_latency">سنجش تأخیر پروتکل‌ها…</string>
+    <string name="nps_step_protocol_one">سنجش تأخیر %1$s…</string>
+    <string name="nps_step_mtu">کشف MTU بهینه…</string>
+    <string name="nps_step_mtu_probe">پروب MTU %1$d بایت… بهترین %2$d</string>
+    <string name="nps_step_noise">تست حالت‌های مبهم‌سازی…</string>
+    <string name="nps_step_noise_one">تست مبهم‌سازی %1$s — %2$d از %3$d…</string>
+    <string name="nps_step_scan">ارزیابی استراتژی‌های اسکن…</string>
+    <string name="nps_step_scan_one">تست اسکن %1$s — %2$d از %3$d…</string>
+    <string name="nps_step_analyzing">محاسبه پیکربندی بهینه…</string>
+    <string name="nps_step_complete">پیکربندی بهینه پیدا شد!</string>
+    <string name="nps_err_no_internet">اتصال اینترنت در دسترس نیست. به یک شبکه سالم وصل شده و دوباره تلاش کنید.</string>
+    <string name="nps_err_detection_failed">شناسایی ناموفق بود</string>
+    <string name="nps_proto_tcp_latency">%1$s: سنجش تأخیر TCP…</string>
+    <string name="nps_proto_https_probe">%1$s: پروب HTTPS…</string>
+    <string name="nps_proto_https_latency">%1$s: سنجش تأخیر HTTPS…</string>
+
     <!-- نرسیس اسپوف -->
     <string name="title_narcis_spoof_setting">نرسیس اسپوف</string>
     <string name="title_narcis_spoof_setting_subtitle">جعل SNI و فرگمنتیشن TLS به‌صورت محلی</string>

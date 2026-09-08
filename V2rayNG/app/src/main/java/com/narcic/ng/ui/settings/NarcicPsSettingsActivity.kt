@@ -149,6 +149,13 @@ fun NarcicPsSettingsScreen(onBackClick: () -> Unit) {
     val titleColor = if (isDark) Nc.Txt else MaterialTheme.colorScheme.onSurface
     val accent = Nc.Cyan
 
+    // Fix 1: system back inside a subpage returns to the PS root; system back
+    // on the root itself falls through and closes the Activity. App-bar back
+    // keeps the exact same semantics through back().
+    androidx.activity.compose.BackHandler(enabled = currentPage != NpsPage.ROOT) {
+        page = NpsPage.ROOT.name
+    }
+
     Scaffold(
         containerColor = bgColor,
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -187,6 +194,17 @@ fun NarcicPsSettingsScreen(onBackClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Fix 7: settings on these pages only take effect after the tunnel
+            // restarts (see AetherVpnService reading config at start), so show
+            // a reconnect hint while the VPN is up. AutoDetect/DNS pages are
+            // measurement tools, not connection settings.
+            val reconnectPages = setOf(
+                NpsPage.PROFILES, NpsPage.PROTOCOL, NpsPage.CHAIN, NpsPage.ZEROTRUST,
+                NpsPage.SPLIT, NpsPage.NETWORK, NpsPage.SECURITY, NpsPage.DIAG, NpsPage.SYSTEM
+            )
+            if (connectionStatus == ConnectionStatus.RUNNING && currentPage in reconnectPages) {
+                NpsReconnectBanner(subColor = subColor, accent = accent)
+            }
             when (currentPage) {
                 NpsPage.ROOT -> NpsRootPage(
                     cardColor = cardColor,
@@ -427,6 +445,32 @@ internal fun NpsSwitchRow(
 @Composable
 internal fun NpsDivider(color: Color) {
     HorizontalDivider(color = color, thickness = 0.5.dp, modifier = Modifier.padding(start = 52.dp))
+}
+
+@Composable
+internal fun NpsReconnectBanner(subColor: Color, accent: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Nc.Amber.copy(alpha = 0.12f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.Sync, null,
+            tint = Nc.Amber, modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            stringResource(R.string.nps_reconnect_banner),
+            color = Nc.Amber,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 16.sp
+        )
+    }
 }
 
 // ============================== ROOT ==============================

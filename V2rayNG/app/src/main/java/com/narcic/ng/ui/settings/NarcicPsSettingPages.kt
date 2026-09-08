@@ -18,15 +18,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,18 +37,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.R
 import com.narcic.ng.aether.platform.PlatformContext
 import com.narcic.ng.aether.platform.getSettings
+import com.narcic.ng.aether.platform.getSystemUtils
 import com.narcic.ng.aether.shared.data.AetherConfigRepository
 import com.narcic.ng.aether.shared.data.AutoDetectRepository
 import com.narcic.ng.aether.shared.data.DnsBenchmarkRepository
-import com.narcic.ng.aether.shared.data.DnsProbeResult
-import com.narcic.ng.aether.shared.data.IpInfoRepository
 import com.narcic.ng.aether.shared.model.AetherConfig
 import com.narcic.ng.aether.shared.model.AetherLogLevel
 import com.narcic.ng.aether.shared.model.AetherNoise
@@ -55,6 +57,9 @@ import com.narcic.ng.aether.shared.model.AetherScanMode
 import com.narcic.ng.aether.shared.model.AutoDetectPhase
 import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.model.ProbeStatus
+import com.narcic.ng.extension.toast
+import com.narcic.ng.extension.toastError
+import com.narcic.ng.extension.toastSuccess
 import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.compose.SettingsEditItem
 import com.narcic.ng.ui.compose.SettingsListItem
@@ -64,6 +69,62 @@ import com.narcic.ng.ui.compose.SettingsSwitchItem
 // Wired to the real AutoDetectRepository (ported verbatim from upstream
 // AetherST). Requires the tunnel to be STOPPED/ERROR so probes measure the
 // bare network instead of the VPN tunnel.
+
+/**
+ * Maps the repository's English step strings onto localized resources.
+ * Unknown text (e.g. raw socket exceptions) falls back to the original
+ * string so nothing is silently hidden.
+ */
+@Composable
+private fun localizedAutoDetectStep(step: String): String {
+    return when {
+        step == "Checking internet connection..." -> stringResource(R.string.nps_step_checking_net)
+        step == "Checking IPv6 connectivity..." -> stringResource(R.string.nps_step_checking_ipv6)
+        step.startsWith("Checking IPv6... attempt ") ->
+            stringResource(R.string.nps_step_checking_ipv6_attempt, step.substringAfter("attempt ").trim().toIntOrNull() ?: 1)
+        step == "Checking DPI restrictions..." -> stringResource(R.string.nps_step_checking_dpi)
+        step == "Detecting ISP..." -> stringResource(R.string.nps_step_detecting_isp)
+        step.startsWith("Detecting ISP... attempt ") ->
+            stringResource(R.string.nps_step_detecting_isp_attempt, step.substringAfter("attempt ").trim().toIntOrNull() ?: 1)
+        step == "Network fingerprint complete" -> stringResource(R.string.nps_step_fingerprint_done)
+        step == "Measuring protocol latency..." -> stringResource(R.string.nps_step_protocol_latency)
+        step.startsWith("Measuring ") && step.endsWith(" latency...") ->
+            stringResource(R.string.nps_step_protocol_one, step.removePrefix("Measuring ").removeSuffix(" latency..."))
+        step.startsWith("MASQUE: TCP latency...") || step.startsWith("WireGuard: TCP latency...") || step.startsWith("Gool: TCP latency...") ->
+            stringResource(R.string.nps_proto_tcp_latency, step.substringBefore(":"))
+        step.startsWith("MASQUE: HTTPS probe...") || step.startsWith("WireGuard: HTTPS probe...") || step.startsWith("Gool: HTTPS probe...") ->
+            stringResource(R.string.nps_proto_https_probe, step.substringBefore(":"))
+        step.startsWith("MASQUE: HTTPS latency...") || step.startsWith("WireGuard: HTTPS latency...") || step.startsWith("Gool: HTTPS latency...") ->
+            stringResource(R.string.nps_proto_https_latency, step.substringBefore(":"))
+        step == "Discovering optimal MTU..." -> stringResource(R.string.nps_step_mtu)
+        step.startsWith("Probing MTU ") && step.contains("... best ") -> {
+            val nums = step.removePrefix("Probing MTU ").removeSuffix("").split("... best ")
+            stringResource(R.string.nps_step_mtu_probe, nums.getOrNull(0)?.trim()?.toIntOrNull() ?: 0, nums.getOrNull(1)?.trim()?.toIntOrNull() ?: 0)
+        }
+        step == "Testing obfuscation modes..." -> stringResource(R.string.nps_step_noise)
+        step.startsWith("Testing ") && step.endsWith(" obfuscation") -> stringResource(R.string.nps_step_noise)
+        step.startsWith("Testing ") && step.contains(" obfuscation ") -> {
+            // "Testing <name> obfuscation <i>/<n>..."
+            val rest = step.removePrefix("Testing ").removeSuffix("...")
+            val idx = rest.substringAfterLast(" ").split("/")
+            val namePart = rest.substringBefore(" obfuscation ")
+            stringResource(R.string.nps_step_noise_one, namePart, idx.getOrNull(0)?.toIntOrNull() ?: 1, idx.getOrNull(1)?.toIntOrNull() ?: 1)
+        }
+        step == "Evaluating scan strategies..." -> stringResource(R.string.nps_step_scan)
+        step.startsWith("Testing ") && step.contains(" scan ") -> {
+            // "Testing <mode> scan <i>/<n>..."
+            val rest = step.removePrefix("Testing ").removeSuffix("...")
+            val idx = rest.substringAfterLast(" ").split("/")
+            val namePart = rest.substringBefore(" scan ")
+            stringResource(R.string.nps_step_scan_one, namePart, idx.getOrNull(0)?.toIntOrNull() ?: 1, idx.getOrNull(1)?.toIntOrNull() ?: 1)
+        }
+        step == "Computing optimal configuration..." -> stringResource(R.string.nps_step_analyzing)
+        step == "Optimal configuration found!" -> stringResource(R.string.nps_step_complete)
+        step == "Detection failed" -> stringResource(R.string.nps_err_detection_failed)
+        step.startsWith("No internet connection") -> stringResource(R.string.nps_err_no_internet)
+        else -> step
+    }
+}
 
 @Composable
 fun NarcicAutoDetectPage(
@@ -125,7 +186,10 @@ fun NarcicAutoDetectPage(
                     )
                     if (state.currentStep.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Text(state.currentStep, color = accent, fontSize = 12.sp, maxLines = 1)
+                        Text(
+                            localizedAutoDetectStep(state.currentStep),
+                            color = accent, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -141,7 +205,14 @@ fun NarcicAutoDetectPage(
             item {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cardColor).padding(16.dp)) {
                     Text(
-                        stringResource(R.string.nps_generic_error, state.error ?: ""),
+                        // Repository error is a technical identifier (exception
+                        // message or the fixed "No internet connection..." text
+                        // which is mapped above); show the localized frame with
+                        // the raw detail inside.
+                        stringResource(
+                            R.string.nps_generic_error,
+                            localizedAutoDetectStep(state.error ?: "")
+                        ),
                         color = Nc.Red, fontSize = 13.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(10.dp))
@@ -155,9 +226,14 @@ fun NarcicAutoDetectPage(
         if (fp != null && phase != AutoDetectPhase.IDLE) {
             item {
                 NpsGroupCard(cardColor) {
+                    // Fix 6: meaningful localized network state instead of Yes/No.
                     NpsRow(stringResource(R.string.nps_network), null,
-                        when (fp.networkType) { "open" -> stringResource(R.string.nps_no); "restricted" -> stringResource(R.string.nps_yes); else -> "—" },
-                        null, accent, titleColor, subColor)
+                        when (fp.networkType) {
+                            "open" -> stringResource(R.string.nps_network_open)
+                            "restricted" -> stringResource(R.string.nps_network_restricted)
+                            else -> "—"
+                        },
+                        null, if (fp.networkType == "restricted") Nc.Amber else Nc.Green, titleColor, subColor)
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     NpsRow(stringResource(R.string.nps_dpi), null,
                         if (fp.supportsDPI) stringResource(R.string.nps_yes) else stringResource(R.string.nps_no),
@@ -395,11 +471,11 @@ fun NarcicProfilesPage(
     accent: Color
 ) {
     val presets = listOf(
-        "turbo" to stringResource(R.string.nps_label_mtu).let { "Turbo" },
-        "thorough" to "Thorough",
-        "stealth" to "Stealth",
-        "ironclad" to "Ironclad",
-        "custom" to "Custom"
+        Triple("turbo", stringResource(R.string.nps_profile_turbo), stringResource(R.string.nps_profile_turbo_sub)),
+        Triple("thorough", stringResource(R.string.nps_profile_thorough), stringResource(R.string.nps_profile_thorough_sub)),
+        Triple("stealth", stringResource(R.string.nps_profile_stealth), stringResource(R.string.nps_profile_stealth_sub)),
+        Triple("ironclad", stringResource(R.string.nps_profile_ironclad), stringResource(R.string.nps_profile_ironclad_sub)),
+        Triple("custom", stringResource(R.string.nps_profile_custom), stringResource(R.string.nps_profile_custom_sub))
     )
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -408,7 +484,7 @@ fun NarcicProfilesPage(
     ) {
         item {
             NpsGroupCard(cardColor) {
-                presets.forEachIndexed { idx, (id, label) ->
+                presets.forEachIndexed { idx, (id, label, subtitle) ->
                     if (idx > 0) NpsDivider(subColor.copy(alpha = 0.15f))
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { configRepository.applyPreset(id) }
@@ -417,7 +493,11 @@ fun NarcicProfilesPage(
                     ) {
                         Box(Modifier.size(10.dp).clip(CircleShape).background(if (config.presetId == id) accent else subColor.copy(alpha = 0.3f)))
                         Spacer(Modifier.width(12.dp))
-                        Text(label, color = if (config.presetId == id) accent else titleColor, fontSize = 15.sp, fontWeight = if (config.presetId == id) FontWeight.Bold else FontWeight.Medium)
+                        Column(Modifier.weight(1f)) {
+                            Text(label, color = if (config.presetId == id) accent else titleColor, fontSize = 15.sp, fontWeight = if (config.presetId == id) FontWeight.Bold else FontWeight.Medium)
+                            Spacer(Modifier.height(2.dp))
+                            Text(subtitle, color = subColor, fontSize = 12.sp)
+                        }
                     }
                 }
             }
@@ -458,25 +538,25 @@ fun NarcicProtocolPage(
                 if (config.protocol == AetherProtocol.MASQUE) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsSwitchItem(
-                        title = "HTTP/2 fallback",
+                        title = stringResource(R.string.nps_proto_h2),
                         checked = config.h2Mode,
                         onCheckedChange = { update(config.copy(h2Mode = it)) }
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsSwitchItem(
-                        title = "Packet fragmentation",
+                        title = stringResource(R.string.nps_proto_fragment),
                         checked = config.h2Fragment,
                         onCheckedChange = { update(config.copy(h2Fragment = it)) }
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsSwitchItem(
-                        title = "ECH (Encrypted Client Hello)",
+                        title = stringResource(R.string.nps_proto_ech),
                         checked = config.echEnabled,
                         onCheckedChange = { update(config.copy(echEnabled = it)) }
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsEditItem(
-                        title = "MASQUE inner MTU",
+                        title = stringResource(R.string.nps_proto_masque_mtu),
                         value = if (config.masqueMtu > 0) config.masqueMtu.toString() else "",
                         keyboardNumber = true,
                         onValueChanged = { update(config.copy(masqueMtu = it.toIntOrNull()?.coerceIn(0, 9000) ?: 0)) }
@@ -484,13 +564,13 @@ fun NarcicProtocolPage(
                 }
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsSwitchItem(
-                    title = "Disable data verification",
+                    title = stringResource(R.string.nps_proto_no_data_check),
                     checked = config.noDataCheck,
                     onCheckedChange = { update(config.copy(noDataCheck = it)) }
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsListItem(
-                    title = "Bypass / obfuscation (noise)",
+                    title = stringResource(R.string.nps_proto_noise),
                     entries = AetherNoise.entries.map { it.displayName },
                     values = AetherNoise.entries.map { it.name },
                     selectedValue = config.noise.name,
@@ -501,7 +581,7 @@ fun NarcicProtocolPage(
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsListItem(
-                    title = "Speed strategy (scan mode)",
+                    title = stringResource(R.string.nps_proto_scan_mode),
                     entries = AetherScanMode.entries.map { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
                     values = AetherScanMode.entries.map { it.name },
                     selectedValue = config.scanMode.name,
@@ -512,14 +592,14 @@ fun NarcicProtocolPage(
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsEditItem(
-                    title = "Custom MTU",
+                    title = stringResource(R.string.nps_proto_mtu),
                     value = config.mtu.toString(),
                     keyboardNumber = true,
                     onValueChanged = { update(config.copy(mtu = it.toIntOrNull() ?: 1320)) }
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsEditItem(
-                    title = "TLS key groups",
+                    title = stringResource(R.string.nps_proto_tls_groups),
                     value = config.tlsGroups,
                     onValueChanged = { update(config.copy(tlsGroups = it)) }
                 )
@@ -529,23 +609,23 @@ fun NarcicProtocolPage(
             // Cloak obfuscation group
             NpsGroupCard(cardColor) {
                 SettingsSwitchItem(
-                    title = "Cloak decoy traffic",
+                    title = stringResource(R.string.nps_cloak_title),
                     checked = config.cloakEnabled,
                     onCheckedChange = { update(config.copy(cloakEnabled = it)) }
                 )
                 if (config.cloakEnabled) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "Decoy SNI list", value = config.cloakSniList, onValueChanged = { update(config.copy(cloakSniList = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_cloak_sni), value = config.cloakSniList, onValueChanged = { update(config.copy(cloakSniList = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "TTL list", value = config.cloakTtlList, onValueChanged = { update(config.copy(cloakTtlList = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_cloak_ttl), value = config.cloakTtlList, onValueChanged = { update(config.copy(cloakTtlList = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsSwitchItem(title = "Fragment real ClientHello", checked = config.cloakFragment, onCheckedChange = { update(config.copy(cloakFragment = it)) })
+                    SettingsSwitchItem(title = stringResource(R.string.nps_cloak_fragment), checked = config.cloakFragment, onCheckedChange = { update(config.copy(cloakFragment = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsSwitchItem(title = "Adaptive statistics", checked = config.cloakAdaptive, onCheckedChange = { update(config.copy(cloakAdaptive = it)) })
+                    SettingsSwitchItem(title = stringResource(R.string.nps_cloak_adaptive), checked = config.cloakAdaptive, onCheckedChange = { update(config.copy(cloakAdaptive = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsSwitchItem(title = "Randomize SNI case", checked = config.cloakRandomizeSniCase, onCheckedChange = { update(config.copy(cloakRandomizeSniCase = it)) })
+                    SettingsSwitchItem(title = stringResource(R.string.nps_cloak_random_sni), checked = config.cloakRandomizeSniCase, onCheckedChange = { update(config.copy(cloakRandomizeSniCase = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "Fallback ports", value = config.cloakFallbackPorts, onValueChanged = { update(config.copy(cloakFallbackPorts = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_cloak_ports), value = config.cloakFallbackPorts, onValueChanged = { update(config.copy(cloakFallbackPorts = it)) })
                 }
             }
         }
@@ -572,15 +652,15 @@ fun NarcicChainPage(
         item {
             NpsGroupCard(cardColor) {
                 SettingsSwitchItem(
-                    title = "Enable Psiphon chain",
-                    summary = "Route tunnel traffic through a second Psiphon hop",
+                    title = stringResource(R.string.nps_chain_enable),
+                    summary = stringResource(R.string.nps_chain_enable_sub),
                     checked = config.psiphonEnabled,
                     onCheckedChange = { update(config.copy(psiphonEnabled = it)) }
                 )
                 if (config.psiphonEnabled) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsListItem(
-                        title = "Chain mode",
+                        title = stringResource(R.string.nps_chain_mode),
                         entries = listOf("Auto", "Always", "Fallback"),
                         values = listOf("AUTO", "ALWAYS", "FALLBACK"),
                         selectedValue = config.psiphonChainMode.name,
@@ -592,20 +672,20 @@ fun NarcicChainPage(
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsEditItem(
-                        title = "Exit region (ISO code, empty = auto)",
+                        title = stringResource(R.string.nps_chain_region),
                         value = config.psiphonEgressRegion,
                         onValueChanged = { v -> update(config.copy(psiphonEgressRegion = v.trim().uppercase().take(2))) }
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsEditItem(
-                        title = "Psiphon SOCKS port",
+                        title = stringResource(R.string.nps_chain_socks_port),
                         value = config.psiphonSocksPort,
                         keyboardNumber = true,
                         onValueChanged = { update(config.copy(psiphonSocksPort = it.filter { c -> c.isDigit() }.take(5))) }
                     )
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsSwitchItem(
-                        title = "Bootstrap via tunnel",
+                        title = stringResource(R.string.nps_chain_via_tunnel),
                         checked = config.psiphonViaAether,
                         onCheckedChange = { update(config.copy(psiphonViaAether = it)) }
                     )
@@ -636,19 +716,19 @@ fun NarcicZeroTrustPage(
     ) {
         item {
             NpsGroupCard(cardColor) {
-                SettingsEditItem(title = "Organization team name", value = config.teamName, onValueChanged = { update(config.copy(teamName = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_zt_team), value = config.teamName, onValueChanged = { update(config.copy(teamName = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Access email", value = config.accessEmail, onValueChanged = { update(config.copy(accessEmail = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_zt_email), value = config.accessEmail, onValueChanged = { update(config.copy(accessEmail = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Use Cloudflare Gateway", checked = config.useGateway, onCheckedChange = { update(config.copy(useGateway = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_zt_gateway), checked = config.useGateway, onCheckedChange = { update(config.copy(useGateway = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Stay signed in", checked = config.ztStaySignedIn, onCheckedChange = { update(config.copy(ztStaySignedIn = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_zt_stay), checked = config.ztStaySignedIn, onCheckedChange = { update(config.copy(ztStaySignedIn = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Service token ID", value = config.accessId, onValueChanged = { update(config.copy(accessId = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_zt_token_id), value = config.accessId, onValueChanged = { update(config.copy(accessId = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Service token secret", value = config.accessSecret, isPassword = true, onValueChanged = { update(config.copy(accessSecret = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_zt_token_secret), value = config.accessSecret, isPassword = true, onValueChanged = { update(config.copy(accessSecret = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Access token (JWT)", value = config.accessToken, isPassword = true, onValueChanged = { v -> update(config.copy(accessToken = v, ztTokenExpiry = config.parseJwtExpiry(v))) })
+                SettingsEditItem(title = stringResource(R.string.nps_zt_jwt), value = config.accessToken, isPassword = true, onValueChanged = { v -> update(config.copy(accessToken = v, ztTokenExpiry = config.parseJwtExpiry(v))) })
             }
         }
         if (ztError != null) {
@@ -677,23 +757,34 @@ fun NarcicSplitPage(
         item {
             NpsGroupCard(cardColor) {
                 SettingsSwitchItem(
-                    title = "Tunnel whole device",
-                    summary = "Route all apps through the tunnel",
+                    title = stringResource(R.string.nps_split_whole),
+                    summary = stringResource(R.string.nps_split_whole_sub),
                     checked = config.tunnelAllApps,
                     onCheckedChange = { update(config.copy(tunnelAllApps = it)) }
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsSwitchItem(
-                    title = "Share via hotspot",
-                    summary = "Expose the local SOCKS proxy to hotspot clients",
+                    title = stringResource(R.string.nps_split_hotspot),
+                    summary = stringResource(R.string.nps_split_hotspot_sub),
                     checked = config.shareHotspot,
                     onCheckedChange = { update(config.copy(shareHotspot = it)) }
                 )
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(
-                    title = "Routing rules (JSON, [{\"pattern\":...,\"mode\":\"DIRECT|BLOCK|TUNNEL\"}])",
-                    value = config.routingRules.joinToString(", ") { "${it.pattern}=${it.mode.name}" },
-                    onValueChanged = { /* read-only display of rules managed via import */ }
+            }
+        }
+        item {
+            // Fix 3: purely informational read-only summary. Not clickable, no
+            // dialog — no user input is ever requested here.
+            NpsGroupCard(cardColor) {
+                NpsRow(
+                    title = stringResource(R.string.nps_routing_rules_title),
+                    subtitle = stringResource(R.string.nps_routing_rules_hint),
+                    value = if (config.routingRules.isEmpty())
+                        stringResource(R.string.nps_routing_rules_none)
+                    else
+                        stringResource(R.string.nps_routing_rules_count, config.routingRules.size),
+                    icon = null, iconTint = accent, titleColor = titleColor, subColor = subColor,
+                    enabled = true,
+                    onClick = null
                 )
             }
         }
@@ -701,6 +792,18 @@ fun NarcicSplitPage(
 }
 
 // ========================= Network & DNS =========================
+
+@Composable
+private fun NpsGroupHeader(title: String, color: Color) {
+    Text(
+        title,
+        color = color,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.5.sp,
+        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+    )
+}
 
 @Composable
 fun NarcicNetworkPage(
@@ -719,59 +822,71 @@ fun NarcicNetworkPage(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // ---- Group 1: Local listeners ----
         item {
+            NpsGroupHeader(stringResource(R.string.nps_group_listeners), subColor)
             NpsGroupCard(cardColor) {
-                SettingsEditItem(title = "SOCKS host", value = config.socksHost, onValueChanged = { update(config.copy(socksHost = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_net_socks_host), value = config.socksHost, onValueChanged = { update(config.copy(socksHost = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "SOCKS port", value = config.socksPort, keyboardNumber = true, onValueChanged = { update(config.copy(socksPort = it.filter { c -> c.isDigit() }.take(5))) })
+                SettingsEditItem(title = stringResource(R.string.nps_net_socks_port), value = config.socksPort, keyboardNumber = true, onValueChanged = { update(config.copy(socksPort = it.filter { c -> c.isDigit() }.take(5))) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "HTTP port", value = config.httpPort, keyboardNumber = true, onValueChanged = { update(config.copy(httpPort = it.filter { c -> c.isDigit() }.take(5))) })
+                SettingsEditItem(title = stringResource(R.string.nps_net_http_port), value = config.httpPort, keyboardNumber = true, onValueChanged = { update(config.copy(httpPort = it.filter { c -> c.isDigit() }.take(5))) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsSwitchItem(
-                    title = "Internal HTTP proxy",
-                    summary = if (httpLocked) "Locked while Psiphon chain is enabled" else null,
+                    title = stringResource(R.string.nps_net_http_proxy),
+                    summary = if (httpLocked) stringResource(R.string.nps_net_http_proxy_locked) else null,
                     checked = config.httpProxyEnabled,
                     enabled = !httpLocked,
                     onCheckedChange = { update(config.copy(httpProxyEnabled = it)) }
                 )
-                NpsDivider(subColor.copy(alpha = 0.15f))
+            }
+        }
+        // ---- Group 2: DNS ----
+        item {
+            NpsGroupHeader(stringResource(R.string.nps_group_dns), subColor)
+            NpsGroupCard(cardColor) {
                 SettingsSwitchItem(
-                    title = "Custom DNS",
+                    title = stringResource(R.string.nps_net_custom_dns),
                     checked = config.dnsEnabled,
                     onCheckedChange = { update(config.copy(dnsEnabled = it, dnsList = if (it) config.dnsList.ifBlank { "1.1.1.1,1.0.0.1" } else config.dnsList)) }
                 )
                 if (config.dnsEnabled) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "DNS server list", value = config.dnsList, onValueChanged = { update(config.copy(dnsList = it.replace(Regex("\\s*,\\s*"), ","))) })
+                    SettingsEditItem(title = stringResource(R.string.nps_net_dns_list), value = config.dnsList, onValueChanged = { update(config.copy(dnsList = it.replace(Regex("\\s*,\\s*"), ","))) })
                 }
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Forced peer IP (e.g. 1.2.3.4:443)", value = config.peer, onValueChanged = { update(config.copy(peer = it)) })
+            }
+        }
+        // ---- Group 3: Protocol endpoints & timing ----
+        item {
+            NpsGroupHeader(stringResource(R.string.nps_group_endpoints), subColor)
+            NpsGroupCard(cardColor) {
+                SettingsEditItem(title = stringResource(R.string.nps_net_forced_peer), value = config.peer, onValueChanged = { update(config.copy(peer = it)) })
                 if (config.protocol == AetherProtocol.WG || config.protocol == AetherProtocol.GOOL) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "WireGuard peer endpoint", value = config.wgPeer, onValueChanged = { update(config.copy(wgPeer = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_net_wg_peer), value = config.wgPeer, onValueChanged = { update(config.copy(wgPeer = it)) })
                 }
                 if (config.protocol == AetherProtocol.GOOL) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "WiW outer endpoint", value = config.wiwOuter, onValueChanged = { update(config.copy(wiwOuter = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_net_wiw_outer), value = config.wiwOuter, onValueChanged = { update(config.copy(wiwOuter = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "WiW inner endpoint", value = config.wiwInner, onValueChanged = { update(config.copy(wiwInner = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_net_wiw_inner), value = config.wiwInner, onValueChanged = { update(config.copy(wiwInner = it)) })
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsSwitchItem(title = "WiW endpoint scan", checked = config.wiwScan, onCheckedChange = { update(config.copy(wiwScan = it)) })
+                    SettingsSwitchItem(title = stringResource(R.string.nps_net_wiw_scan), checked = config.wiwScan, onCheckedChange = { update(config.copy(wiwScan = it)) })
                 }
                 if (config.protocol == AetherProtocol.WG || config.protocol == AetherProtocol.GOOL) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsSwitchItem(title = "Keepalive packets", checked = config.keepaliveEnabled, onCheckedChange = { update(config.copy(keepaliveEnabled = it)) })
+                    SettingsSwitchItem(title = stringResource(R.string.nps_net_keepalive), checked = config.keepaliveEnabled, onCheckedChange = { update(config.copy(keepaliveEnabled = it)) })
                     if (config.keepaliveEnabled) {
                         NpsDivider(subColor.copy(alpha = 0.15f))
-                        SettingsEditItem(title = "Keepalive interval (s)", value = config.keepalive.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(keepalive = it.toIntOrNull()?.coerceIn(1, 300) ?: 5)) })
+                        SettingsEditItem(title = stringResource(R.string.nps_net_keepalive_interval), value = config.keepalive.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(keepalive = it.toIntOrNull()?.coerceIn(1, 300) ?: 5)) })
                     }
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "Endpoint cooldown (s)", value = config.wgEndpointCooldownSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(wgEndpointCooldownSecs = it.toIntOrNull()?.coerceIn(30, 3600) ?: 300)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_net_cooldown), value = config.wgEndpointCooldownSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(wgEndpointCooldownSecs = it.toIntOrNull()?.coerceIn(30, 3600) ?: 300)) })
                 }
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Validation interval (s)", value = config.validateSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(validateSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 10)) })
+                SettingsEditItem(title = stringResource(R.string.nps_net_validate), value = config.validateSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(validateSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 10)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Reconnect interval (s)", value = config.reconnectSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(reconnectSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 2)) })
+                SettingsEditItem(title = stringResource(R.string.nps_net_reconnect_interval), value = config.reconnectSecs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(reconnectSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 2)) })
             }
         }
     }
@@ -796,19 +911,19 @@ fun NarcicSecurityPage(
     ) {
         item {
             NpsGroupCard(cardColor) {
-                SettingsSwitchItem(title = "Strict kill switch", checked = config.strictKillSwitch, onCheckedChange = { update(config.copy(strictKillSwitch = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_sec_strict_ks), checked = config.strictKillSwitch, onCheckedChange = { update(config.copy(strictKillSwitch = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Kill switch", checked = config.killSwitch, onCheckedChange = { update(config.copy(killSwitch = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_sec_ks), checked = config.killSwitch, onCheckedChange = { update(config.copy(killSwitch = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "IPv6 leak protection", checked = config.ipv6Leak, onCheckedChange = { update(config.copy(ipv6Leak = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_sec_ipv6), checked = config.ipv6Leak, onCheckedChange = { update(config.copy(ipv6Leak = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Smart reconnect", checked = config.smartReconnect, onCheckedChange = { update(config.copy(smartReconnect = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_sec_smart_reconnect), checked = config.smartReconnect, onCheckedChange = { update(config.copy(smartReconnect = it)) })
                 if (config.smartReconnect) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "Max retries", value = config.reconnectRetryLimit.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(reconnectRetryLimit = it.toIntOrNull() ?: 10)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_sec_max_retries), value = config.reconnectRetryLimit.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(reconnectRetryLimit = it.toIntOrNull() ?: 10)) })
                 }
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Reprovision profile on auth failure", checked = config.reprovision, onCheckedChange = { update(config.copy(reprovision = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_sec_reprovision), checked = config.reprovision, onCheckedChange = { update(config.copy(reprovision = it)) })
             }
         }
     }
@@ -826,6 +941,7 @@ fun NarcicDiagPage(
     accent: Color
 ) {
     val update: (AetherConfig) -> Unit = { configRepository.updateConfig(it) }
+    var hevExpanded by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -833,10 +949,10 @@ fun NarcicDiagPage(
     ) {
         item {
             NpsGroupCard(cardColor) {
-                SettingsEditItem(title = "Ping test URL", value = config.pingUrl, onValueChanged = { update(config.copy(pingUrl = it)) })
+                SettingsEditItem(title = stringResource(R.string.nps_diag_ping_url), value = config.pingUrl, onValueChanged = { update(config.copy(pingUrl = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsListItem(
-                    title = "App log level",
+                    title = stringResource(R.string.nps_diag_app_log),
                     entries = AetherLogLevel.entries.map { it.rawValue },
                     values = AetherLogLevel.entries.map { it.name },
                     selectedValue = config.appLogLevel.name,
@@ -847,7 +963,7 @@ fun NarcicDiagPage(
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsListItem(
-                    title = "Core log level",
+                    title = stringResource(R.string.nps_diag_core_log),
                     entries = AetherLogLevel.entries.map { it.rawValue },
                     values = AetherLogLevel.entries.map { it.name },
                     selectedValue = config.coreLogLevel.name,
@@ -858,7 +974,7 @@ fun NarcicDiagPage(
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsListItem(
-                    title = "Performance profile",
+                    title = stringResource(R.string.nps_diag_perf),
                     entries = AetherPerfProfile.entries.map { it.displayName },
                     values = AetherPerfProfile.entries.map { it.name },
                     selectedValue = config.perfProfile.name,
@@ -869,50 +985,66 @@ fun NarcicDiagPage(
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 SettingsSwitchItem(
-                    title = "External upstream proxy",
+                    title = stringResource(R.string.nps_diag_upstream),
                     checked = config.upstreamProxyEnabled,
                     onCheckedChange = { update(config.copy(upstreamProxyEnabled = it, upstreamProxy = if (it) config.upstreamProxy.ifBlank { "socks5://127.0.0.1:1080" } else "")) }
                 )
                 if (config.upstreamProxyEnabled) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
-                    SettingsEditItem(title = "Upstream proxy URL", value = config.upstreamProxy, onValueChanged = { update(config.copy(upstreamProxy = it)) })
+                    SettingsEditItem(title = stringResource(R.string.nps_diag_upstream_url), value = config.upstreamProxy, onValueChanged = { update(config.copy(upstreamProxy = it)) })
                 }
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Domain sniffing", checked = config.routeSniffing, onCheckedChange = { update(config.copy(routeSniffing = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_diag_sniffing), checked = config.routeSniffing, onCheckedChange = { update(config.copy(routeSniffing = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "Sniffing timeout (ms)", value = config.sniffingTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(sniffingTimeoutMs = it.toIntOrNull() ?: 100)) })
+                SettingsEditItem(title = stringResource(R.string.nps_diag_sniff_timeout), value = config.sniffingTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(sniffingTimeoutMs = it.toIntOrNull() ?: 100)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Quick reconnect", checked = config.quickReconnect, onCheckedChange = { update(config.copy(quickReconnect = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_diag_quick_reconnect), checked = config.quickReconnect, onCheckedChange = { update(config.copy(quickReconnect = it)) })
                 NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsSwitchItem(title = "Strict profile lock (no retry)", checked = config.noProfileRetry, onCheckedChange = { update(config.copy(noProfileRetry = it)) })
+                SettingsSwitchItem(title = stringResource(R.string.nps_diag_profile_lock), checked = config.noProfileRetry, onCheckedChange = { update(config.copy(noProfileRetry = it)) })
             }
         }
         item {
-            // HEV engine group — Android-only native tun2socks parameters.
-            NpsGroupCard(cardColor) {
-                SettingsListItem(
-                    title = "HEV log level",
-                    entries = listOf("error", "warn", "info", "debug"),
-                    values = listOf("error", "warn", "info", "debug"),
-                    selectedValue = config.hevLogLevel,
-                    onSelected = { update(config.copy(hevLogLevel = it)) }
+            // Fix 9: Advanced HEV — collapsed by default, tap header to expand.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(cardColor)
+                    .clickable { hevExpanded = !hevExpanded }
+                    .padding(vertical = 4.dp)
+            ) {
+                NpsRow(
+                    title = stringResource(R.string.nps_hev_advanced_title),
+                    subtitle = stringResource(R.string.nps_hev_advanced_sub),
+                    value = null, icon = null, iconTint = accent, titleColor = titleColor, subColor = subColor,
+                    onClick = { hevExpanded = !hevExpanded }
                 )
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "HEV connect timeout (ms)", value = config.hevConnectTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevConnectTimeoutMs = it.toIntOrNull()?.coerceIn(500, 120000) ?: 5000)) })
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "HEV read/write timeout (ms)", value = config.hevReadWriteTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevReadWriteTimeoutMs = it.toIntOrNull()?.coerceIn(1000, 600000) ?: 60000)) })
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "HEV max sessions (0 = unlimited)", value = config.hevMaxSessionCount.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevMaxSessionCount = it.toIntOrNull()?.coerceIn(0, 200000) ?: 0)) })
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsEditItem(title = "HEV mapdns cache size", value = config.hevMapdnsCacheSize.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevMapdnsCacheSize = it.toIntOrNull()?.coerceIn(100, 1000000) ?: 10000)) })
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                SettingsListItem(
-                    title = "HEV UDP forwarding mode",
-                    entries = listOf("UDP associate", "Over TCP (ICMP)", "Disabled"),
-                    values = listOf("udp", "tcp", "off"),
-                    selectedValue = config.hevUdpMode.lowercase().let { if (it == "icmp" || it == "true") "tcp" else it },
-                    onSelected = { update(config.copy(hevUdpMode = it)) }
-                )
+                if (hevExpanded) {
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsListItem(
+                        title = stringResource(R.string.nps_hev_log_level),
+                        entries = listOf("error", "warn", "info", "debug"),
+                        values = listOf("error", "warn", "info", "debug"),
+                        selectedValue = config.hevLogLevel,
+                        onSelected = { update(config.copy(hevLogLevel = it)) }
+                    )
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsEditItem(title = stringResource(R.string.nps_hev_connect_timeout), value = config.hevConnectTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevConnectTimeoutMs = it.toIntOrNull()?.coerceIn(500, 120000) ?: 5000)) })
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsEditItem(title = stringResource(R.string.nps_hev_rw_timeout), value = config.hevReadWriteTimeoutMs.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevReadWriteTimeoutMs = it.toIntOrNull()?.coerceIn(1000, 600000) ?: 60000)) })
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsEditItem(title = stringResource(R.string.nps_hev_max_sessions), value = config.hevMaxSessionCount.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevMaxSessionCount = it.toIntOrNull()?.coerceIn(0, 200000) ?: 0)) })
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsEditItem(title = stringResource(R.string.nps_hev_mapdns), value = config.hevMapdnsCacheSize.toString(), keyboardNumber = true, onValueChanged = { update(config.copy(hevMapdnsCacheSize = it.toIntOrNull()?.coerceIn(100, 1000000) ?: 10000)) })
+                    NpsDivider(subColor.copy(alpha = 0.15f))
+                    SettingsListItem(
+                        title = stringResource(R.string.nps_hev_udp_mode),
+                        entries = listOf("UDP associate", "Over TCP (ICMP)", "Disabled"),
+                        values = listOf("udp", "tcp", "off"),
+                        selectedValue = config.hevUdpMode.lowercase().let { if (it == "icmp" || it == "true") "tcp" else it },
+                        onSelected = { update(config.copy(hevUdpMode = it)) }
+                    )
+                }
             }
         }
     }
@@ -929,7 +1061,7 @@ fun NarcicSystemPage(
     accent: Color
 ) {
     val context = LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var showResetConfirm by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -937,37 +1069,69 @@ fun NarcicSystemPage(
     ) {
         item {
             NpsGroupCard(cardColor) {
-                // Export backup: real Bridge.saveFile path via SystemUtils.exportFile.
+                // Fix 4: explicit success/failure toast; picker cancel stays silent.
                 NpsRow(
-                    title = "Export full backup (.astf)",
-                    subtitle = "Save the whole PS configuration to a file",
+                    title = stringResource(R.string.nps_sys_export),
+                    subtitle = stringResource(R.string.nps_sys_export_sub),
                     value = null, icon = null, iconTint = accent, titleColor = titleColor, subColor = subColor,
                     onClick = {
                         val json = configRepository.getFullConfigJson()
-                        val utils = com.narcic.ng.aether.platform.getSystemUtils(PlatformContext(context))
-                        utils.exportFile("NarcicPS_Backup.astf", json) { }
-                    }
-                )
-                NpsDivider(subColor.copy(alpha = 0.15f))
-                NpsRow(
-                    title = "Restore full backup",
-                    subtitle = "Import a previously exported .astf file",
-                    value = null, icon = null, iconTint = accent, titleColor = titleColor, subColor = subColor,
-                    onClick = {
-                        val utils = com.narcic.ng.aether.platform.getSystemUtils(PlatformContext(context))
-                        utils.importFile { content ->
-                            if (content != null) configRepository.restoreFullConfig(content)
+                        val utils = getSystemUtils(PlatformContext(context))
+                        utils.exportFile("NarcicPS_Backup.astf", json) { success ->
+                            if (success) context.toastSuccess(R.string.nps_backup_exported)
+                            else context.toastError(R.string.nps_backup_export_failed)
                         }
                     }
                 )
                 NpsDivider(subColor.copy(alpha = 0.15f))
                 NpsRow(
-                    title = "Reset to factory defaults",
-                    subtitle = "Restore every PS setting to its default value",
+                    title = stringResource(R.string.nps_sys_restore),
+                    subtitle = stringResource(R.string.nps_sys_restore_sub),
+                    value = null, icon = null, iconTint = accent, titleColor = titleColor, subColor = subColor,
+                    onClick = {
+                        val utils = getSystemUtils(PlatformContext(context))
+                        utils.importFile { content ->
+                            if (content != null) {
+                                if (configRepository.restoreFullConfig(content)) {
+                                    context.toastSuccess(R.string.nps_backup_restored)
+                                } else {
+                                    context.toastError(R.string.nps_backup_restore_invalid)
+                                }
+                            }
+                            // content == null → user cancelled the picker: silent.
+                        }
+                    }
+                )
+                NpsDivider(subColor.copy(alpha = 0.15f))
+                NpsRow(
+                    title = stringResource(R.string.nps_sys_reset),
+                    subtitle = stringResource(R.string.nps_sys_reset_sub),
                     value = null, icon = null, iconTint = Nc.Red, titleColor = Nc.Red, subColor = subColor,
-                    onClick = { configRepository.resetToDefaults() }
+                    onClick = { showResetConfirm = true }
                 )
             }
         }
+    }
+    // Fix 2: destructive reset requires explicit confirmation.
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(stringResource(R.string.nps_reset_confirm_title)) },
+            text = { Text(stringResource(R.string.nps_reset_confirm_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetConfirm = false
+                    configRepository.resetToDefaults()
+                    context.toast(R.string.nps_reset_done)
+                }) {
+                    Text(stringResource(R.string.nps_reset_confirm_yes), color = Nc.Red, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
     }
 }

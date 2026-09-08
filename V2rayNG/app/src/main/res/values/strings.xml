@@ -240,6 +240,149 @@
     <string name="nps_dns_custom">Custom DNS servers (comma separated)</string>
     <string name="nps_generic_error">Scan failed: %1$s</string>
 
+    <!-- v45.1 hardening strings -->
+    <string name="nps_network_open">Open</string>
+    <string name="nps_network_restricted">Restricted</string>
+    <string name="nps_reconnect_banner">VPN is connected — reconnect the tunnel for changes to take effect</string>
+    <string name="nps_reset_confirm_title">Reset settings</string>
+    <string name="nps_reset_confirm_msg">All Narcic PS settings will be restored to factory defaults. Continue?</string>
+    <string name="nps_reset_confirm_yes">Reset</string>
+    <string name="nps_reset_done">Settings restored to defaults</string>
+    <string name="nps_backup_exported">Backup exported successfully</string>
+    <string name="nps_backup_export_failed">Backup export failed</string>
+    <string name="nps_backup_restored">Configuration restored successfully</string>
+    <string name="nps_backup_restore_invalid">Invalid or corrupted backup file</string>
+    <string name="nps_routing_rules_title">Domain &amp; IP routing rules</string>
+    <string name="nps_routing_rules_none">No custom rules yet</string>
+    <string name="nps_routing_rules_count">%1$d active routing rules</string>
+    <string name="nps_routing_rules_hint">Rule editor coming soon — rules are preserved from backup imports</string>
+    <string name="nps_group_listeners">Local listeners</string>
+    <string name="nps_group_dns">DNS configuration</string>
+    <string name="nps_group_endpoints">Protocol endpoints &amp; timing</string>
+    <string name="nps_hev_advanced_title">Advanced HEV engine</string>
+    <string name="nps_hev_advanced_sub">Low-level tun2socks parameters — change only for troubleshooting</string>
+    <string name="nps_section_tools_sub">Scan the network and rank DNS servers</string>
+    <!-- profile names -->
+    <string name="nps_profile_turbo">Turbo</string>
+    <string name="nps_profile_turbo_sub">Fastest MASQUE profile · MTU 1320</string>
+    <string name="nps_profile_thorough">Thorough</string>
+    <string name="nps_profile_thorough_sub">Stable MASQUE profile · MTU 1320</string>
+    <string name="nps_profile_stealth">Stealth</string>
+    <string name="nps_profile_stealth_sub">Double-layer Gool · MTU 1330</string>
+    <string name="nps_profile_ironclad">Ironclad</string>
+    <string name="nps_profile_ironclad_sub">Single-layer WireGuard · MTU 1330</string>
+    <string name="nps_profile_custom">Custom</string>
+    <string name="nps_profile_custom_sub">Manually tuned settings</string>
+    <!-- protocol page -->
+    <string name="nps_proto_h2">HTTP/2 fallback</string>
+    <string name="nps_proto_fragment">Packet fragmentation</string>
+    <string name="nps_proto_ech">ECH (Encrypted Client Hello)</string>
+    <string name="nps_proto_masque_mtu">MASQUE inner MTU</string>
+    <string name="nps_proto_no_data_check">Disable data verification</string>
+    <string name="nps_proto_noise">Bypass / obfuscation (noise)</string>
+    <string name="nps_proto_scan_mode">Speed strategy (scan mode)</string>
+    <string name="nps_proto_mtu">Custom MTU</string>
+    <string name="nps_proto_tls_groups">TLS key groups</string>
+    <string name="nps_cloak_title">Cloak decoy traffic</string>
+    <string name="nps_cloak_sni">Decoy SNI list</string>
+    <string name="nps_cloak_ttl">TTL list</string>
+    <string name="nps_cloak_fragment">Fragment real ClientHello</string>
+    <string name="nps_cloak_adaptive">Adaptive statistics</string>
+    <string name="nps_cloak_random_sni">Randomize SNI case</string>
+    <string name="nps_cloak_ports">Fallback ports</string>
+    <!-- chain page -->
+    <string name="nps_chain_enable">Enable Psiphon chain</string>
+    <string name="nps_chain_enable_sub">Route tunnel traffic through a second Psiphon hop</string>
+    <string name="nps_chain_mode">Chain mode</string>
+    <string name="nps_chain_region">Exit region (ISO code, empty = auto)</string>
+    <string name="nps_chain_socks_port">Psiphon SOCKS port</string>
+    <string name="nps_chain_via_tunnel">Bootstrap via tunnel</string>
+    <!-- zero trust page -->
+    <string name="nps_zt_team">Organization team name</string>
+    <string name="nps_zt_email">Access email</string>
+    <string name="nps_zt_gateway">Use Cloudflare Gateway</string>
+    <string name="nps_zt_stay">Stay signed in</string>
+    <string name="nps_zt_token_id">Service token ID</string>
+    <string name="nps_zt_token_secret">Service token secret</string>
+    <string name="nps_zt_jwt">Access token (JWT)</string>
+    <!-- split page -->
+    <string name="nps_split_whole">Tunnel whole device</string>
+    <string name="nps_split_whole_sub">Route all apps through the tunnel</string>
+    <string name="nps_split_hotspot">Share via hotspot</string>
+    <string name="nps_split_hotspot_sub">Expose the local SOCKS proxy to hotspot clients</string>
+    <!-- network page -->
+    <string name="nps_net_socks_host">SOCKS host</string>
+    <string name="nps_net_socks_port">SOCKS port</string>
+    <string name="nps_net_http_port">HTTP port</string>
+    <string name="nps_net_http_proxy">Internal HTTP proxy</string>
+    <string name="nps_net_http_proxy_locked">Locked while Psiphon chain is enabled</string>
+    <string name="nps_net_custom_dns">Custom DNS</string>
+    <string name="nps_net_dns_list">DNS server list</string>
+    <string name="nps_net_forced_peer">Forced peer IP (e.g. 1.2.3.4:443)</string>
+    <string name="nps_net_wg_peer">WireGuard peer endpoint</string>
+    <string name="nps_net_wiw_outer">WiW outer endpoint</string>
+    <string name="nps_net_wiw_inner">WiW inner endpoint</string>
+    <string name="nps_net_wiw_scan">WiW endpoint scan</string>
+    <string name="nps_net_keepalive">Keepalive packets</string>
+    <string name="nps_net_keepalive_interval">Keepalive interval (s)</string>
+    <string name="nps_net_cooldown">Endpoint cooldown (s)</string>
+    <string name="nps_net_validate">Validation interval (s)</string>
+    <string name="nps_net_reconnect_interval">Reconnect interval (s)</string>
+    <!-- security page -->
+    <string name="nps_sec_strict_ks">Strict kill switch</string>
+    <string name="nps_sec_ks">Kill switch</string>
+    <string name="nps_sec_ipv6">IPv6 leak protection</string>
+    <string name="nps_sec_smart_reconnect">Smart reconnect</string>
+    <string name="nps_sec_max_retries">Max retries</string>
+    <string name="nps_sec_reprovision">Reprovision profile on auth failure</string>
+    <!-- diagnostics page -->
+    <string name="nps_diag_ping_url">Ping test URL</string>
+    <string name="nps_diag_app_log">App log level</string>
+    <string name="nps_diag_core_log">Core log level</string>
+    <string name="nps_diag_perf">Performance profile</string>
+    <string name="nps_diag_upstream">External upstream proxy</string>
+    <string name="nps_diag_upstream_url">Upstream proxy URL</string>
+    <string name="nps_diag_sniffing">Domain sniffing</string>
+    <string name="nps_diag_sniff_timeout">Sniffing timeout (ms)</string>
+    <string name="nps_diag_quick_reconnect">Quick reconnect</string>
+    <string name="nps_diag_profile_lock">Strict profile lock (no retry)</string>
+    <string name="nps_hev_log_level">HEV log level</string>
+    <string name="nps_hev_connect_timeout">HEV connect timeout (ms)</string>
+    <string name="nps_hev_rw_timeout">HEV read/write timeout (ms)</string>
+    <string name="nps_hev_max_sessions">HEV max sessions (0 = unlimited)</string>
+    <string name="nps_hev_mapdns">HEV mapdns cache size</string>
+    <string name="nps_hev_udp_mode">HEV UDP forwarding mode</string>
+    <!-- system page -->
+    <string name="nps_sys_export">Export full backup (.astf)</string>
+    <string name="nps_sys_export_sub">Save the whole PS configuration to a file</string>
+    <string name="nps_sys_restore">Restore full backup</string>
+    <string name="nps_sys_restore_sub">Import a previously exported .astf file</string>
+    <string name="nps_sys_reset">Reset to factory defaults</string>
+    <string name="nps_sys_reset_sub">Restore every PS setting to its default value</string>
+    <!-- auto detect step localization -->
+    <string name="nps_step_checking_net">Checking internet connection…</string>
+    <string name="nps_step_checking_ipv6">Checking IPv6 connectivity…</string>
+    <string name="nps_step_checking_ipv6_attempt">Checking IPv6… attempt %1$d/3</string>
+    <string name="nps_step_checking_dpi">Checking DPI restrictions…</string>
+    <string name="nps_step_detecting_isp">Detecting ISP…</string>
+    <string name="nps_step_detecting_isp_attempt">Detecting ISP… attempt %1$d/2</string>
+    <string name="nps_step_fingerprint_done">Network fingerprint complete</string>
+    <string name="nps_step_protocol_latency">Measuring protocol latency…</string>
+    <string name="nps_step_protocol_one">Measuring %1$s latency…</string>
+    <string name="nps_step_mtu">Discovering optimal MTU…</string>
+    <string name="nps_step_mtu_probe">Probing MTU %1$d bytes… best %2$d</string>
+    <string name="nps_step_noise">Testing obfuscation modes…</string>
+    <string name="nps_step_noise_one">Testing %1$s obfuscation %2$d/%3$d…</string>
+    <string name="nps_step_scan">Evaluating scan strategies…</string>
+    <string name="nps_step_scan_one">Testing %1$s scan %2$d/%3$d…</string>
+    <string name="nps_step_analyzing">Computing optimal configuration…</string>
+    <string name="nps_step_complete">Optimal configuration found!</string>
+    <string name="nps_err_no_internet">No internet connection. Connect to a working network and try again.</string>
+    <string name="nps_err_detection_failed">Detection failed</string>
+    <string name="nps_proto_tcp_latency">%1$s: TCP latency…</string>
+    <string name="nps_proto_https_probe">%1$s: HTTPS probe…</string>
+    <string name="nps_proto_https_latency">%1$s: HTTPS latency…</string>
+
     <!-- Narcis Spoof (نرسیس اسپوف) -->
     <string name="title_narcis_spoof_setting">Narcis Spoof</string>
     <string name="title_narcis_spoof_setting_subtitle">Local SNI-spoofing / TLS-fragmentation forwarder</string>
