@@ -72,6 +72,8 @@ import com.narcic.ng.aether.core.ConnectionController
 import com.narcic.ng.aether.shared.data.AetherConfigRepository
 import com.narcic.ng.aether.shared.data.AutoDetectRepository
 import com.narcic.ng.aether.shared.data.DnsBenchmarkRepository
+import com.narcic.ng.aether.shared.model.AutoDetectPhase
+import com.narcic.ng.extension.toastSuccess
 import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.model.ConnectionMode
 import com.narcic.ng.aether.shared.model.TunnelEngine
@@ -153,6 +155,14 @@ fun NarcicPsSettingsScreen(onBackClick: () -> Unit) {
     // on the root itself falls through and closes the Activity. App-bar back
     // keeps the exact same semantics through back().
     androidx.activity.compose.BackHandler(enabled = currentPage != NpsPage.ROOT) {
+        // v46: leaving the AutoDetect page while a scan is running cancels the
+        // background job first, then navigates back to the PS root.
+        if (currentPage == NpsPage.AUTO_DETECT) {
+            val adPhase = AutoDetectRepository.state.value.phase
+            if (adPhase != AutoDetectPhase.IDLE && adPhase != AutoDetectPhase.COMPLETE && adPhase != AutoDetectPhase.ERROR) {
+                AutoDetectRepository.cancel()
+            }
+        }
         page = NpsPage.ROOT.name
     }
 
@@ -242,7 +252,9 @@ fun NarcicPsSettingsScreen(onBackClick: () -> Unit) {
                                 noDataCheck = result.recommendedNoDataCheck
                             )
                         )
-                    }
+                        context.toastSuccess(R.string.nps_applied_toast)
+                    },
+                    onExitToRoot = { page = NpsPage.ROOT.name }
                 )
                 NpsPage.DNS_BENCH -> NarcicDnsBenchmarkPage(
                     configRepository = configRepository,

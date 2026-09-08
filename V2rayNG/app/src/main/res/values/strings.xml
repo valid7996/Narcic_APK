@@ -383,6 +383,29 @@
     <string name="nps_proto_https_probe">%1$s: HTTPS probe…</string>
     <string name="nps_proto_https_latency">%1$s: HTTPS latency…</string>
 
+    <!-- v46 Smart Auto Detect -->
+    <string name="nps_ad_explain">Probes your real network (without the tunnel) to find the best protocol, MTU and anti-censorship settings. Run it while the VPN is disconnected.</string>
+    <string name="nps_ad_start">Start detection</string>
+    <string name="nps_ad_phase">Phase: %1$d/8 — %2$s</string>
+    <string name="nps_ad_ranked">Protocol quality (fastest first) — tap a row to apply that protocol</string>
+    <string name="nps_ad_rank">#%1$d</string>
+    <string name="nps_ad_median_rtt">median %1$d ms</string>
+    <string name="nps_ad_quality_excellent">Excellent</string>
+    <string name="nps_ad_quality_good">Good</string>
+    <string name="nps_ad_quality_fair">Fair</string>
+    <string name="nps_ad_quality_slow">Slow</string>
+    <string name="nps_ad_quality_blocked">Blocked</string>
+    <string name="nps_ad_recommended_tag">Recommended</string>
+    <string name="nps_applied_toast">Optimal configuration applied</string>
+    <string name="nps_ad_phase_fingerprint">Network fingerprinting</string>
+    <string name="nps_ad_phase_protocols">Protocol latency scan</string>
+    <string name="nps_ad_phase_mtu">MTU discovery</string>
+    <string name="nps_ad_phase_noise">Obfuscation probe</string>
+    <string name="nps_ad_phase_scanmode">Scan strategy probe</string>
+    <string name="nps_ad_phase_analyzing">Analyzing results</string>
+    <string name="nps_ad_phase_complete">Complete</string>
+    <string name="nps_ad_phase_error">Error</string>
+
     <!-- Narcis Spoof (نرسیس اسپوف) -->
     <string name="title_narcis_spoof_setting">Narcis Spoof</string>
     <string name="title_narcis_spoof_setting_subtitle">Local SNI-spoofing / TLS-fragmentation forwarder</string>

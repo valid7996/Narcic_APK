@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -127,13 +130,91 @@ private fun localizedAutoDetectStep(step: String): String {
 }
 
 @Composable
+private fun autoDetectPhaseLabel(phase: AutoDetectPhase): String {
+    return when (phase) {
+        AutoDetectPhase.FINGERPRINTING -> stringResource(R.string.nps_ad_phase_fingerprint)
+        AutoDetectPhase.PROTOCOL_SCAN -> stringResource(R.string.nps_ad_phase_protocols)
+        AutoDetectPhase.MTU_PROBE -> stringResource(R.string.nps_ad_phase_mtu)
+        AutoDetectPhase.NOISE_PROBE -> stringResource(R.string.nps_ad_phase_noise)
+        AutoDetectPhase.SCAN_MODE_PROBE -> stringResource(R.string.nps_ad_phase_scanmode)
+        AutoDetectPhase.ANALYZING -> stringResource(R.string.nps_ad_phase_analyzing)
+        AutoDetectPhase.COMPLETE -> stringResource(R.string.nps_ad_phase_complete)
+        AutoDetectPhase.ERROR -> stringResource(R.string.nps_ad_phase_error)
+        AutoDetectPhase.IDLE -> stringResource(R.string.nps_ad_phase_complete)
+    }
+}
+
+/** Upstream thresholds: <80 Excellent, <180 Good, <350 Fair, else Slow. */
+@Composable
+private fun protocolQualityLabel(latencyMs: Long): Pair<String, Color> {
+    return when {
+        latencyMs in 1..79 -> stringResource(R.string.nps_ad_quality_excellent) to Nc.Green
+        latencyMs in 80..179 -> stringResource(R.string.nps_ad_quality_good) to Nc.Cyan
+        latencyMs in 180..349 -> stringResource(R.string.nps_ad_quality_fair) to Nc.Amber
+        else -> stringResource(R.string.nps_ad_quality_slow) to Nc.Red
+    }
+}
+
+@Composable
+private fun ProtocolRankRow(
+    rank: Int,
+    probe: com.narcic.ng.aether.shared.model.ProtocolProbeResult,
+    subColor: Color,
+    titleColor: Color,
+    onApply: () -> Unit
+) {
+    val (qualityLabel, qualityColor) = protocolQualityLabel(probe.latencyMs)
+    val isBest = rank == 1
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onApply() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp).clip(CircleShape)
+                .background(if (isBest) Nc.Green.copy(alpha = 0.18f) else subColor.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                stringResource(R.string.nps_ad_rank, rank),
+                color = if (isBest) Nc.Green else titleColor,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 12.sp
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(probe.protocol.displayName, color = titleColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                stringResource(R.string.nps_ad_median_rtt, probe.latencyMs),
+                color = subColor, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(qualityLabel, color = qualityColor, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
+            if (isBest) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    stringResource(R.string.nps_ad_recommended_tag),
+                    color = Nc.Green, fontWeight = FontWeight.SemiBold, fontSize = 9.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun NarcicAutoDetectPage(
     connectionStatus: ConnectionStatus,
     cardColor: Color,
     subColor: Color,
     titleColor: Color,
     accent: Color,
-    onApplyResult: (com.narcic.ng.aether.shared.model.AutoDetectResult) -> Unit
+    onApplyResult: (com.narcic.ng.aether.shared.model.AutoDetectResult) -> Unit,
+    onExitToRoot: () -> Unit
 ) {
     val context = LocalContext.current
     val state by AutoDetectRepository.state.collectAsStateWithLifecycle()
@@ -153,28 +234,49 @@ fun NarcicAutoDetectPage(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // ---------------- Entry / IDLE hero ----------------
         if (phase == AutoDetectPhase.IDLE) {
             item {
-                Button(
-                    onClick = { start() },
-                    enabled = disconnected,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color(0xFF070B14))
-                ) { Text(stringResource(R.string.nps_start_scan), fontWeight = FontWeight.Bold) }
-                if (!disconnected) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        .background(cardColor).padding(16.dp)
+                ) {
+                    Text(stringResource(R.string.nps_sub_auto_detect), color = titleColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
-                    Text(stringResource(R.string.nps_disconnect_first), color = Nc.Amber, fontSize = 12.sp)
+                    Text(stringResource(R.string.nps_ad_explain), color = subColor, fontSize = 12.sp, lineHeight = 17.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Button(
+                        onClick = { start() },
+                        enabled = disconnected,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color(0xFF070B14))
+                    ) { Text(stringResource(R.string.nps_ad_start), fontWeight = FontWeight.Bold) }
+                    if (!disconnected) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Sync, null, tint = Nc.Amber, modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.nps_disconnect_first), color = Nc.Amber, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
+
+        // ---------------- Running: real progress from StateFlow ----------------
         if (isRunning) {
             item {
                 Column(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cardColor).padding(16.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(stringResource(R.string.nps_scan_running), color = titleColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.nps_ad_phase, phaseNumber(phase), autoDetectPhaseLabel(phase)),
+                            color = titleColor, fontWeight = FontWeight.Bold, fontSize = 14.sp
+                        )
                         Text("${state.progressPercent}%", color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                     }
                     Spacer(Modifier.height(10.dp))
@@ -201,14 +303,12 @@ fun NarcicAutoDetectPage(
                 ) { Text(stringResource(R.string.nps_cancel_scan), color = Nc.Red, fontWeight = FontWeight.Bold) }
             }
         }
+
+        // ---------------- ERROR ----------------
         if (phase == AutoDetectPhase.ERROR) {
             item {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cardColor).padding(16.dp)) {
                     Text(
-                        // Repository error is a technical identifier (exception
-                        // message or the fixed "No internet connection..." text
-                        // which is mapped above); show the localized frame with
-                        // the raw detail inside.
                         stringResource(
                             R.string.nps_generic_error,
                             localizedAutoDetectStep(state.error ?: "")
@@ -216,17 +316,21 @@ fun NarcicAutoDetectPage(
                         color = Nc.Red, fontSize = 13.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(10.dp))
-                    Button(onClick = { start() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                        Text(stringResource(R.string.nps_retest))
-                    }
+                    Button(
+                        onClick = { start() },
+                        enabled = disconnected,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) { Text(stringResource(R.string.nps_retest)) }
                 }
             }
         }
+
+        // ---------------- Network fingerprint ----------------
         val fp = state.finalResult?.networkFingerprint ?: state.liveFingerprint
         if (fp != null && phase != AutoDetectPhase.IDLE) {
             item {
                 NpsGroupCard(cardColor) {
-                    // Fix 6: meaningful localized network state instead of Yes/No.
                     NpsRow(stringResource(R.string.nps_network), null,
                         when (fp.networkType) {
                             "open" -> stringResource(R.string.nps_network_open)
@@ -253,30 +357,49 @@ fun NarcicAutoDetectPage(
                 }
             }
         }
-        if (state.protocolResults.isNotEmpty()) {
+
+        // ---------------- Protocol ranking (real backend latencies only) ----------------
+        val successful = state.protocolResults.filter { it.status == ProbeStatus.SUCCESS && it.latencyMs > 0 }
+        if (successful.isNotEmpty()) {
+            item { Text(stringResource(R.string.nps_ad_ranked), color = subColor, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            val ranked = successful.sortedBy { it.latencyMs }
+            items(ranked.size) { i ->
+                val r = ranked[i]
+                NpsGroupCard(cardColor) {
+                    ProtocolRankRow(
+                        rank = i + 1,
+                        probe = r,
+                        subColor = subColor,
+                        titleColor = titleColor,
+                        onApply = {
+                            onApplyResult(buildResultForProtocol(r.protocol, state))
+                            AutoDetectRepository.reset()
+                            onExitToRoot()
+                        }
+                    )
+                }
+            }
+        }
+        val unsuccessful = state.protocolResults.filter { it.status != ProbeStatus.SUCCESS && it.status != ProbeStatus.IDLE }
+        if (unsuccessful.isNotEmpty()) {
             item { Text(stringResource(R.string.nps_protocol_latency), color = subColor, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            items(state.protocolResults.size) { i ->
-                val r = state.protocolResults[i]
+            items(unsuccessful.size) { i ->
+                val r = unsuccessful[i]
                 NpsGroupCard(cardColor) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(when (r.status) {
-                            ProbeStatus.SUCCESS -> Nc.Green; ProbeStatus.RUNNING -> Nc.Amber
-                            ProbeStatus.FAILED -> Nc.Red; else -> subColor
-                        }))
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (r.status == ProbeStatus.RUNNING) Nc.Amber else Nc.Red))
                         Spacer(Modifier.width(10.dp))
                         Text(r.protocol.displayName, color = titleColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text(
-                            when {
-                                r.status == ProbeStatus.RUNNING -> "…"
-                                r.status == ProbeStatus.SUCCESS -> "${r.latencyMs} ms"
-                                else -> r.error ?: "✕"
-                            },
-                            color = subColor, fontSize = 12.sp
+                            if (r.status == ProbeStatus.RUNNING) "…" else (r.error ?: "✕"),
+                            color = subColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
             }
         }
+
+        // ---------------- MTU ----------------
         if (state.mtuResult.status != ProbeStatus.IDLE) {
             item {
                 Text(stringResource(R.string.nps_path_mtu), color = subColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -293,6 +416,8 @@ fun NarcicAutoDetectPage(
                 }
             }
         }
+
+        // ---------------- Noise modes ----------------
         if (state.noiseResults.isNotEmpty()) {
             item { Text(stringResource(R.string.nps_obfuscation), color = subColor, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             items(state.noiseResults.size) { i ->
@@ -304,6 +429,8 @@ fun NarcicAutoDetectPage(
                 }
             }
         }
+
+        // ---------------- Scan strategies ----------------
         if (state.scanModeResults.isNotEmpty()) {
             item { Text(stringResource(R.string.nps_scan_strategies), color = subColor, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             items(state.scanModeResults.size) { i ->
@@ -315,6 +442,8 @@ fun NarcicAutoDetectPage(
                 }
             }
         }
+
+        // ---------------- Final recommendation ----------------
         val result = state.finalResult
         if (phase == AutoDetectPhase.COMPLETE && result != null) {
             item {
@@ -346,6 +475,7 @@ fun NarcicAutoDetectPage(
                         onClick = {
                             onApplyResult(result)
                             AutoDetectRepository.reset()
+                            onExitToRoot()
                         },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = RoundedCornerShape(14.dp),
@@ -353,13 +483,76 @@ fun NarcicAutoDetectPage(
                     ) { Text(stringResource(R.string.nps_apply), fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
-                        onClick = { AutoDetectRepository.reset() },
+                        onClick = { start() },
                         modifier = Modifier.fillMaxWidth().height(44.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) { Text(stringResource(R.string.nps_retest), color = subColor) }
                 }
             }
         }
+    }
+}
+
+private fun phaseNumber(phase: AutoDetectPhase): Int = when (phase) {
+    AutoDetectPhase.FINGERPRINTING -> 1
+    AutoDetectPhase.PROTOCOL_SCAN -> 2
+    AutoDetectPhase.MTU_PROBE -> 3
+    AutoDetectPhase.NOISE_PROBE -> 4
+    AutoDetectPhase.SCAN_MODE_PROBE -> 5
+    AutoDetectPhase.ANALYZING -> 6
+    AutoDetectPhase.COMPLETE -> 7
+    AutoDetectPhase.ERROR -> 8
+    AutoDetectPhase.IDLE -> 0
+}
+
+/**
+ * Upstream-equivalent per-protocol recommendation: derives a protocol-specific
+ * result from the completed scan's own fingerprint. Uses only values the
+ * backend actually measured; no invented scores.
+ */
+private fun buildResultForProtocol(
+    protocol: com.narcic.ng.aether.shared.model.AetherProtocol,
+    state: com.narcic.ng.aether.shared.model.AutoDetectState
+): com.narcic.ng.aether.shared.model.AutoDetectResult {
+    val base = state.finalResult ?: return com.narcic.ng.aether.shared.model.AutoDetectResult()
+    val isDPI = base.networkFingerprint.supportsDPI
+    return when (protocol) {
+        com.narcic.ng.aether.shared.model.AetherProtocol.MASQUE -> base.copy(
+            recommendedProtocol = protocol,
+            recommendedNoise = if (isDPI) com.narcic.ng.aether.shared.model.AetherNoise.GFW else com.narcic.ng.aether.shared.model.AetherNoise.FIREWALL,
+            recommendedScanMode = if (isDPI) com.narcic.ng.aether.shared.model.AetherScanMode.IRONCLAD else com.narcic.ng.aether.shared.model.AetherScanMode.BALANCED,
+            recommendedH2Mode = true,
+            recommendedEch = isDPI,
+            recommendedFragment = isDPI,
+            recommendedNoDataCheck = false
+        )
+        com.narcic.ng.aether.shared.model.AetherProtocol.WG -> base.copy(
+            recommendedProtocol = protocol,
+            recommendedNoise = com.narcic.ng.aether.shared.model.AetherNoise.BALANCED,
+            recommendedScanMode = com.narcic.ng.aether.shared.model.AetherScanMode.TURBO,
+            recommendedH2Mode = false,
+            recommendedEch = false,
+            recommendedFragment = false,
+            recommendedNoDataCheck = true
+        )
+        com.narcic.ng.aether.shared.model.AetherProtocol.GOOL -> base.copy(
+            recommendedProtocol = protocol,
+            recommendedNoise = com.narcic.ng.aether.shared.model.AetherNoise.BALANCED,
+            recommendedScanMode = if (isDPI) com.narcic.ng.aether.shared.model.AetherScanMode.IRONCLAD else com.narcic.ng.aether.shared.model.AetherScanMode.BALANCED,
+            recommendedH2Mode = false,
+            recommendedEch = false,
+            recommendedFragment = false,
+            recommendedNoDataCheck = true
+        )
+        com.narcic.ng.aether.shared.model.AetherProtocol.ZERO_TRUST -> base.copy(
+            recommendedProtocol = protocol,
+            recommendedNoise = com.narcic.ng.aether.shared.model.AetherNoise.OFF,
+            recommendedScanMode = com.narcic.ng.aether.shared.model.AetherScanMode.BALANCED,
+            recommendedH2Mode = false,
+            recommendedEch = false,
+            recommendedFragment = false,
+            recommendedNoDataCheck = true
+        )
     }
 }
 

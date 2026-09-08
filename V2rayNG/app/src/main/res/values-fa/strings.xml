@@ -365,6 +365,29 @@
     <string name="nps_proto_https_probe">%1$s: پروب HTTPS…</string>
     <string name="nps_proto_https_latency">%1$s: سنجش تأخیر HTTPS…</string>
 
+    <!-- v46 شناسایی خودکار هوشمند -->
+    <string name="nps_ad_explain">شبکه واقعی شما (بدون تونل) بررسی می‌شود تا بهترین پروتکل، MTU و تنظیمات ضد سانسور پیدا شود. آن را هنگام قطع‌بودن VPN اجرا کنید.</string>
+    <string name="nps_ad_start">شروع شناسایی</string>
+    <string name="nps_ad_phase">فاز %1$d از 8 — %2$s</string>
+    <string name="nps_ad_ranked">کیفیت پروتکل‌ها (سریع‌ترین اول) — برای اعمال هر پروتکل روی ردیفش بزنید</string>
+    <string name="nps_ad_rank">#%1$d</string>
+    <string name="nps_ad_median_rtt">مدین %1$d میلی‌ثانیه</string>
+    <string name="nps_ad_quality_excellent">عالی</string>
+    <string name="nps_ad_quality_good">خوب</string>
+    <string name="nps_ad_quality_fair">متوسط</string>
+    <string name="nps_ad_quality_slow">کند</string>
+    <string name="nps_ad_quality_blocked">مسدود</string>
+    <string name="nps_ad_recommended_tag">پیشنهاد‌شده</string>
+    <string name="nps_applied_toast">پیکربندی بهینه اعمال شد</string>
+    <string name="nps_ad_phase_fingerprint">فینگرپرینت شبکه</string>
+    <string name="nps_ad_phase_protocols">سنجش تأخیر پروتکل‌ها</string>
+    <string name="nps_ad_phase_mtu">کشف MTU</string>
+    <string name="nps_ad_phase_noise">پروب مبهم‌سازی</string>
+    <string name="nps_ad_phase_scanmode">پروب استراتژی اسکن</string>
+    <string name="nps_ad_phase_analyzing">تحلیل نتایج</string>
+    <string name="nps_ad_phase_complete">کامل شد</string>
+    <string name="nps_ad_phase_error">خطا</string>
+
     <!-- نرسیس اسپوف -->
     <string name="title_narcis_spoof_setting">نرسیس اسپوف</string>
     <string name="title_narcis_spoof_setting_subtitle">جعل SNI و فرگمنتیشن TLS به‌صورت محلی</string>
