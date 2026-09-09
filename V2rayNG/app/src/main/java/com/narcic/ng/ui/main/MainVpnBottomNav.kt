@@ -62,9 +62,6 @@ fun MainVpnBottomNav(
         NavItem(R.drawable.ic_power_24dp, "وی‌پی‌ان", selectedTab == MainHomeTab.VPN) {
             onSelectTab(MainHomeTab.VPN)
         },
-        NavItem(R.drawable.ic_public_24dp, "Aether", selectedTab == MainHomeTab.AETHER) {
-            onSelectTab(MainHomeTab.AETHER)
-        },
         NavItem(R.drawable.ic_stats_24dp, "آمار", false, onStatisticsClick),
         NavItem(R.drawable.ic_settings_24dp, "تنظیمات", false, onSettingsClick),
     )

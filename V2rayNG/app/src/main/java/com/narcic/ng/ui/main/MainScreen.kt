@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.R
 import com.narcic.ng.enums.EConfigType
+import com.narcic.ng.aether.core.ConnectionController
+import com.narcic.ng.aether.shared.data.AetherConfigRepository
+import com.narcic.ng.aether.shared.data.IpInfoRepository
+import com.narcic.ng.aether.shared.data.PingRepository
+import com.narcic.ng.aether.shared.data.PsiphonEgressRegistry
+import com.narcic.ng.aether.shared.model.ConnectionStatus
+import com.narcic.ng.aether.shared.platform.Bridge
+import com.narcic.ng.awg.AwgManager
+import com.narcic.ng.core.LauncherManager
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -49,12 +59,27 @@ import com.narcic.ng.ui.compose.EngineSwitch
 import com.narcic.ng.ui.compose.GooOverlay
 import com.narcic.ng.ui.compose.GroupTabs
 import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.SpiderWebCorners
 import com.narcic.ng.ui.compose.StatusPill
 import com.narcic.ng.ui.compose.accentFor
+import android.app.Activity
+import android.content.Intent
+import android.net.VpnService
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.narcic.ng.aether.service.AetherVpnService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/**
+ * Accent pair for the Narcic PS engine — built on the existing cyan accent
+ * (AetherScreen uses Nc.Cyan), kept local to this screen so DesignTokens
+ * stays untouched.
+ */
+private val NpsAccentPair = com.narcic.ng.ui.compose.AccentPair(Nc.Cyan, Color(0xFF0EA5E9))
 
 /**
  * Connection screen — "two engines, one screen":
@@ -100,7 +125,6 @@ fun MainScreen(
     // Bottom-nav overlay screens.
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
-    var showAether by remember { mutableStateOf(false) }
 
     // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
     // "Manage configs" (test/sort/export-all + bulk delete).
@@ -114,29 +138,38 @@ fun MainScreen(
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
     }
 
-    // ---- Active engine (AmneziaWG vs V2Ray) -----------------------------
+    // ---- Active engine (AmneziaWG vs V2Ray vs Narcic PS) ----------------
     // UI-local: which engine's servers are currently *shown*. It starts in
     // sync with whatever server is actually selected in the ViewModel, but
     // the user can freely browse the other engine's tab without that
     // changing the real selection until they tap a server card
     // (SelectServer) -- the ViewModel's notion of "selected server" is
-    // untouched by this switch.
+    // untouched by this switch. "ps" is the Narcic PS (Aether) engine: it
+    // keeps its own config/state in the existing Aether stack and shows no
+    // server list here.
     var engineIsAwg by rememberSaveable { mutableStateOf(false) }
+    var engineIsPs by rememberSaveable { mutableStateOf(false) }
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
     LaunchedEffect(selectedGuid) {
         val type = connectedServer?.profile?.configType
         if (type != null) {
+            engineIsPs = false
             engineIsAwg = type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
         }
     }
-    val accentPair = remember(engineIsAwg) { accentFor(engineIsAwg) }
-    val engineLabel = if (engineIsAwg) "AWG" else "V2Ray"
+    val accentPair = if (engineIsPs) NpsAccentPair else remember(engineIsAwg) { accentFor(engineIsAwg) }
+    val engineLabel = when {
+        engineIsPs -> "Narcic PS"
+        engineIsAwg -> "AWG"
+        else -> "V2Ray"
+    }
 
     // If switching engines hides the currently-selected tab (e.g. the
     // WireGuard sub was selected and the user flips to V2Ray), jump to the
     // first tab that's still visible instead of leaving an empty list up
     // against a tab that no longer shows as selected.
     LaunchedEffect(engineIsAwg, groups) {
+        if (engineIsPs) return@LaunchedEffect
         val stillVisible = groups.filter { g ->
             when (g.remarks) {
                 "Narcic Irancell", "Narcic NG - JSON" -> !engineIsAwg
@@ -146,6 +179,86 @@ fun MainScreen(
         }
         if (stillVisible.isNotEmpty() && stillVisible.none { it.id == uiState.selectedGroupId }) {
             onAction(MainAction.SelectGroup(stillVisible.first().id))
+        }
+    }
+
+    // ---- Narcic PS engine: real Aether state -----------------------------
+    // Only subscribed while the Narcic PS engine tab is active; every value
+    // comes straight from the existing Aether stack (no fake data). When a
+    // server profile is selected, the LaunchedEffect above resets engineIsPs.
+    val npsContext = androidx.compose.ui.platform.LocalContext.current
+    val npsConfigRepository = if (engineIsPs) {
+        remember {
+            AetherConfigRepository.getInstance(
+                com.narcic.ng.aether.platform.getSettings(
+                    com.narcic.ng.aether.platform.PlatformContext(npsContext)
+                )
+            )
+        }
+    } else null
+    val npsConfig = if (npsConfigRepository != null) {
+        npsConfigRepository.config.collectAsStateWithLifecycle().value
+    } else null
+    val npsStatus = if (engineIsPs) {
+        ConnectionController.status.collectAsStateWithLifecycle().value
+    } else ConnectionStatus.STOPPED
+    val npsTraffic = if (engineIsPs) {
+        Bridge.trafficOverride.collectAsStateWithLifecycle().value
+    } else null
+    val npsIpInfo = if (engineIsPs) {
+        IpInfoRepository.ipInfo.collectAsStateWithLifecycle().value
+    } else null
+    val npsPingState = if (engineIsPs) {
+        PingRepository.pingState.collectAsStateWithLifecycle().value
+    } else null
+    val npsAvailableRegions = if (engineIsPs) {
+        PsiphonEgressRegistry.availableRegions.collectAsStateWithLifecycle().value
+    } else emptyList()
+
+    // Same mutual-exclusion semantics AetherScreen uses: the three engines
+    // never run at the same time (one TUN interface per app).
+    val npsRunning = engineIsPs && npsStatus != ConnectionStatus.STOPPED &&
+        npsStatus != ConnectionStatus.ERROR && npsStatus != ConnectionStatus.FAILED
+    val npsConnected = engineIsPs && npsStatus == ConnectionStatus.RUNNING
+
+    // AetherVpnService is a Service and cannot show the system VPN consent
+    // dialog itself — request it here (same flow AetherScreen implements),
+    // then start the service only after the user grants access.
+    val npsVpnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val intent = Intent(npsContext, AetherVpnService::class.java).apply {
+                action = AetherVpnService.ACTION_START
+            }
+            ContextCompat.startForegroundService(npsContext, intent)
+        }
+    }
+
+    // IP/ping refresh triggers when the tunnel comes up — the same cadence
+    // the existing AetherScreen poller uses (via the same repositories).
+    LaunchedEffect(npsConnected, npsConfig?.psiphonEnabled) {
+        if (npsConnected && npsConfig != null && npsConfigRepository != null) {
+            val socksPort = npsConfig.socksPort.toIntOrNull() ?: 1819
+            val psiphonUrl = com.narcic.ng.aether.shared.data.ActiveProxyProvider.psiphonProxyUrl
+            launch {
+                PingRepository.runPing(
+                    socksHost = npsConfig.socksHost,
+                    socksPort = socksPort,
+                    useProxy = true,
+                    pingUrl = npsConfig.pingUrl
+                )
+            }
+            if (!psiphonUrl.isNullOrEmpty()) {
+                val parts = psiphonUrl.removePrefix("socks5://").removePrefix("socks://").split(":", limit = 2)
+                IpInfoRepository.fetchIpInfo(
+                    socksHost = parts.firstOrNull() ?: "127.0.0.1",
+                    socksPort = parts.getOrNull(1)?.toIntOrNull() ?: 3080,
+                    useProxy = true
+                )
+            } else {
+                IpInfoRepository.fetchIpInfo(npsConfig.socksHost, socksPort, useProxy = true)
+            }
         }
     }
 
@@ -284,13 +397,6 @@ fun MainScreen(
         return
     }
 
-    // ---- Full-screen overlay: Aether tunnel (third engine) ----
-    if (showAether) {
-        BackHandler { showAether = false }
-        AetherScreen()
-        return
-    }
-
     // No overlay is showing (all branches above return early), so this is
     // the root connection screen: back should minimize the app instead of
     // finishing the activity — unless the drawer is open, in which case back
@@ -356,7 +462,6 @@ fun MainScreen(
                     selectedTab = MainHomeTab.VPN,
                     onSelectTab = { tab ->
                         if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
-                        if (tab == MainHomeTab.AETHER) showAether = true
                     },
                     onSettingsClick = { onNavigate("settings") },
                     onStatisticsClick = { onNavigate("statistics") },
@@ -371,7 +476,7 @@ fun MainScreen(
             ) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     StatusPill(
-                        isRunning = isRunning,
+                        isRunning = isRunning || npsRunning,
                         isConnecting = isConnectingLocal,
                         engineLabel = engineLabel,
                     )
@@ -383,26 +488,44 @@ fun MainScreen(
                     options = listOf(
                         EngineOption("awg", "AmneziaWG", awgTotal) { tint -> Icon(Icons.Rounded.Shield, null, tint = tint, modifier = Modifier.size(16.dp)) },
                         EngineOption("v2ray", "V2Ray", v2Total) { tint -> Icon(Icons.Rounded.Bolt, null, tint = tint, modifier = Modifier.size(16.dp)) },
+                        EngineOption("ps", "Narcic PS", 0) { tint -> Icon(Icons.Rounded.Public, null, tint = tint, modifier = Modifier.size(16.dp)) },
                     ),
-                    selectedId = if (engineIsAwg) "awg" else "v2ray",
+                    selectedId = when {
+                        engineIsPs -> "ps"
+                        engineIsAwg -> "awg"
+                        else -> "v2ray"
+                    },
                     accent = accentPair.main,
-                    enabled = !isRunning,
-                    onSelect = { id -> engineIsAwg = id == "awg" },
+                    enabled = !isRunning && !npsRunning,
+                    onSelect = { id ->
+                        engineIsAwg = id == "awg"
+                        engineIsPs = id == "ps"
+                    },
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
 
                 Spacer(Modifier.height(10.dp))
 
                 ConnectHero(
-                    isRunning = isRunning,
+                    isRunning = isRunning || npsRunning,
                     isConnecting = isConnectingLocal,
                     isTesting = uiState.isTesting,
                     statusText = when {
+                        npsRunning -> when (npsStatus) {
+                            ConnectionStatus.STARTING -> "در حال اتصال..."
+                            ConnectionStatus.VALIDATING -> "اعتبارسنجی مسیر..."
+                            ConnectionStatus.DATAPLANE_VALIDATED, ConnectionStatus.SOCKS_READY, ConnectionStatus.TUN_ACTIVE -> "در حال راه‌اندازی..."
+                            ConnectionStatus.RUNNING -> "متصل · Narcic PS"
+                            ConnectionStatus.RECONNECTING -> "اتصال مجدد..."
+                            ConnectionStatus.STOPPING -> "در حال قطع..."
+                            else -> "متصل · Narcic PS"
+                        }
                         isRunning -> "متصل · $engineLabel"
                         isConnectingLocal -> "در حال اتصال..."
                         else -> "قطع شده"
                     },
                     timeText = when {
+                        npsConnected -> uiState.connectionDurationText.ifBlank { "۰۰:۰۰:۰۰" }
                         isRunning -> uiState.connectionDurationText.ifBlank { "۰۰:۰۰:۰۰" }
                         isConnectingLocal -> "در حال برقراری تونل..."
                         else -> "برای اتصال لمس کنید"
@@ -411,6 +534,29 @@ fun MainScreen(
                     accent2 = accentPair.second,
                     onToggle = {
                         when {
+                            // ---- Narcic PS engine toggle (existing Aether flow) ----
+                            engineIsPs && !isRunning -> {
+                                isConnectingLocal = false
+                                if (npsRunning) {
+                                    val intent = Intent(npsContext, AetherVpnService::class.java).apply {
+                                        action = AetherVpnService.ACTION_STOP
+                                    }
+                                    npsContext.startService(intent)
+                                } else {
+                                    // Same mutual exclusion AetherScreen enforces
+                                    // before taking ownership of the TUN interface.
+                                    LauncherManager.stopService(npsContext)
+                                    runCatching { AwgManager.disconnect() }
+                                    val prep = VpnService.prepare(npsContext)
+                                    if (prep != null) npsVpnPermissionLauncher.launch(prep)
+                                    else {
+                                        val intent = Intent(npsContext, AetherVpnService::class.java).apply {
+                                            action = AetherVpnService.ACTION_START
+                                        }
+                                        ContextCompat.startForegroundService(npsContext, intent)
+                                    }
+                                }
+                            }
                             isRunning -> {
                                 isConnectingLocal = false
                                 onAction(MainAction.ToggleService)
@@ -433,24 +579,59 @@ fun MainScreen(
                 )
 
                 // Ping / IP / speed card — stays hidden until the user has
-                // picked a server below and actually connected.
-                ConnectionStatsPanel(
-                    isRunning = isRunning,
-                    pingText = uiState.livePingMillis?.let { "${it}ms" }
-                        ?: connectedServer?.testDelayString.orEmpty(),
-                    downloadSpeedText = uiState.downloadSpeedText,
-                    uploadSpeedText = uiState.uploadSpeedText,
-                    connectionDurationText = uiState.connectionDurationText,
-                    remoteIp = uiState.remoteIp,
-                    remoteCountryName = uiState.remoteCountryName,
-                    remoteCountryCode = uiState.remoteCountryCode,
-                    engineLabel = engineLabel,
-                    accent = accentPair.main,
-                    speedHistory = speedHistory,
-                )
+                // picked a server below and actually connected. While the
+                // Narcic PS engine is selected, the dedicated setup /
+                // connected cards below replace it (same real data sources).
+                if (!engineIsPs) {
+                    ConnectionStatsPanel(
+                        isRunning = isRunning,
+                        pingText = uiState.livePingMillis?.let { "${it}ms" }
+                            ?: connectedServer?.testDelayString.orEmpty(),
+                        downloadSpeedText = uiState.downloadSpeedText,
+                        uploadSpeedText = uiState.uploadSpeedText,
+                        connectionDurationText = uiState.connectionDurationText,
+                        remoteIp = uiState.remoteIp,
+                        remoteCountryName = uiState.remoteCountryName,
+                        remoteCountryCode = uiState.remoteCountryCode,
+                        engineLabel = engineLabel,
+                        accent = accentPair.main,
+                        speedHistory = speedHistory,
+                    )
+                }
+
+                // ---- Narcic PS engine card ------------------------------------
+                if (engineIsPs) {
+                    Spacer(Modifier.height(12.dp))
+                    if (npsConnected) {
+                        // Post-RUNNING status card — exactly Country / IP /
+                        // Ping / Download / Upload from the live repositories.
+                        if (npsIpInfo != null && npsPingState != null) {
+                            NarcicPsConnectedCard(
+                                ipInfo = npsIpInfo,
+                                pingState = npsPingState,
+                                traffic = npsTraffic,
+                                accent = accentPair.main,
+                            )
+                        }
+                    } else {
+                        // Pre-connection compact setup card.
+                        if (npsConfig != null && npsConfigRepository != null) {
+                            ConnectionSetupCard(
+                                config = npsConfig,
+                                configRepository = npsConfigRepository,
+                                availableRegions = npsAvailableRegions,
+                                accent = accentPair.main,
+                            )
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(10.dp))
 
+                // The Narcic PS engine has no server list — its method/chain
+                // setup lives in the card above, so tabs + list stay hidden
+                // while that engine tab is active.
+                if (!engineIsPs) {
                 GroupTabs(
                     groups = visibleGroups,
                     selectedGroupId = uiState.selectedGroupId,
@@ -482,6 +663,7 @@ fun MainScreen(
                     onAutoSelectBest = { onAction(MainAction.AutoConnect) },
                     modifier = Modifier.padding(top = 8.dp)
                 )
+                }
             }
         }
 
