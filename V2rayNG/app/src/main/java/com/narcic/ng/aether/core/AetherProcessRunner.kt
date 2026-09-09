@@ -459,14 +459,11 @@ class AetherProcessRunner(private val context: Context) {
                 updateState(ConnectionStatus.DATAPLANE_VALIDATED, attemptId)
             }
             protocol == AetherProtocol.GOOL && lower.contains("tunnel validated") -> {
-                if (lower.contains("outer") && lower.contains("tunnel validated")) {
-                    goolOuterValidated = true
-                    updateState(ConnectionStatus.VALIDATING, attemptId)
-                } else if (lower.contains("inner") && lower.contains("tunnel validated") && goolOuterValidated) {
-                    quickRetryPending.set(false)
-                    dataPlaneOk = true
-                    updateState(ConnectionStatus.DATAPLANE_VALIDATED, attemptId)
-                }
+                // The binary reports the same WireGuard-family validation message
+                // ("[+] [inner] wireguard tunnel validated") — not outer/inner markers.
+                quickRetryPending.set(false)
+                dataPlaneOk = true
+                updateState(ConnectionStatus.DATAPLANE_VALIDATED, attemptId)
             }
             lower.contains("tunnel validated") || lower.contains("data-plane verification passed") || lower.contains("data plane verification passed") -> {
                 if (protocol != AetherProtocol.GOOL) {
