@@ -43,6 +43,7 @@ import com.narcic.ng.aether.shared.model.AetherProtocol
 import com.narcic.ng.aether.shared.util.CountryNames
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
+import com.narcic.ng.util.CountryFlags
 
 /**
  * Compact pre-connection setup card for the Narcic PS engine on the main
@@ -55,10 +56,10 @@ import com.narcic.ng.ui.compose.Nc
  * No connect logic, no state ownership, no fake data.
  */
 
-// Zero Trust runs over the Cloudflare organization gateway and does not
-// participate in the Psiphon chain — the backend ignores it, so the UI
-// hides the exit-country selector for that protocol.
-private fun AetherConfig.supportsExitRegion(): Boolean = protocol != AetherProtocol.ZERO_TRUST
+// Psiphon Chain is surfaced for the WireGuard method only. GOOL, MASQUE and
+// Zero Trust hide the whole chain section (Issue 2): this is display gating
+// only — the backend's chain support and config semantics are untouched.
+private fun AetherConfig.supportsPsiphonChain(): Boolean = protocol == AetherProtocol.WG
 
 private fun methodLabel(p: AetherProtocol): String = when (p) {
     AetherProtocol.MASQUE -> "MASQUE"
@@ -124,60 +125,62 @@ fun ConnectionSetupCard(
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Psiphon chain toggle ────────────────────────────────────────
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("زنجیره Psiphon", color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "خروجی ترافیک از Psiphon",
-                    color = txtSub, fontSize = 10.sp,
+        // ── Psiphon chain (Issue 2: visible for the WireGuard method only) ──
+        if (config.supportsPsiphonChain()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("زنجیره Psiphon", color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "خروجی ترافیک از Psiphon",
+                        color = txtSub, fontSize = 10.sp,
+                    )
+                }
+                Switch(
+                    checked = config.psiphonEnabled,
+                    onCheckedChange = { enabled ->
+                        configRepository.updateConfig(
+                            configRepository.config.value.copy(psiphonEnabled = enabled)
+                        )
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = accent),
                 )
             }
-            Switch(
-                checked = config.psiphonEnabled,
-                onCheckedChange = { enabled ->
-                    configRepository.updateConfig(
-                        configRepository.config.value.copy(psiphonEnabled = enabled)
-                    )
-                },
-                colors = SwitchDefaults.colors(checkedTrackColor = accent),
-            )
-        }
 
-        // ── Exit-country selector: only when applicable ─────────────────
-        AnimatedVisibility(
-            visible = config.psiphonEnabled && config.supportsExitRegion(),
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-        ) {
-            Column {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(13.dp))
-                        .background(inner)
-                        .border(1.dp, stroke, RoundedCornerShape(13.dp))
-                        .clickable { showRegionSheet = true }
-                        .padding(horizontal = 13.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("کشور خروجی", color = txtSub, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(2.dp))
+            // ── Exit-country selector: only when the chain is on ────────────
+            AnimatedVisibility(
+                visible = config.psiphonEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(inner)
+                            .border(1.dp, stroke, RoundedCornerShape(13.dp))
+                            .clickable { showRegionSheet = true }
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("کشور خروجی", color = txtSub, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                exitRegionLabel(config.psiphonEgressRegion),
+                                color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        Text("▾", color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    if (availableRegions.isEmpty()) {
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            exitRegionLabel(config.psiphonEgressRegion),
-                            color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+                            "لیست کشورها پس از اتصال Psiphon نمایش داده می‌شود",
+                            color = txtSub, fontSize = 9.sp,
                         )
                     }
-                    Text("▾", color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                if (availableRegions.isEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "لیست کشورها پس از اتصال Psiphon نمایش داده می‌شود",
-                        color = txtSub, fontSize = 9.sp,
-                    )
                 }
             }
         }
@@ -248,8 +251,8 @@ fun ConnectionSetupCard(
             availableRegions.forEach { region ->
                 ExitRegionOptionRow(
                     flag = flagEmojiFor(region),
-                    title = region,
-                    subtitle = CountryNames.display(region).ifEmpty { "نامشخص" },
+                    title = regionFaName(region),
+                    subtitle = "$region · ${CountryNames.display(region)}",
                     selected = config.psiphonEgressRegion == region,
                     accent = accent,
                     txtMain = txtMain,
@@ -289,6 +292,7 @@ private fun SheetOptionRow(
     txtMain: Color,
     txtSub: Color,
     inner: Color,
+    flag: String = "",
     onClick: () -> Unit,
 ) {
     Row(
@@ -302,6 +306,10 @@ private fun SheetOptionRow(
             .padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (flag.isNotEmpty()) {
+            Text(flag, fontSize = 20.sp)
+            Spacer(Modifier.width(10.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text(title, color = if (selected) accent else txtMain, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = txtSub, fontSize = 10.sp)
@@ -311,6 +319,15 @@ private fun SheetOptionRow(
             Text("✓", color = accent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
+}
+
+// Issue 1: Persian display name for a Psiphon region. Uses the project's
+// existing CountryFlags Persian map (the same source the location picker
+// uses); falls back to the existing CountryNames table, then the code.
+private fun regionFaName(region: String): String {
+    if (region.isEmpty()) return "خودکار"
+    val fa = CountryFlags.displayNameFa(flagEmojiFor(region))
+    return if (fa != region) fa else CountryNames.display(region).ifEmpty { region }
 }
 
 @Composable
@@ -325,11 +342,14 @@ private fun ExitRegionOptionRow(
     inner: Color,
     onClick: () -> Unit,
 ) {
-    SheetOptionRow(title, subtitle, selected, accent, txtMain, txtSub, inner, onClick)
+    SheetOptionRow(
+        title, subtitle, selected, accent, txtMain, txtSub, inner,
+        flag = flag, onClick = onClick,
+    )
 }
 
 private fun exitRegionLabel(region: String): String =
-    if (region.isEmpty()) "🌐 خودکار" else "${flagEmojiFor(region)} $region"
+    if (region.isEmpty()) "🌐 خودکار" else "${flagEmojiFor(region)} ${regionFaName(region)}"
 
 private fun flagEmojiFor(code: String): String {
     val c = code.trim().uppercase()
