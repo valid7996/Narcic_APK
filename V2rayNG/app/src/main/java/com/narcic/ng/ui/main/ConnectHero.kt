@@ -40,9 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import com.narcic.ng.ui.compose.GooLoader
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Big connect button per the two-engine redesign: idle=red power icon,
@@ -193,10 +198,10 @@ fun ConnectHero(
                 if (isConnecting) {
                     GooLoader(size = 96.dp, color = Color.White)
                 } else {
-                    Icon(
-                        Icons.Filled.PowerSettingsNew, null, tint = Color.White,
-                        modifier = Modifier.size(58.dp)
-                    )
+                    // Spider-on-web emblem from the connection-screen prototype,
+                    // tinted with the active engine accent instead of the old
+                    // power icon. Purely visual: same tap target, same states.
+                    Box(Modifier.size(96.dp).drawBehind { drawSpiderEmblem(accent) })
                 }
             }
         }
@@ -236,4 +241,119 @@ fun ConnectHero(
             }
         }
     }
+}
+
+/**
+ * Spider-on-web emblem decoded from the connection-screen prototype, redrawn
+ * as vectors so it scales cleanly. Prototype geometry (1:1, 850x910 frame,
+ * emblem center ~(313,313) in its half-scale wireframe):
+ *  - thick full ring, r 175→212 (29 units thick) with a rounded outer rim;
+ *  - three interior arcs hugging the ring's inner edge (r≈158), spanning
+ *    40°-115°, 140°-215° and 240°-315°;
+ *  - dense radial threads in the four ring-gap sectors (centered ~75°, 165°,
+ *    275°, 352°) fanning from the body outward;
+ *  - three thin concentric web arcs at r 55/85/120 on the thread-free side;
+ *  - a filled spider: tilted teardrop abdomen from the hub toward ~135°,
+ *    a small round head at the hub, four thick tapering legs (three wrapping
+ *    clockwise along the ring's inner edge, one free across the lower web).
+ * Angles below are measured clockwise from 3 o'clock to match atan2 with y
+ * increasing downward.
+ */
+private fun DrawScope.drawSpiderEmblem(accent: Color) {
+    val S = size.width / 420f // prototype half-scale units -> canvas
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    fun pt(r: Float, adeg: Float): Offset =
+        Offset(cx + r * S * cos(Math.toRadians(adeg.toDouble())).toFloat(),
+               cy + r * S * sin(Math.toRadians(adeg.toDouble())).toFloat())
+
+    val bodyColor = Color.White
+    val webColor = accent.copy(alpha = 0.55f)
+    val roundCap = StrokeCap.Round
+
+    // ── thick ring (r 175→212) + thin outer rim ──
+    drawCircle(color = bodyColor, radius = 193.5f * S, style = Stroke(37 * S))
+    drawCircle(color = bodyColor, radius = 230.5f * S, style = Stroke(3 * S))
+
+    // ── three interior arcs at r≈158, hugging the ring's inner edge ──
+    val arcStroke = Stroke(width = 13 * S, cap = roundCap)
+    listOf(40f to 115f, 140f to 215f, 240f to 315f).forEach { (start, end) ->
+        drawArc(
+            color = bodyColor,
+            startAngle = start - 6.5f,
+            sweepAngle = (end - start) + 13f,
+            useCenter = false,
+            topLeft = Offset(cx - 158 * S, cy - 158 * S),
+            size = Size(316 * S, 316 * S),
+            style = arcStroke,
+        )
+    }
+
+    // ── dense radial threads in the four ring-gap sectors ──
+    val threadSectors = listOf(45f to 105f, 135f to 195f, 245f to 305f, 325f to 383f)
+    threadSectors.forEach { (from, to) ->
+        var a = from
+        while (a <= to + 0.1f) {
+            drawLine(
+                color = webColor,
+                start = pt(70f, a),
+                end = pt(172f, a),
+                strokeWidth = 2.5f * S,
+            )
+            a += 6f
+        }
+    }
+
+    // ── three thin concentric web arcs on the thread-free side ──
+    listOf(55f, 85f, 120f).forEach { r ->
+        drawArc(
+            color = webColor,
+            startAngle = -130f,
+            sweepAngle = 78f,
+            useCenter = false,
+            topLeft = Offset(cx - r * S, cy - r * S),
+            size = Size(2 * r * S, 2 * r * S),
+            style = Stroke(2.5f * S, cap = roundCap),
+        )
+    }
+
+    // ── spider body: tilted teardrop abdomen (hub → ~135°, i.e. up-left) + head ──
+    val body = androidx.compose.ui.graphics.Path().apply {
+        val tip = pt(158f, 135f)
+        val mid = pt(85f, 135f)
+        val nx = cos(Math.toRadians(45.0)).toFloat()
+        val ny = sin(Math.toRadians(45.0)).toFloat()
+        val half = 34f * S
+        moveTo(pt(12f, 135f).x, pt(12f, 135f).y)
+        quadraticBezierTo(mid.x + nx * half, mid.y + ny * half, tip.x, tip.y)
+        quadraticBezierTo(mid.x - nx * half, mid.y - ny * half, pt(12f, 135f).x, pt(12f, 135f).y)
+        close()
+    }
+    drawPath(body, bodyColor)
+    drawCircle(color = bodyColor, radius = 21 * S, center = pt(0f, 0f))
+
+    // ── four thick tapering legs ──
+    val legStroke = Stroke(width = 13 * S, cap = roundCap)
+    // three legs wrapping clockwise along the ring's inner edge (r≈137)
+    listOf(165f to 243f, 205f to 285f, 245f to 322f).forEach { (from, to) ->
+        drawArc(
+            color = bodyColor,
+            startAngle = from,
+            sweepAngle = to - from,
+            useCenter = false,
+            topLeft = Offset(cx - 137 * S, cy - 137 * S),
+            size = Size(274 * S, 274 * S),
+            style = legStroke,
+        )
+    }
+    // one free leg sweeping across the lower web toward the lower-left gap
+    drawArc(
+        color = bodyColor,
+        startAngle = 122f,
+        sweepAngle = 50f,
+        useCenter = false,
+        topLeft = Offset(cx - 108 * S, cy - 108 * S),
+        size = Size(216 * S, 216 * S),
+        style = legStroke,
+    )
 }
