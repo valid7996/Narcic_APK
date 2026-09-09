@@ -63,6 +63,13 @@ object PsiphonController {
                     when (method.name) {
                         "getContext" -> context
                         "getPsiphonConfig" -> buildPsiphonConfig(context, port, config.psiphonEgressRegion, upstream)
+                        "loadLibrary" -> {
+                            // PsiphonTunnel's constructor calls hostService.loadLibrary("gojni");
+                            // the HostLibraryLoader default is not invoked through a Proxy, so
+                            // libgojni.so must be loaded here or native calls fail with UnsatisfiedLinkError.
+                            System.loadLibrary(args?.get(0) as? String ?: "gojni")
+                            null
+                        }
                         "onListeningSocksProxyPort" -> {
                             val p = args?.get(0) as? Int ?: port
                             psiphonPort = p
