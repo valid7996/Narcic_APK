@@ -797,8 +797,15 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         notifyStatusChanged(appContext, ConnectionStatus.SOCKS_READY)
         if (!verifyPortListening("127.0.0.1", proxyPort)) throw IllegalStateException("Proxy port $proxyPort is not listening")
         delay(3000.milliseconds)
-        notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
-        startTimer()
+        // Psiphon chain: the direct core is only the outer leg here. Emitting RUNNING
+        // now is premature — Psiphon is not up yet, and a RUNNING broadcast would let
+        // the UI/collectors treat the tunnel as fully connected (and re-arm the HEV
+        // switch path) before the chain completes. Hold at SOCKS_READY until the
+        // chain controller emits the final RUNNING after Psiphon is stable.
+        if (!psiphonChaining) {
+            notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
+            startTimer()
+        }
         LogRepository.i("[Controller] Core is active and validated on port $proxyPort")
         return true
     }
