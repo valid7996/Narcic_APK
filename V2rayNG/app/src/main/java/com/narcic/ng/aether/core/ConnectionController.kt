@@ -199,7 +199,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                         }
                         return
                     }
-                    if (masqueOrder == "auto") {
+                    if (masqueOrder == "auto" && false) { // auto race disabled: MASQUE now always uses the deterministic Core-First (masque-first) chain below
                         LogRepository.i("[Controller] Psiphon MASQUE order=auto -> racing MASQUE direct against Psiphon direct, winner completes the chain")
                         val raceWinner = coroutineScope {
                             val masqueLeg = async {
