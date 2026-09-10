@@ -151,7 +151,13 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                     LogRepository.i("[Controller] Cloak active, routing MASQUE via ${effectiveConfig.peer}")
                 }
             }
-            val psiphonSupported = PsiphonController.isSupported(effectiveConfig)
+            // Psiphon Chain is WireGuard-only (matches the UI gating in
+            // ConnectionSetupCard.supportsPsiphonChain). psiphonEnabled is
+            // persistent and can stay true from a previous WireGuard session;
+            // without this protocol gate MASQUE would enter the chain branch.
+            val psiphonSupported =
+                effectiveConfig.protocol == AetherProtocol.WG &&
+                PsiphonController.isSupported(effectiveConfig)
             if (psiphonSupported) {
                 effectiveConfig = effectiveConfig.copy(httpProxyEnabled = true)
             }

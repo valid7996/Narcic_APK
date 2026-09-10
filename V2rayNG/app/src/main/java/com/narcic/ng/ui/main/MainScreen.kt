@@ -220,6 +220,12 @@ fun MainScreen(
     val npsRunning = engineIsPs && npsStatus != ConnectionStatus.STOPPED &&
         npsStatus != ConnectionStatus.ERROR && npsStatus != ConnectionStatus.FAILED
     val npsConnected = engineIsPs && npsStatus == ConnectionStatus.RUNNING
+    // Narcic PS handshake states (STARTING/VALIDATING/DATAPLANE/SOCKS_READY/
+    // RECONNECTING): the tunnel is coming up but is not RUNNING yet. Exposed
+    // to ConnectHero so the button shows the amber spinner during the whole
+    // MASQUE handshake instead of staying a static idle power icon.
+    val npsConnecting = engineIsPs && npsRunning &&
+        npsStatus != ConnectionStatus.RUNNING && npsStatus != ConnectionStatus.TUN_ACTIVE
 
     // AetherVpnService is a Service and cannot show the system VPN consent
     // dialog itself — request it here (same flow AetherScreen implements),
@@ -476,8 +482,8 @@ fun MainScreen(
             ) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     StatusPill(
-                        isRunning = isRunning || npsRunning,
-                        isConnecting = isConnectingLocal,
+                        isRunning = isRunning || npsConnected,
+                        isConnecting = isConnectingLocal || npsConnecting,
                         engineLabel = engineLabel,
                     )
                 }
@@ -507,8 +513,8 @@ fun MainScreen(
                 Spacer(Modifier.height(10.dp))
 
                 ConnectHero(
-                    isRunning = isRunning || npsRunning,
-                    isConnecting = isConnectingLocal,
+                    isRunning = isRunning || npsConnected,
+                    isConnecting = isConnectingLocal || npsConnecting,
                     isTesting = uiState.isTesting,
                     statusText = when {
                         npsRunning -> when (npsStatus) {
