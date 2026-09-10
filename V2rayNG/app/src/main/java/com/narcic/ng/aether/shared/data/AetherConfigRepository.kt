@@ -563,8 +563,8 @@ class AetherConfigRepository private constructor(private val settings: Settings)
         return when (protocol) {
             AetherProtocol.MASQUE -> base.copy(
                 protocol = protocol,
-                noise = AetherNoise.GFW,
-                scanMode = AetherScanMode.TURBO,
+                noise = AetherNoise.FIREWALL,
+                scanMode = AetherScanMode.BALANCED,
                 ipMode = AetherIpMode.AUTO,
                 echEnabled = false,
                 httpProxyEnabled = false,
@@ -572,7 +572,7 @@ class AetherConfigRepository private constructor(private val settings: Settings)
                 h2Fragment = false,
                 fragmentSize = "16-32",
                 fragmentDelay = "2-10",
-                noDataCheck = false,
+                noDataCheck = true,
                 quickReconnect = true,
                 peer = "",
                 wgPeer = "",

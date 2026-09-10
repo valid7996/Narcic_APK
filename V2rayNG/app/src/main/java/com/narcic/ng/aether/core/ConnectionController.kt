@@ -742,6 +742,10 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                     }
                 }
             } else {
+                // Direct start (no Psiphon chain): reset any chaining flag left
+                // over from a previous chained session — otherwise
+                // startAetherInternal would suppress the final RUNNING emit.
+                psiphonChaining = false
                 ActiveProxyProvider.psiphonProxyUrl = null
                 if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
                     throw IllegalStateException("Core failed direct")
