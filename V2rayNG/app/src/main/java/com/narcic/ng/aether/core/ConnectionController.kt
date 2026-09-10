@@ -801,6 +801,13 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                 if (coreStatus == ConnectionStatus.SOCKS_READY) return@withTimeoutOrNull true
                 if (coreStatus == ConnectionStatus.ERROR) throw IllegalStateException("Core reported error during startup")
                 if (coreStatus == ConnectionStatus.STOPPED) throw IllegalStateException("Core stopped unexpectedly during startup")
+                // MASQUE: the core reports DATAPLANE_VALIDATED after "tunnel
+                // validated ... exposing socks5" with the local listener already
+                // bound. A locally listening SOCKS port is the readiness signal;
+                // never gate this on an external probe through the fresh tunnel.
+                if (coreStatus == ConnectionStatus.DATAPLANE_VALIDATED && isPortListening("127.0.0.1", proxyPort)) {
+                    return@withTimeoutOrNull true
+                }
                 if (probeSocksReady("127.0.0.1", proxyPort)) return@withTimeoutOrNull true
                 delay(250.milliseconds)
             }
@@ -1003,7 +1010,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                     if (!fillStream(ins, method)) return@runCatching false
                     if (method[0] != 5.toByte() || method[1] != 0.toByte()) return@runCatching false
                     val addr = InetAddress.getByName("1.1.1.1").address
-                    val req = ByteArray(5 + 4 + 2)
+                    val req = ByteArray(4 + 4 + 2)
                     req[0] = 5; req[1] = 1; req[2] = 0; req[3] = 1
                     System.arraycopy(addr, 0, req, 4, 4)
                     req[8] = (80 shr 8).toByte(); req[9] = 80.toByte()

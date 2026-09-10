@@ -37,6 +37,11 @@ class AetherProcessRunner(private val context: Context) {
     private val currentAttemptId = AtomicLong(0)
     private var goolOuterValidated = false
     private var dataPlaneOk = false
+    // libaether binds the local SOCKS5 listener (and logs "socks5 listening on")
+    // BEFORE data-plane validation in MASQUE mode; remember it so the later
+    // "tunnel validated ... exposing socks5" line can promote straight to
+    // SOCKS_READY instead of stranding the state at DATAPLANE_VALIDATED.
+    private var socksListeningSeen = false
     private val isReconnecting = AtomicBoolean(false)
 
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.STOPPED)
@@ -49,6 +54,10 @@ class AetherProcessRunner(private val context: Context) {
             if (runnerJob?.isActive == true) return
 
             val attemptId = currentAttemptId.incrementAndGet()
+            // New attempt: forget any listener state from a previous process run.
+            goolOuterValidated = false
+            dataPlaneOk = false
+            socksListeningSeen = false
             updateState(ConnectionStatus.STARTING, attemptId)
             runnerJob = scope.launch {
                 var retryCount = 0
@@ -104,6 +113,7 @@ class AetherProcessRunner(private val context: Context) {
         var proc: Process? = null
         try {
             dataPlaneOk = false
+            socksListeningSeen = false
             val binaryFile = BinaryManager.prepareBinary(context)
             if (currentAttemptId.get() != attemptId) return@coroutineScope true
 
@@ -481,10 +491,21 @@ class AetherProcessRunner(private val context: Context) {
                 if (protocol != AetherProtocol.GOOL) {
                     quickRetryPending.set(false)
                     dataPlaneOk = true
-                    updateState(ConnectionStatus.DATAPLANE_VALIDATED, attemptId)
+                    // MASQUE: libaether logs "socks5 listening on" BEFORE
+                    // validation but never again after "tunnel validated ...
+                    // exposing socks5" — promote straight to SOCKS_READY when
+                    // the listener is already known-bound (or this very line
+                    // says socks5 is being exposed) so the state is not
+                    // stranded at DATAPLANE_VALIDATED.
+                    if (socksListeningSeen || lower.contains("exposing socks5")) {
+                        updateState(ConnectionStatus.SOCKS_READY, attemptId)
+                    } else {
+                        updateState(ConnectionStatus.DATAPLANE_VALIDATED, attemptId)
+                    }
                 }
             }
             lower.contains("socks") && lower.contains("listening") -> {
+                socksListeningSeen = true
                 if (dataPlaneOk) {
                     updateState(ConnectionStatus.SOCKS_READY, attemptId)
                 } else {
