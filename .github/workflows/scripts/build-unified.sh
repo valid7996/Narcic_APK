@@ -132,15 +132,14 @@ sed -i \
 # this one struct is touched; no other psiphon-tls behavior changes and the
 # psi engine source is untouched.
 echo "[1c/6] adapt psiphon-tls ConnectionState to Go 1.27"
-git clone --depth 1 https://github.com/Psiphon-Labs/psiphon-tls.git "$WORK/psitls"
-git -C "$WORK/psitls" fetch --depth 1 origin 4944f00a8304 2>/dev/null || true
-git -C "$WORK/psitls" checkout 4944f00a8304 2>/dev/null || true
-# Insert ONLY inside the ConnectionState struct (address-range scoped so the
-# identically-named HelloRetryRequest field in ClientHelloInfo is NOT touched):
+git clone --depth 1 -b release-branch.go1.26 https://github.com/Psiphon-Labs/psiphon-tls.git "$WORK/psitls"
+git -C "$WORK/psitls" checkout 4944f00a8304d3b92fd509415f2f61ba0549f194
+
+# Insert LocalCertificate with tab indentation strictly within ConnectionState struct
 sed -i '/type ConnectionState struct/,/^}/ s/HelloRetryRequest bool/HelloRetryRequest bool\n\tLocalCertificate [][]byte/' "$WORK/psitls/common.go"
-# gofmt-normalize the edited file (keeps the inserted field tab-indented):
 gofmt -w "$WORK/psitls/common.go"
-# sanity check: the field must exist exactly once in the whole tree:
+
+# Sanity check: verify the field exists exactly once in common.go
 grep -c "LocalCertificate" "$WORK/psitls/common.go" | grep -qx 1 \
   || { echo "FATAL: LocalCertificate not inserted exactly once into psiphon-tls/common.go"; exit 1; }
 
