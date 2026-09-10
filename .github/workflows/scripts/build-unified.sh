@@ -192,9 +192,9 @@ replace github.com/Psiphon-Labs/quic-go => $WORK/psiquic
 
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
 
-# github.com/Psiphon-Labs/psiphon-tls MUST resolve to the ADAPTED clone
-# (step 1c above) — without this replace, gomobile bind compiles the upstream
-# unpatched fork and the Go 1.27 ConnectionState alignment never applies.
+// github.com/Psiphon-Labs/psiphon-tls MUST resolve to the ADAPTED clone
+// (step 1c above) — without this replace, gomobile bind compiles the upstream
+// unpatched fork and the Go 1.27 ConnectionState alignment never applies.
 replace github.com/Psiphon-Labs/psiphon-tls => $WORK/psitls
 
 	// qpack v0.6.0 — both engines are aligned to this version (the Psiphon
