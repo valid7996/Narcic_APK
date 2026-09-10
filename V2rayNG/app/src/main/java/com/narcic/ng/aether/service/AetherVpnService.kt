@@ -710,50 +710,18 @@ class AetherVpnService : VpnService() {
                 val target = "$targetHost:$targetPort"
                 when (activeTunnelEngine) {
                     TunnelEngine.HEV_TUN2SOCKS -> {
-                        if (lastHevUpstream != target && hevEngine != null && vpnInterface != null) {
-                            LogRepository.i("[VpnService] HEV restart to $target for psiphon chain (was $lastHevUpstream)")
-                            stopStatsJob()
-                            val restartDescriptor: android.os.ParcelFileDescriptor?
-                            stateMutex.withLock {
-                                hevEngine?.requestStop()
-                                restartDescriptor = vpnInterface
-                            }
-                            delay(400.milliseconds)
-                            if (restartDescriptor != null) {
-                                val newEngine = HevTun2SocksEngine()
-                                val hevSettings = HevEngineSettings(
-                                    logLevel = cfg.hevLogLevel,
-                                    connectTimeoutMs = cfg.hevConnectTimeoutMs,
-                                    readWriteTimeoutMs = cfg.hevReadWriteTimeoutMs,
-                                    maxSessionCount = cfg.hevMaxSessionCount,
-                                    mapdnsCacheSize = cfg.hevMapdnsCacheSize
-                                )
-                                val ok = newEngine.start(
-                                    tunPfd = restartDescriptor,
-                                    socksAddress = targetHost,
-                                    socksPort = targetPort,
-                                    mtu = cfg.mtu.coerceIn(576, 9000),
-                                    attemptId = activeAttemptId.get(),
-                                    settings = hevSettings,
-                                    udpMode = cfg.hevUdpMode
-                                )
-                                stateMutex.withLock {
-                                    if (ok) {
-                                        hevEngine = newEngine
-                                        lastHevUpstream = target
-                                        LogRepository.i("[VpnService] HEV restarted to $target mtu=${cfg.mtu}")
-                                    } else {
-                                        LogRepository.e("[VpnService] HEV restart to $target failed")
-                                        hevEngine?.resume()
-                                    }
-                                }
-                            }
-                            if (statsJob == null) startStatsJob()
-                        } else {
+                        // The HEV restart/switch for a changed upstream is owned
+                        // exclusively by switchHevInternal() (ACTION_SWITCH_HEV).
+                        // Duplicating the stop/start here races a second native
+                        // HEV instance against the first — both tear down and
+                        // re-init the process-global hev task system / LwIP
+                        // state concurrently (SIGSEGV). Only resume/re-arm the
+                        // existing engine; never restart it from this path.
+                        if (lastHevUpstream == null) lastHevUpstream = target
+                        if (lastHevUpstream == target) {
                             hevEngine?.resume()
-                            if (statsJob == null) startStatsJob()
-                            if (lastHevUpstream == null) lastHevUpstream = target
                         }
+                        if (statsJob == null) startStatsJob()
                     }
                     TunnelEngine.SOCKS_TUN_BRIDGE -> {
                         if (lastBridgeUpstream != target && socksBridge != null) {
@@ -801,8 +769,14 @@ class AetherVpnService : VpnService() {
         val switchDescriptor: android.os.ParcelFileDescriptor?
         var switchCfg: com.narcic.ng.aether.shared.model.AetherConfig? = null
         var switchHevSettings: HevEngineSettings? = null
+        val oldEngine: HevTun2SocksEngine?
         stateMutex.withLock {
-            hevEngine?.requestStop()
+            // Claim the transition atomically so a concurrent switch (e.g. the
+            // RUNNING status collector re-firing ACTION_SWITCH_HEV) cannot enter
+            // the same stop/start sequence and race a second native HEV instance.
+            lastHevUpstream = target
+            oldEngine = hevEngine
+            if (oldEngine != null) oldEngine.stop()
             switchDescriptor = vpnInterface
             if (switchDescriptor != null) {
                 val cfg = AetherConfigRepository.getInstance(getSettings(PlatformContext(this@AetherVpnService))).config.value
@@ -816,22 +790,30 @@ class AetherVpnService : VpnService() {
                 )
             }
         }
-        val descriptor = switchDescriptor ?: return
-        val cfg = switchCfg ?: return
-        val hevSettings = switchHevSettings ?: return
-        delay(400.milliseconds)
+        val descriptor = switchDescriptor ?: run {
+            stateMutex.withLock { if (hevEngine == null) lastHevUpstream = null }
+            return
+        }
+        val cfg = switchCfg ?: run {
+            stateMutex.withLock { if (hevEngine == null) lastHevUpstream = null }
+            return
+        }
+        val hevSettings = switchHevSettings ?: run {
+            stateMutex.withLock { if (hevEngine == null) lastHevUpstream = null }
+            return
+        }
         val newEngine = HevTun2SocksEngine()
         val ok = newEngine.start(descriptor, host, port, cfg.mtu.coerceIn(576, 9000), activeAttemptId.get(), hevSettings, cfg.hevUdpMode)
         stateMutex.withLock {
             if (ok) {
                 hevEngine = newEngine
-                lastHevUpstream = target
                 LogRepository.i("[VpnService] HEV switched to $target mtu=${cfg.mtu}")
                 DnsMap.clear()
                 routingEngine?.clearCache()
                 if (statsJob == null) startStatsJob()
             } else {
                 LogRepository.e("[VpnService] HEV switch to $target failed")
+                lastHevUpstream = null
             }
         }
     }

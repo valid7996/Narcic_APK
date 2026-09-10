@@ -156,6 +156,23 @@ class HevTun2SocksEngine {
             .onFailure { LogRepository.w("[Hev] Stop request failed: ${it.localizedMessage}") }
     }
 
+    /**
+     * Minimal synchronous stop for the HEV switch path: requestStop() then await
+     * the native engine coroutine's termination (bounded to 2000 ms) so a new
+     * engine instance can never start while the previous native loop is still
+     * tearing down process-global state (hev task system / LwIP / statics).
+     */
+    suspend fun stop() {
+        val job = engineJob
+        requestStop()
+        if (job != null && job.isActive) {
+            val terminated = withTimeoutOrNull(2000.milliseconds) { job.join() }
+            if (terminated == null) {
+                LogRepository.w("[Hev] Engine event loop did not terminate within 2000 ms; proceeding")
+            }
+        }
+    }
+
     fun pause() {
         if (!active.get()) return
         if (_state.value != State.RUNNING && _state.value != State.STARTING) return
