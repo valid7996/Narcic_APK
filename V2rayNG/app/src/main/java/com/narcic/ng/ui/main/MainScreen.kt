@@ -542,13 +542,18 @@ fun MainScreen(
                         when {
                             // ---- Narcic PS engine toggle (existing Aether flow) ----
                             engineIsPs && !isRunning -> {
-                                isConnectingLocal = false
                                 if (npsRunning) {
+                                    isConnectingLocal = false
                                     val intent = Intent(npsContext, AetherVpnService::class.java).apply {
                                         action = AetherVpnService.ACTION_STOP
                                     }
                                     npsContext.startService(intent)
                                 } else {
+                                    // Show the connecting spinner immediately —
+                                    // npsConnecting only turns on once the service
+                                    // chain reaches ConnectionController (STARTING),
+                                    // which is seconds away from the tap.
+                                    isConnectingLocal = true
                                     // Same mutual exclusion AetherScreen enforces
                                     // before taking ownership of the TUN interface.
                                     LauncherManager.stopService(npsContext)
