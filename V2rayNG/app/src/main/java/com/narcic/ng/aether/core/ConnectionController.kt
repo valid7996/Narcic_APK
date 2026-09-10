@@ -121,9 +121,13 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
     }
 
     override suspend fun start() {
+        LogRepository.i("[AetherDiag] CONTROLLER start() entry status=${_status.value}")
         val attemptId: Long
         mutex.withLock {
-            if (_status.value == ConnectionStatus.RUNNING || _status.value == ConnectionStatus.VALIDATING) return
+            if (_status.value == ConnectionStatus.RUNNING || _status.value == ConnectionStatus.VALIDATING) {
+                LogRepository.i("[AetherDiag] CONTROLLER start() busy-state exit status=${_status.value}")
+                return
+            }
             attemptId = System.currentTimeMillis()
             activeAttemptId.set(attemptId)
             notifyStatusChanged(appContext, ConnectionStatus.STARTING)
@@ -745,11 +749,14 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             }
         } catch (e: Exception) {
             val st = _status.value
+            LogRepository.i("[AetherDiag] PATH CONTROLLER_CATCH attemptId=$attemptId type=${e.javaClass.name} msg=${e.localizedMessage} status=$st")
             if (st == ConnectionStatus.STOPPED || st == ConnectionStatus.STOPPING) {
+                LogRepository.i("[AetherDiag] PATH CONTROLLER_CATCH_STOPPATH attemptId=$attemptId (stopped/stopping; cleanup and return)")
                 runCatching { cleanup(attemptId) }
                 return
             }
             LogRepository.e("[Controller] Startup failed: ${e.localizedMessage}")
+            LogRepository.i("[AetherDiag] PATH CONTROLLER_CATCH_ERRORPATH attemptId=$attemptId (cleanup + ERROR)")
             cleanup(attemptId)
             notifyStatusChanged(appContext, ConnectionStatus.ERROR)
         }
@@ -757,14 +764,19 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
 
     private suspend fun startAetherInternal(config: AetherConfig, bindAddress: String, attemptId: Long): Boolean {
         LogRepository.i("[Controller] Starting core at $bindAddress (event-driven, awaiting core verdict)")
+        LogRepository.i("[AetherDiag] RUNNER start() call attemptId=$attemptId bind=$bindAddress protocol=${config.protocol} runnerStatus=${runner.connectionStatus.value}")
         runner.start(config, bindAddress, onCodeRequired = { updateIsWaitingForCode(true) }, inputProvider = { loginCodeChannel.receive() })
+        LogRepository.i("[AetherDiag] RUNNER start() returned attemptId=$attemptId runnerStatus=${runner.connectionStatus.value}")
         val proxyPort = config.socksPort.toIntOrNull() ?: 1819
         var dpValidated = false
         var lastStatus = runner.connectionStatus.value
         var lastProgressAt = System.currentTimeMillis()
         var stallWarned = false
         while (currentCoroutineContext().isActive) {
-            if (activeAttemptId.get() != attemptId) return false
+            if (activeAttemptId.get() != attemptId) {
+                LogRepository.i("[AetherDiag] RUNNER loop stale-attempt exit attemptId=$attemptId")
+                return false
+            }
             val coreStatus = runner.connectionStatus.value
             if (coreStatus != lastStatus) {
                 lastStatus = coreStatus
@@ -795,6 +807,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         }
         if (!dpValidated) {
             val coreStatus = runner.connectionStatus.value
+            LogRepository.i("[AetherDiag] RUNNER loop1 exit-no-verdict attemptId=$attemptId runnerStatus=$coreStatus")
             if (coreStatus == ConnectionStatus.ERROR) throw IllegalStateException("Core failed to start (error)")
             if (coreStatus == ConnectionStatus.STOPPED) throw IllegalStateException("Core stopped unexpectedly")
             throw IllegalStateException("Core data-plane validation failed (no verdict from core)")
@@ -820,6 +833,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             false
         } ?: false
         if (!socksReady) throw IllegalStateException("SOCKS proxy not ready (0x00 probe failed) after 60s")
+        LogRepository.i("[AetherDiag] RUNNER socks-ready confirmed attemptId=$attemptId runnerStatus=${runner.connectionStatus.value}")
         notifyStatusChanged(appContext, ConnectionStatus.SOCKS_READY)
         if (!verifyPortListening("127.0.0.1", proxyPort)) throw IllegalStateException("Proxy port $proxyPort is not listening")
         delay(3000.milliseconds)
@@ -832,7 +846,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
             startTimer()
         }
-        LogRepository.i("[Controller] Core is active and validated on port $proxyPort")
+        LogRepository.i("[AetherDiag] RUNNER startAetherInternal exit attemptId=$attemptId result=true psiphonChaining=$psiphonChaining controllerStatus=${_status.value}")
         return true
     }
 

@@ -292,6 +292,7 @@ class AetherVpnService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        LogRepository.i("[AetherDiag] onStartCommand entry action=${intent?.action ?: "null"} startId=$startId flags=$flags")
         when (intent?.action) {
             ACTION_START -> {
                 isUserInitiatedStop = false
@@ -359,19 +360,31 @@ class AetherVpnService : VpnService() {
     }
 
     private fun startAttempt(commandId: Long) {
+        LogRepository.i("[AetherDiag] startAttempt entry commandId=$commandId")
         startupJob = scope.launch {
-            if (commandCounter.get() != commandId) return@launch
+            if (commandCounter.get() != commandId) {
+                LogRepository.i("[AetherDiag] startAttempt stale command exit commandId=$commandId counter=${commandCounter.get()}")
+                return@launch
+            }
 
             val attemptId = stateMutex.withLock {
-                if (commandCounter.get() != commandId) return@launch
+                if (commandCounter.get() != commandId) {
+                    LogRepository.i("[AetherDiag] startAttempt stale command (mutex) exit commandId=$commandId counter=${commandCounter.get()}")
+                    return@launch
+                }
                 val current = ConnectionController.status.value
-                if (current == ConnectionStatus.RUNNING || current == ConnectionStatus.VALIDATING) return@launch
-                
+                if (current == ConnectionStatus.RUNNING || current == ConnectionStatus.VALIDATING) {
+                    LogRepository.i("[AetherDiag] startAttempt busy-state exit commandId=$commandId status=$current")
+                    return@launch
+                }
+
                 val id = System.currentTimeMillis()
                 activeAttemptId.set(id)
+                LogRepository.i("[AetherDiag] startAttempt claimed attemptId=$id commandId=$commandId priorStatus=$current")
                 id
             }
 
+            LogRepository.i("[AetherDiag] startAttempt proceeding attemptId=$attemptId commandId=$commandId")
             runCatching { wakeLock?.acquire(4 * 60 * 60 * 1000L) }.onFailure { LogRepository.w("[VpnService] wakeLock acquire failed: ${it.message}") }
 
             try {
@@ -390,7 +403,10 @@ class AetherVpnService : VpnService() {
                 }
                 activeTunnelEngine = effectiveEngine
 
-                if (!establishVpnTun(attemptId, effectiveEngine)) throw IllegalStateException("TUN establishment failed")
+                LogRepository.i("[AetherDiag] STEP TUN_ESTABLISH_BEGIN attemptId=$attemptId engine=$effectiveEngine")
+                val tunOk = establishVpnTun(attemptId, effectiveEngine)
+                LogRepository.i("[AetherDiag] STEP TUN_ESTABLISH_END attemptId=$attemptId result=$tunOk")
+                if (!tunOk) throw IllegalStateException("TUN establishment failed")
                 ensureCurrentAttempt(attemptId)
                 val descriptor = vpnInterface ?: throw IllegalStateException("TUN descriptor unavailable")
 
@@ -426,6 +442,7 @@ class AetherVpnService : VpnService() {
                 } else {
                     val psiphonUrl = ActiveProxyProvider.psiphonProxyUrl
                     val (bridgeHost, bridgePort) = resolveEffectiveSocks(config, psiphonUrl)
+                    LogRepository.i("[AetherDiag] STEP SOCKS_BRIDGE_BEGIN attemptId=$attemptId bridge=$bridgeHost:$bridgePort")
                     socksBridge = SocksTunBridge(
                         vpnService = this@AetherVpnService,
                         tunDescriptor = descriptor,
@@ -435,10 +452,13 @@ class AetherVpnService : VpnService() {
                         blockedPackagesProvider = { if (config.tunnelAllApps) emptySet() else config.blockedPackages },
                         routingEngine = routingEngine!!
                     ).apply { start() }
+                    LogRepository.i("[AetherDiag] STEP SOCKS_BRIDGE_OK attemptId=$attemptId bridge=$bridgeHost:$bridgePort")
                     lastBridgeUpstream = "$bridgeHost:$bridgePort"
                 }
 
+                LogRepository.i("[AetherDiag] STEP CONTROLLER_BEGIN attemptId=$attemptId engine=$effectiveEngine")
                 getController().start()
+                LogRepository.i("[AetherDiag] STEP CONTROLLER_RETURNED attemptId=$attemptId status=${ConnectionController.status.value}")
                 if (ConnectionController.status.value != ConnectionStatus.RUNNING) {
                     throw IllegalStateException("Core failed to start")
                 }
@@ -457,8 +477,10 @@ class AetherVpnService : VpnService() {
                 wasEverRunning = true
                 startStatsJob()
             } catch (cancellation: CancellationException) {
+                LogRepository.i("[AetherDiag] PATH CATCH_CANCELLATION attemptId=$attemptId commandId=$commandId")
                 throw cancellation
             } catch (throwable: Throwable) {
+                LogRepository.e("[AetherDiag] PATH CATCH_THROWABLE attemptId=$attemptId commandId=$commandId type=${throwable.javaClass.name} msg=${throwable.localizedMessage}\n${throwable.stackTraceToString()}")
                 if (activeAttemptId.get() == attemptId && commandCounter.get() == commandId) {
                     rollback(attemptId, throwable.localizedMessage ?: "Startup failed")
                 }
@@ -603,15 +625,18 @@ class AetherVpnService : VpnService() {
         true
     }.getOrElse {
         LogRepository.e("[Tun] [attempt=$attemptId] Failed: ${it.localizedMessage}")
+        LogRepository.e("[AetherDiag] PATH TUN_ESTABLISH_THROWABLE attemptId=$attemptId type=${it.javaClass.name} msg=${it.localizedMessage}\n${it.stackTraceToString()}")
         false
     }
 
     private suspend fun rollback(attemptId: Long, reason: String) {
         LogRepository.e("[VpnService] Rollback: $reason")
+        LogRepository.i("[AetherDiag] PATH ROLLBACK entry attemptId=$attemptId reason=$reason wasEverRunning=$wasEverRunning isUserInitiatedStop=$isUserInitiatedStop")
         stopStatsJob()
         val status = ConnectionController.status.value
         val pauseOnly = !isUserInitiatedStop &&
                 (status == ConnectionStatus.RECONNECTING || status == ConnectionStatus.DATAPLANE_VALIDATED || status == ConnectionStatus.SOCKS_READY)
+        LogRepository.i("[AetherDiag] PATH ROLLBACK decision attemptId=$attemptId status=$status pauseOnly=$pauseOnly")
         if (wasEverRunning && !isUserInitiatedStop) {
             showDisconnectionAlert(reason)
         }
@@ -619,6 +644,7 @@ class AetherVpnService : VpnService() {
         if (!pauseOnly) {
             getController().stop()
         }
+        LogRepository.i("[AetherDiag] PATH ROLLBACK exit attemptId=$attemptId pauseOnly=$pauseOnly")
     }
 
     private fun stopVpnService(commandId: Long) {
@@ -669,12 +695,14 @@ class AetherVpnService : VpnService() {
         val status = ConnectionController.status.value
         val pauseOnly = !forceTeardown && !isUserInitiatedStop &&
                 (status == ConnectionStatus.RECONNECTING || status == ConnectionStatus.DATAPLANE_VALIDATED || status == ConnectionStatus.SOCKS_READY)
+        LogRepository.i("[AetherDiag] PATH CLEANUP entry attemptId=$attemptId forceTeardown=$forceTeardown status=$status pauseOnly=$pauseOnly")
         stateMutex.withLock {
             if (pauseOnly) {
-                LogRepository.i("[VpnService] Reconnect in progress; pausing TUN instead of tearing down")
+                LogRepository.i("[AetherDiag] PATH CLEANUP_PAUSE attemptId=$attemptId (reconnect in progress; pausing TUN instead of tearing down)")
                 stopStatsJob()
                 hevEngine?.pause()
             } else {
+                LogRepository.i("[AetherDiag] PATH CLEANUP_TEARDOWN attemptId=$attemptId (full teardown: hev/bridge/tun)")
                 hevEngine?.requestStop()
                 hevEngine = null
                 socksBridge?.stop()

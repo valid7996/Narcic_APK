@@ -91,16 +91,20 @@ class AetherProcessRunner(private val context: Context) {
                     if (currentAttemptId.get() != attemptId) break
 
                     try {
+                        LogRepository.i("[AetherDiag] RUNNER runBinary call retry=$retryCount attemptId=$attemptId")
                         val result = runBinary(config, attemptId, bindAddress, onCodeRequired, inputProvider)
+                        LogRepository.i("[AetherDiag] RUNNER runBinary returned retry=$retryCount attemptId=$attemptId result=$result runnerStatus=${_connectionStatus.value}")
                         if (currentAttemptId.get() != attemptId) break
-                        
+
                         if (!result) {
                             LogRepository.e("Stability check failed. Retrying...")
                         }
                     } catch (e: CancellationException) {
+                        LogRepository.i("[AetherDiag] PATH RUNNER_CATCH_CANCELLATION attemptId=$attemptId retry=$retryCount")
                         throw e
                     } catch (e: Exception) {
                         LogRepository.e("Execution cycle critical error: ${e.localizedMessage}")
+                        LogRepository.i("[AetherDiag] PATH RUNNER_CATCH_EXCEPTION attemptId=$attemptId retry=$retryCount type=${e.javaClass.name} msg=${e.localizedMessage}")
                     }
 
                     retryCount++
@@ -341,9 +345,11 @@ class AetherProcessRunner(private val context: Context) {
             pb.redirectErrorStream(true)
 
             proc = withContext(Dispatchers.IO) { pb.start() }
+            LogRepository.i("[AetherDiag] RUNNER process started attemptId=$attemptId binary=${binaryFile.absolutePath} pid=${proc?.pid()}")
 
             synchronized(lock) {
                 if (currentAttemptId.get() != attemptId) {
+                    LogRepository.i("[AetherDiag] PATH RUNNER_STALE_AFTER_START attemptId=$attemptId (destroying just-started process)")
                     proc?.destroyForcibly()
                     return@coroutineScope true
                 }
@@ -390,14 +396,17 @@ class AetherProcessRunner(private val context: Context) {
             }
             exitCode == 0
         } catch (e: CancellationException) {
+            LogRepository.i("[AetherDiag] PATH RUNNERRUN_CATCH_CANCELLATION attemptId=$attemptId")
             throw e
         } catch (e: Exception) {
             if (currentAttemptId.get() == attemptId) {
                 LogRepository.e("Binary runtime error: ${e.localizedMessage}")
+                LogRepository.i("[AetherDiag] PATH RUNNERRUN_CATCH_EXCEPTION attemptId=$attemptId type=${e.javaClass.name} msg=${e.localizedMessage}\n${e.stackTraceToString()}")
                 return@coroutineScope false
             }
             true
         } finally {
+            LogRepository.i("[AetherDiag] PATH RUNNERRUN_FINALLY attemptId=$attemptId procAlive=${proc?.isAlive}")
             synchronized(lock) {
                 if (process === proc) process = null
             }
