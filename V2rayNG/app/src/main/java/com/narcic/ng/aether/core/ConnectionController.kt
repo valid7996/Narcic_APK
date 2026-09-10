@@ -130,6 +130,19 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         }
         try {
             val config = AetherConfigRepository.getInstance(getSettings(PlatformContext(appContext))).config.value.effectiveZeroTrustConfig()
+
+            // Zero Trust requires organization credentials (team + one auth
+            // method). Blocking here prevents the silent fallback to consumer
+            // WARP/MASQUE that libaether performs when no --team is supplied.
+            if (config.protocol == AetherProtocol.ZERO_TRUST) {
+                val ztError = config.zeroTrustError()
+                if (ztError != null) {
+                    LogRepository.e("[Controller] Zero Trust start blocked: $ztError")
+                    notifyStatusChanged(appContext, ConnectionStatus.ERROR)
+                    return
+                }
+            }
+
             var effectiveConfig = config
             if (CloakController.isSupported(config)) {
                 val cloakStarted = runNativeBounded(30000L, "Cloak.start") { CloakController.start(appContext, config) } == true

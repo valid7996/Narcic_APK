@@ -86,6 +86,12 @@ fun ConnectionSetupCard(
     var showMethodSheet by remember { mutableStateOf(false) }
     var showRegionSheet by remember { mutableStateOf(false) }
 
+    // Zero Trust needs team + one auth method before it can connect
+    // (AetherConfig.zeroTrustError drives both this badge and the start gate).
+    val isZtUnconfigured =
+        config.protocol == AetherProtocol.ZERO_TRUST &&
+        config.zeroTrustError() != null
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,6 +118,17 @@ fun ConnectionSetupCard(
                 methodLabel(config.protocol),
                 color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
             )
+            if (isZtUnconfigured) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "تنظیم‌نشده",
+                    color = Nc.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Nc.Red.copy(alpha = .13f))
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                )
+            }
             Spacer(Modifier.width(8.dp))
             Text(
                 "تغییر",
@@ -120,6 +137,14 @@ fun ConnectionSetupCard(
                     .clip(RoundedCornerShape(50))
                     .background(accent.copy(alpha = .13f))
                     .padding(horizontal = 9.dp, vertical = 3.dp),
+            )
+        }
+
+        if (isZtUnconfigured) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "اطلاعات تیم و احراز هویت در تنظیمات Zero Trust وارد نشده است.",
+                color = Nc.Red, fontSize = 10.sp, fontWeight = FontWeight.Medium,
             )
         }
 
@@ -200,9 +225,14 @@ fun ConnectionSetupCard(
                 AetherProtocol.WG,
                 AetherProtocol.ZERO_TRUST,
             ).forEach { p ->
+                val ztPending = p == AetherProtocol.ZERO_TRUST && config.zeroTrustError() != null
                 SheetOptionRow(
                     title = methodLabel(p),
-                    subtitle = p.description,
+                    subtitle = if (ztPending) {
+                        "Cloudflare for Organizations — تنظیم‌نشده (نیاز به تیم و احراز هویت)"
+                    } else {
+                        p.description
+                    },
                     selected = p == config.protocol,
                     accent = accent,
                     txtMain = txtMain,
