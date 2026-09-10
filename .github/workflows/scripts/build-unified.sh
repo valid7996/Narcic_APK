@@ -28,6 +28,12 @@ NDK_VERSION="${3:?ndk version required}"
 export GO111MODULE=on
 export GOPATH="${GOPATH:-$HOME/go}"
 export GOBIN="$GOPATH/bin"
+# Pin the toolchain: the wrapper module says go 1.26, but if the runner has a
+# newer Go (e.g. 1.27) installed, GOTOOLCHAIN=auto would compile against that
+# newer crypto/tls layout and break psiphon-tls' unsafe.go ConnectionState
+# struct check (panic: struct field count mismatch). 'local' forces the go
+# directive in go.mod (1.26) to be honored with the installed 1.26 toolchain.
+export GOTOOLCHAIN=local
 # allow go commands to update go.mod/go.sum as needed (gomobile bind writes
 # generated bind packages into the module and may add missing requires):
 export GOFLAGS=-mod=mod
@@ -130,6 +136,8 @@ cat > "$WRAPPER/go.mod" <<EOF
 module narcic/bind
 
 go 1.26
+
+toolchain go1.26.8
 
 require (
 	github.com/2dust/AndroidLibXrayLite v0.0.0
