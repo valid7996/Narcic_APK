@@ -27,7 +27,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
 
       - name: Install NDK
         run: |
@@ -83,7 +83,7 @@ jobs:
       - name: Setup Go for unified gomobile bind
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
           cache: false
 
       - name: Setup Java for unified bind (javac for the psiphon wrapper)

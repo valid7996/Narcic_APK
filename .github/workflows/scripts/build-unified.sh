@@ -28,12 +28,6 @@ NDK_VERSION="${3:?ndk version required}"
 export GO111MODULE=on
 export GOPATH="${GOPATH:-$HOME/go}"
 export GOBIN="$GOPATH/bin"
-# Pin the toolchain: the wrapper module says go 1.26, but if the runner has a
-# newer Go (e.g. 1.27) installed, GOTOOLCHAIN=auto would compile against that
-# newer crypto/tls layout and break psiphon-tls' unsafe.go ConnectionState
-# struct check (panic: struct field count mismatch). 'local' forces the go
-# directive in go.mod (1.26) to be honored with the installed 1.26 toolchain.
-export GOTOOLCHAIN=local
 # allow go commands to update go.mod/go.sum as needed (gomobile bind writes
 # generated bind packages into the module and may add missing requires):
 export GOFLAGS=-mod=mod
@@ -126,6 +120,30 @@ sed -i \
 # 3) the fork's qpack version must now resolve to v0.6.0 (set via replace in
 #    the wrapper go.mod below: github.com/quic-go/qpack => v0.6.0)
 
+# Controlled dependency fork #2 (same rule as the quic-go adaptation above):
+# psiphon-tls@4944f00a8304 (the exact pin in psiphon-tunnel-core's go.mod)
+# vendors a copy of crypto/tls whose ConnectionState mirrors Go 1.26 (17
+# fields). Go 1.27 added LocalCertificate [][]byte to crypto/tls.ConnectionState
+# (golang/go@efbecbbb465c), so under the Go 1.27 toolchain required by
+# AndroidLibXrayLite the unsafe.go structsEqual() layout check panics at
+# runtime ("struct field count mismatch: 18 vs 17"). The fork's ConnectionState
+# is mechanically aligned to the Go 1.27 layout by inserting the missing field
+# at the exact upstream position (after HelloRetryRequest, before ekm) — only
+# this one struct is touched; no other psiphon-tls behavior changes and the
+# psi engine source is untouched.
+echo "[1c/6] adapt psiphon-tls ConnectionState to Go 1.27"
+git clone --depth 1 https://github.com/Psiphon-Labs/psiphon-tls.git "$WORK/psitls"
+git -C "$WORK/psitls" fetch --depth 1 origin 4944f00a8304 2>/dev/null || true
+git -C "$WORK/psitls" checkout 4944f00a8304 2>/dev/null || true
+# Insert ONLY inside the ConnectionState struct (address-range scoped so the
+# identically-named HelloRetryRequest field in ClientHelloInfo is NOT touched):
+sed -i '/type ConnectionState struct/,/^}/ s/HelloRetryRequest bool/HelloRetryRequest bool\n\tLocalCertificate [][]byte/' "$WORK/psitls/common.go"
+# gofmt-normalize the edited file (keeps the inserted field tab-indented):
+gofmt -w "$WORK/psitls/common.go"
+# sanity check: the field must exist exactly once in the whole tree:
+grep -c "LocalCertificate" "$WORK/psitls/common.go" | grep -qx 1 \
+  || { echo "FATAL: LocalCertificate not inserted exactly once into psiphon-tls/common.go"; exit 1; }
+
 echo "[2/6] install gomobile"
 go install golang.org/x/mobile/cmd/gomobile@latest
 gomobile init
@@ -135,9 +153,7 @@ mkdir -p "$WRAPPER"
 cat > "$WRAPPER/go.mod" <<EOF
 module narcic/bind
 
-go 1.26
-
-toolchain go1.26.8
+go 1.27
 
 require (
 	github.com/2dust/AndroidLibXrayLite v0.0.0
@@ -176,6 +192,11 @@ replace github.com/vishvananda/netlink => github.com/vishvananda/netlink v1.2.1-
 replace github.com/Psiphon-Labs/quic-go => $WORK/psiquic
 
 replace github.com/2dust/AndroidLibXrayLite => $XRAYLITE
+
+# github.com/Psiphon-Labs/psiphon-tls MUST resolve to the ADAPTED clone
+# (step 1c above) — without this replace, gomobile bind compiles the upstream
+# unpatched fork and the Go 1.27 ConnectionState alignment never applies.
+replace github.com/Psiphon-Labs/psiphon-tls => $WORK/psitls
 
 	// qpack v0.6.0 — both engines are aligned to this version (the Psiphon
 	// fork's http3 was adapted in step 1b above):
