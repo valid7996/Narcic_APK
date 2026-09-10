@@ -42,6 +42,14 @@ class AetherProcessRunner(private val context: Context) {
     // "tunnel validated ... exposing socks5" line can promote straight to
     // SOCKS_READY instead of stranding the state at DATAPLANE_VALIDATED.
     private var socksListeningSeen = false
+    // MASQUE clean-install bootstrap observability: libaether logs its
+    // Cloudflare registration/provisioning phase ("no masque identity
+    // found", "provisioning dedicated masque account", "enrolling MASQUE
+    // key", "provisioned and saved new masque identity", ...). Track the
+    // phase so ConnectionController can bound it and the UI is never stuck
+    // on "Establishing tunnel" without explanation.
+    @Volatile var bootstrapPhase: String? = null
+        private set
     private val isReconnecting = AtomicBoolean(false)
 
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.STOPPED)
@@ -58,6 +66,7 @@ class AetherProcessRunner(private val context: Context) {
             goolOuterValidated = false
             dataPlaneOk = false
             socksListeningSeen = false
+            bootstrapPhase = null
             updateState(ConnectionStatus.STARTING, attemptId)
             runnerJob = scope.launch {
                 var retryCount = 0
@@ -473,6 +482,33 @@ class AetherProcessRunner(private val context: Context) {
                 quickRetryPending.set(false)
                 SocksGate.setReady(SocksReadiness.NOT_READY)
                 updateState(ConnectionStatus.STARTING, attemptId)
+            }
+            // ---- MASQUE clean-install bootstrap/provisioning phase ----
+            // Non-terminal: keep the state machine alive and observable.
+            // Registration failures are surfaced as a phase string the
+            // controller bounds; success clears the phase below. MASQUE-only:
+            // Zero Trust enrollment deliberately waits on user input
+            // (isWaitingForCode) and must not be bounded by this phase.
+            protocol == AetherProtocol.MASQUE && (lower.contains("no masque identity found") || lower.contains("provisioning dedicated masque account")) -> {
+                bootstrapPhase = "masque_registering"
+                if (_connectionStatus.value == ConnectionStatus.STARTING) updateState(ConnectionStatus.VALIDATING, attemptId)
+            }
+            protocol == AetherProtocol.MASQUE && (lower.contains("masque identity needs a certificate") || lower.contains("registering a fresh masque account") || lower.contains("enrolling masque key")) -> {
+                bootstrapPhase = "masque_enrolling"
+                if (_connectionStatus.value == ConnectionStatus.STARTING) updateState(ConnectionStatus.VALIDATING, attemptId)
+            }
+            protocol == AetherProtocol.MASQUE && (lower.contains("provisioned and saved new masque identity") || lower.contains("loaded existing masque identity") || lower.contains("masque key enrolled")) -> {
+                bootstrapPhase = null
+                if (_connectionStatus.value == ConnectionStatus.STARTING) updateState(ConnectionStatus.VALIDATING, attemptId)
+            }
+            // Cloudflare registration/provisioning rejections (identity or
+            // API refused, rate-limited). These keep retrying inside
+            // libaether; record the phase so the controller can bound it.
+            protocol == AetherProtocol.MASQUE && (lower.contains("cloudflare refused this network") || lower.contains("the saved masque identity was refused") ||
+                lower.contains("cloudflare no longer accepts the saved identity") || lower.contains("no camouflaged route") ||
+                lower.contains("every camouflaged route failed") || lower.contains("too many registrations")) -> {
+                bootstrapPhase = "masque_registration_failed"
+                LogRepository.w("[AetherCore] MASQUE bootstrap registration problem: $line", "AetherCore")
             }
             lower.contains("validating") -> {
                 if (_connectionStatus.value == ConnectionStatus.STARTING) updateState(ConnectionStatus.VALIDATING, attemptId)

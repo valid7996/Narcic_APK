@@ -776,10 +776,41 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         var lastStatus = runner.connectionStatus.value
         var lastProgressAt = System.currentTimeMillis()
         var stallWarned = false
+        var bootstrapStartedAt = 0L
+        // Bounded wait for the initial MASQUE Cloudflare registration
+        // (clean install: no aether-masque.toml yet). libaether retries
+        // registration internally forever on blocked networks; without this
+        // bound a clean install would sit in the bootstrap phase
+        // indefinitely while the UI shows the connecting state.
+        val bootstrapTimeoutMs = 90_000L
+        var bootstrapTimeoutWarned = false
         while (currentCoroutineContext().isActive) {
             if (activeAttemptId.get() != attemptId) {
                 LogRepository.i("[AetherDiag] RUNNER loop stale-attempt exit attemptId=$attemptId")
                 return false
+            }
+            // MASQUE bootstrap phase tracking: entering the phase starts the
+            // clock; leaving it (success/any progress) stops the clock.
+            val phase = if (config.protocol == AetherProtocol.MASQUE) runner.bootstrapPhase else null
+            if (phase != null) {
+                if (bootstrapStartedAt == 0L) {
+                    bootstrapStartedAt = System.currentTimeMillis()
+                    LogRepository.i("[Controller] MASQUE bootstrap phase: $phase (bounded at ${bootstrapTimeoutMs / 1000}s)")
+                }
+                val bootstrapElapsed = System.currentTimeMillis() - bootstrapStartedAt
+                if (phase == "masque_registration_failed") {
+                    if (!bootstrapTimeoutWarned) {
+                        bootstrapTimeoutWarned = true
+                        LogRepository.w("[Controller] Cloudflare refused/blocked MASQUE registration; network-side block likely")
+                    }
+                }
+                if (bootstrapElapsed > bootstrapTimeoutMs) {
+                    runner.stop()
+                    throw IllegalStateException("MASQUE bootstrap/registration did not complete within ${bootstrapTimeoutMs / 1000}s (Cloudflare API unreachable or refusing registration on this network)")
+                }
+            } else {
+                bootstrapStartedAt = 0L
+                bootstrapTimeoutWarned = false
             }
             val coreStatus = runner.connectionStatus.value
             if (coreStatus != lastStatus) {
