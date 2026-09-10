@@ -345,7 +345,7 @@ class AetherProcessRunner(private val context: Context) {
             pb.redirectErrorStream(true)
 
             proc = withContext(Dispatchers.IO) { pb.start() }
-            LogRepository.i("[AetherDiag] RUNNER process started attemptId=$attemptId binary=${binaryFile.absolutePath} pid=${proc?.pid()}")
+            LogRepository.i("[AetherDiag] RUNNER process started attemptId=$attemptId binary=${binaryFile.absolutePath}")
 
             synchronized(lock) {
                 if (currentAttemptId.get() != attemptId) {
