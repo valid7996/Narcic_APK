@@ -255,16 +255,7 @@ class AetherProcessRunner(private val context: Context) {
             pb.directory(context.filesDir)
 
             val env = pb.environment()
-            // libaether only understands masque/wg/gool transports; Zero Trust
-            // is an organization enrollment mode that runs over MASQUE, so map
-            // the unrecognized "zt" value to "masque" for the backend.
-            val backendProto =
-                if (config.protocol == AetherProtocol.ZERO_TRUST) {
-                    AetherProtocol.MASQUE.rawValue
-                } else {
-                    config.protocol.rawValue
-                }
-            env["AETHER_PROTOCOL"] = backendProto
+            env["AETHER_PROTOCOL"] = config.protocol.rawValue
             env["AETHER_NOIZE"] = config.noise.rawValue
             env["AETHER_SCAN"] = config.scanMode.rawValue
             env["AETHER_IP"] = config.effectiveIpMode().rawValue
