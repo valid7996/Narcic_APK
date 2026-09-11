@@ -135,10 +135,12 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         try {
             val config = AetherConfigRepository.getInstance(getSettings(PlatformContext(appContext))).config.value.effectiveZeroTrustConfig()
 
-            // Zero Trust requires organization credentials (team + one auth
-            // method). Blocking here prevents the silent fallback to consumer
-            // WARP/MASQUE that libaether performs when no --team is supplied.
-            if (config.protocol == AetherProtocol.ZERO_TRUST) {
+            // Zero Trust label check: only block REAL organization enrollment
+            // attempts that carry a team name but no valid credentials. An
+            // empty teamName is the historical consumer-WARP fallback path
+            // (libaether: "Zero Trust skipped; staying on personal WARP") and
+            // is intentionally allowed to run — the UI surfaces it as MASQUE.
+            if (config.protocol == AetherProtocol.ZERO_TRUST && config.teamName.isNotBlank()) {
                 val ztError = config.zeroTrustError()
                 if (ztError != null) {
                     LogRepository.e("[Controller] Zero Trust start blocked: $ztError")

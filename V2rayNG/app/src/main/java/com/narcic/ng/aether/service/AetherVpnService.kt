@@ -19,6 +19,7 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import android.util.Log as AndroidLog
 import com.narcic.ng.ui.main.MainActivity
 import com.narcic.ng.R
 import com.narcic.ng.aether.core.ConnectionController
@@ -37,6 +38,7 @@ import com.narcic.ng.aether.shared.data.AetherConfigRepository
 import com.narcic.ng.aether.shared.data.LogRepository
 import com.narcic.ng.aether.shared.model.ConnectionMode
 import com.narcic.ng.aether.shared.model.ConnectionStatus
+import com.narcic.ng.aether.shared.model.LogLevel
 import com.narcic.ng.aether.shared.model.TunnelEngine
 import com.narcic.ng.aether.shared.platform.Bridge
 import kotlinx.coroutines.CancellationException
@@ -129,6 +131,19 @@ class AetherVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         LogRepository.initialize(getSettings(PlatformContext(this)))
+        // Bridge app logs to logcat under the AetherST tag so PID-filtered
+        // logcat shows the Aether pipeline (AetherDiag/AetherCore/...).
+        // LogRepository.fileLogWriter is the single fan-out hook the shared
+        // code already calls for every entry; assigning it here mirrors
+        // every in-app log line to android.util.Log with no behavior change.
+        LogRepository.fileLogWriter = { level, tag, message ->
+            when (level) {
+                LogLevel.ERROR -> AndroidLog.e(tag, message)
+                LogLevel.WARN -> AndroidLog.w(tag, message)
+                LogLevel.DEBUG -> AndroidLog.d(tag, message)
+                LogLevel.INFO -> AndroidLog.i(tag, message)
+            }
+        }
         PsiphonController.setVpnService(this)
         createNotificationChannel()
         

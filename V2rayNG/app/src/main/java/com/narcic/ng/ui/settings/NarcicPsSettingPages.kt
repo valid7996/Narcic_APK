@@ -720,15 +720,27 @@ fun NarcicProtocolPage(
             NpsGroupCard(cardColor) {
                 SettingsListItem(
                     title = stringResource(R.string.nps_label_protocol),
-                    entries = AetherProtocol.entries.map { it.displayName },
-                    values = AetherProtocol.entries.map { it.name },
+                    // UI protocol list mirrors ConnectionSetupCard: ZERO_TRUST
+                    // (labelled "MASQUE", the consumer-WARP fallback path)
+                    // replaces the direct MASQUE entry, which stays fully
+                    // intact in the backend but is not offered here.
+                    entries = listOf(
+                        AetherProtocol.ZERO_TRUST,
+                        AetherProtocol.GOOL,
+                        AetherProtocol.WG,
+                    ).map { "MASQUE".takeIf { p -> p.isNotEmpty() && it == AetherProtocol.ZERO_TRUST } ?: it.displayName },
+                    values = listOf(
+                        AetherProtocol.ZERO_TRUST,
+                        AetherProtocol.GOOL,
+                        AetherProtocol.WG,
+                    ).map { it.name },
                     selectedValue = config.protocol.name,
                     onSelected = { v ->
                         val p = AetherProtocol.entries.firstOrNull { it.name == v } ?: return@SettingsListItem
                         update(config.copy(protocol = p))
                     }
                 )
-                if (config.protocol == AetherProtocol.MASQUE) {
+                if (config.protocol == AetherProtocol.MASQUE || config.protocol == AetherProtocol.ZERO_TRUST) {
                     NpsDivider(subColor.copy(alpha = 0.15f))
                     SettingsSwitchItem(
                         title = stringResource(R.string.nps_proto_h2),

@@ -62,10 +62,14 @@ import com.narcic.ng.util.CountryFlags
 private fun AetherConfig.supportsPsiphonChain(): Boolean = protocol == AetherProtocol.WG
 
 private fun methodLabel(p: AetherProtocol): String = when (p) {
+    // The visible "MASQUE" entry maps to the historical Zero Trust fallback
+    // path (empty team -> libaether consumer-WARP/MASQUE fallback); the
+    // direct MASQUE protocol and real org-enrollment Zero Trust stay in the
+    // backend but are not offered from this UI.
+    AetherProtocol.ZERO_TRUST -> "MASQUE"
     AetherProtocol.MASQUE -> "MASQUE"
     AetherProtocol.GOOL -> "GOOL"
     AetherProtocol.WG -> "WireGuard"
-    AetherProtocol.ZERO_TRUST -> "Zero Trust"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,10 +90,12 @@ fun ConnectionSetupCard(
     var showMethodSheet by remember { mutableStateOf(false) }
     var showRegionSheet by remember { mutableStateOf(false) }
 
-    // Zero Trust needs team + one auth method before it can connect
-    // (AetherConfig.zeroTrustError drives both this badge and the start gate).
+    // Zero Trust org credentials are only required when a team name is set:
+    // an empty team is the historical consumer-WARP fallback path surfaced in
+    // the UI as "MASQUE", so it must not show the unconfigured badge.
     val isZtUnconfigured =
         config.protocol == AetherProtocol.ZERO_TRUST &&
+        config.teamName.isNotBlank() &&
         config.zeroTrustError() != null
 
     Column(
@@ -219,13 +225,15 @@ fun ConnectionSetupCard(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
             SheetTitle("روش اتصال", accent)
+            // UI protocol list: ZERO_TRUST (labelled "MASQUE" — the historical
+            // consumer-WARP fallback path) replaces the direct MASQUE entry,
+            // which stays hidden in the UI but fully intact in the backend.
             listOf(
-                AetherProtocol.MASQUE,
+                AetherProtocol.ZERO_TRUST,
                 AetherProtocol.GOOL,
                 AetherProtocol.WG,
-                AetherProtocol.ZERO_TRUST,
             ).forEach { p ->
-                val ztPending = p == AetherProtocol.ZERO_TRUST && config.zeroTrustError() != null
+                val ztPending = p == AetherProtocol.ZERO_TRUST && config.teamName.isNotBlank() && config.zeroTrustError() != null
                 SheetOptionRow(
                     title = methodLabel(p),
                     subtitle = if (ztPending) {
