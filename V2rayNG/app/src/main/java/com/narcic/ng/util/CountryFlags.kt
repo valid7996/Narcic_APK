@@ -103,6 +103,7 @@ object CountryFlags {
         "PK" to "پاکستان",
         "AF" to "افغانستان",
         "IS" to "ایسلند",
+        "SK" to "اسلواکی",
         "LU" to "لوکزامبورگ",
         "CY" to "قبرس",
         "MT" to "مالت",

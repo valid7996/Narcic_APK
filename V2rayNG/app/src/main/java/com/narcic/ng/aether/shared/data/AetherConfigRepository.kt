@@ -19,8 +19,21 @@ class AetherConfigRepository private constructor(private val settings: Settings)
     val isOnboardingComplete: StateFlow<Boolean> = _isOnboardingComplete.asStateFlow()
 
     companion object {
+        // Full Psiphon-tunnel-core egress region set: the previous 26-region
+        // fallback plus the 8 regions the engine supports that were missing
+        // (BG, EE, HK, HR, LT, LV, SK, UA). Single shared source for both
+        // loadCachedEgressRegions() and cacheEgressRegions(); regions beyond
+        // this set still flow in live via PsiphonController's
+        // onAvailableEgressRegions callback and are unioned on top.
         @Volatile
         private var INSTANCE: AetherConfigRepository? = null
+
+        private val DEFAULT_EGRESS_REGIONS = listOf(
+            "AT", "AU", "BE", "BG", "BR", "CA", "CH", "CZ", "DE", "DK",
+            "EE", "ES", "FI", "FR", "GB", "HK", "HR", "ID", "IE", "IN",
+            "IT", "JP", "LT", "LV", "NL", "NO", "PL", "RO", "RS", "SE",
+            "SG", "SK", "UA", "US"
+        )
 
         fun getInstance(settings: Settings): AetherConfigRepository {
             return INSTANCE ?: synchronized(this) {
@@ -36,19 +49,17 @@ class AetherConfigRepository private constructor(private val settings: Settings)
     }
 
     private fun loadCachedEgressRegions(): List<String> {
-        val defaultRegions = listOf("AT", "AU", "BE", "BR", "CA", "CH", "CZ", "DE", "DK", "ES", "FI", "FR", "GB", "ID", "IE", "IN", "IT", "JP", "NL", "NO", "PL", "RO", "RS", "SE", "SG", "US")
         val cached = settings.getString("psiphon_egress_regions_cache", "")
             .split(",")
             .map { it.trim().uppercase() }
             .filter { it.matches(Regex("^[A-Z]{2}$")) }
             .distinct()
-        return if (cached.isEmpty()) defaultRegions else (defaultRegions + cached).distinct().sorted()
+        return if (cached.isEmpty()) DEFAULT_EGRESS_REGIONS else (DEFAULT_EGRESS_REGIONS + cached).distinct().sorted()
     }
 
     fun cacheEgressRegions(regions: List<String>) {
-        val defaultRegions = listOf("AT", "AU", "BE", "BR", "CA", "CH", "CZ", "DE", "DK", "ES", "FI", "FR", "GB", "ID", "IE", "IN", "IT", "JP", "NL", "NO", "PL", "RO", "RS", "SE", "SG", "US")
         val existing = settings.getString("psiphon_egress_regions_cache", "").split(",").map { it.trim().uppercase() }.filter { it.matches(Regex("^[A-Z]{2}$")) }
-        val normalized = (defaultRegions + existing + regions.map { it.trim().uppercase() }.filter { it.matches(Regex("^[A-Z]{2}$")) }).distinct().sorted()
+        val normalized = (DEFAULT_EGRESS_REGIONS + existing + regions.map { it.trim().uppercase() }.filter { it.matches(Regex("^[A-Z]{2}$")) }).distinct().sorted()
         settings.putString("psiphon_egress_regions_cache", normalized.joinToString(","))
         PsiphonEgressRegistry.setAvailableRegions(normalized)
     }
