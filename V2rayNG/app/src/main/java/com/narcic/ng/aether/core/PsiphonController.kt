@@ -6,7 +6,6 @@ import com.narcic.ng.aether.platform.PlatformContext
 import com.narcic.ng.aether.platform.getSettings
 import com.narcic.ng.aether.shared.data.AetherConfigRepository
 import com.narcic.ng.aether.shared.data.LogRepository
-import com.narcic.ng.aether.shared.data.PsiphonEgressRegistry
 import com.narcic.ng.aether.shared.model.AetherConfig
 import java.io.File
 import java.lang.ref.WeakReference
@@ -92,8 +91,19 @@ object PsiphonController {
                         }
                         "onAvailableEgressRegions" -> {
                             val list = (args?.get(0) as? List<*>)?.mapNotNull { it?.toString()?.trim()?.uppercase() }?.filter { it.matches(Regex("^[A-Z]{2}$")) } ?: emptyList()
-                            PsiphonEgressRegistry.setAvailableRegions(list)
-                            runCatching { AetherConfigRepository.getInstance(getSettings(PlatformContext(context))).cacheEgressRegions(list) }
+                            // Append-only: the runtime notice lists the regions the
+                            // CURRENT server-entry set can egress through today —
+                            // it must never replace (shrink) the canonical country
+                            // list. cacheEgressRegions unions the reported regions
+                            // with DEFAULT_EGRESS_REGIONS + persisted cache and
+                            // republishes the full set to PsiphonEgressRegistry, so
+                            // every country (and its name/flag) stays visible even
+                            // when the bundled server_entries lack it.
+                            runCatching {
+                                AetherConfigRepository.getInstance(getSettings(PlatformContext(context))).cacheEgressRegions(list)
+                            }.onFailure {
+                                LogRepository.w("Failed to persist egress regions: ${it.message}", "Psiphon")
+                            }
                             LogRepository.i("Psiphon available egress regions: ${list.joinToString()}", "Psiphon")
                             null
                         }
