@@ -185,6 +185,66 @@ object PsiphonController {
         LogRepository.i("Psiphon stopped", "Psiphon")
     }
 
+    /**
+     * Bounded single-tunnel region probe for the WG + Psiphon Chain fast-path
+     * (Smart Reconnect). Starts Psiphon pinned to [egressRegion] (EgressRegion
+     * override on a copy of [baseConfig]), requires onConnected within
+     * [connectTimeoutMs] plus a short stability window of [stableMs], then
+     * ALWAYS stops the tunnel before returning — winner or loser.
+     *
+     * The psi runtime is a single-tunnel singleton: callers MUST enforce
+     * concurrency = 1. The guard below refuses to stack a second tunnel
+     * instead of racing them.
+     *
+     * stop() clears the host VpnService WeakReference; it is restored right
+     * after so the real chain start following this probe keeps bindToDevice()
+     * working.
+     */
+    fun probeRegion(
+        context: Context,
+        baseConfig: AetherConfig,
+        egressRegion: String,
+        connectTimeoutMs: Long = 8000L,
+        stableMs: Long = 2000L,
+    ): Boolean {
+        if (running) return false
+        val host = vpnServiceRef?.get()
+        var started = false
+        val probe = Thread {
+            started = try {
+                start(context, baseConfig.copy(psiphonEgressRegion = egressRegion), upstream = null)
+            } catch (_: Throwable) {
+                false
+            }
+        }
+        probe.isDaemon = true
+        probe.name = "psiphon-probe-$egressRegion"
+        probe.start()
+        probe.join(connectTimeoutMs)
+        var healthy = false
+        if (!probe.isAlive) {
+            healthy = started && isConnected()
+            if (healthy) {
+                val deadline = System.currentTimeMillis() + stableMs
+                while (System.currentTimeMillis() < deadline) {
+                    if (!isConnected()) { healthy = false; break }
+                    Thread.sleep(200L)
+                }
+                healthy = healthy && stableFor(stableMs)
+            }
+        }
+        val stopper = Thread {
+            runCatching { stop() }
+            runCatching { host?.let { setVpnService(it) } }
+        }
+        stopper.isDaemon = true
+        stopper.name = "psiphon-probe-stop"
+        stopper.start()
+        stopper.join(3000L)
+        Thread.sleep(200L) // let the psi runtime fully release before next start
+        return healthy
+    }
+
     fun isRunning(): Boolean {
         if (!running) return false
         return try {
