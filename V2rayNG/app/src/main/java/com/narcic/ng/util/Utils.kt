@@ -15,6 +15,7 @@ import androidx.core.net.toUri
 import com.narcic.ng.AppConfig
 import com.narcic.ng.AppConfig.LOOPBACK
 import com.narcic.ng.BuildConfig
+import java.io.File
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -338,6 +339,17 @@ object Utils {
     }
 
     /**
+     * The resolved asset directory is cached for the lifetime of the process:
+     * the Xray core resolves it ONCE (CoreNativeManager.initCoreEnv) while the
+     * updater reads/writes it on demand. Without a sticky answer, a momentary
+     * null from getExternalFilesDir (external storage not yet mounted right
+     * after boot) would silently move the runtime assets to a different
+     * directory and updated geo files would stop being seen by the core.
+     */
+    @Volatile
+    private var cachedUserAssetPath: String? = null
+
+    /**
      * Get the path to the user asset directory.
      *
      * @param context The context to use.
@@ -346,9 +358,15 @@ object Utils {
     fun userAssetPath(context: Context?): String {
         if (context == null) return ""
 
+        cachedUserAssetPath?.let { if (it.isNotEmpty()) return it }
         return try {
-            context.getExternalFilesDir(AppConfig.DIR_ASSETS)?.absolutePath
+            val path = context.getExternalFilesDir(AppConfig.DIR_ASSETS)?.absolutePath
                 ?: context.getDir(AppConfig.DIR_ASSETS, 0).absolutePath
+            // Ensure the directory exists before publishing the path so the
+            // seed/updater can write without racing against creation.
+            runCatching { File(path).mkdirs() }
+            cachedUserAssetPath = path
+            path
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to get user asset path", e)
             ""

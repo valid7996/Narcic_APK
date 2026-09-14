@@ -101,6 +101,9 @@ class UserAssetViewModel(application: Application) : BaseViewModel(application) 
         val targetTemp = File(extDir, item.remarks + "_temp")
         val target = File(extDir, item.remarks)
         try {
+            // Drop a stale temp file from an interrupted previous run first so
+            // we never validate/rename half-written leftovers.
+            targetTemp.delete()
             if (
                 HttpUtil.downloadToFile(
                     UrlContentRequest(
@@ -113,13 +116,45 @@ class UserAssetViewModel(application: Application) : BaseViewModel(application) 
                     targetTemp
                 )
             ) {
-                targetTemp.renameTo(target)
+                if (!targetTemp.isPlausibleGeoDat()) {
+                    LogUtil.e(
+                        AppConfig.TAG,
+                        "Downloaded geo asset looks invalid, keeping the old file: ${item.remarks}"
+                    )
+                    targetTemp.delete()
+                    return false
+                }
+                // Atomic replace with a CHECKED rename: a corrupt or partial
+                // download must never take the place of the healthy runtime
+                // file, and success is only reported when the swap happened.
+                if (!targetTemp.renameTo(target)) {
+                    LogUtil.e(AppConfig.TAG, "Rename failed for ${item.remarks}; old file kept")
+                    targetTemp.delete()
+                    return false
+                }
                 return true
             }
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to download geo file: ${item.remarks}", e)
         }
+        targetTemp.delete()
         return false
+    }
+
+    /**
+     * Cheap sanity gate for *.dat geo assets: v2ray-geoformat files start with
+     * the "// Geo" comment header (the Xray loader rejects files without it)
+     * and are orders of magnitude larger than any HTTP error page.
+     */
+    private fun File.isPlausibleGeoDat(): Boolean {
+        if (!isFile || length() < 100_000L) return false
+        return runCatching {
+            inputStream().use { input ->
+                val head = ByteArray(8)
+                val read = input.read(head)
+                read >= 6 && String(head, 0, read, Charsets.US_ASCII).startsWith("// Geo")
+            }
+        }.getOrDefault(false)
     }
 
     data class GeoDownloadResult(

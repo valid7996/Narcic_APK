@@ -98,6 +98,39 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             _isWaitingForCode.value = waiting
             Bridge.isWaitingForCode.value = waiting
         }
+
+        /**
+         * The ONLY sanctioned read path for the Psiphon chain's upstream SOCKS
+         * URL from outside the Aether package. Psiphon chain state is
+         * Aether-owned runtime state; V2Ray/AWG code must never import
+         * [ActiveProxyProvider] directly.
+         */
+        fun currentChainSocksUrl(): String? = ActiveProxyProvider.psiphonProxyUrl
+
+        /**
+         * Fully clears Aether-only global runtime state (Psiphon chain flag,
+         * login-code wait, status). Called from ConnectionController.stop()
+         * and AetherVpnService.onDestroy() so a stale RUNNING/chaining value
+         * can never leak into a V2Ray or AmneziaWG session in this process.
+         */
+        fun clearGlobalRuntimeState() {
+            psiphonChaining = false
+            _isWaitingForCode.value = false
+            Bridge.isWaitingForCode.value = false
+            lastKnownStatus = ConnectionStatus.STOPPED
+            _status.value = ConnectionStatus.STOPPED
+            Bridge.statusOverride.value = ConnectionStatus.STOPPED
+        }
+
+        // --- WG + Psiphon Chain smart reconnect (bounded) -------------------
+        private const val CHAIN_PROBE_CONNECT_MS = 8000L
+        private const val CHAIN_PROBE_STABLE_MS = 2000L
+        private const val CHAIN_SCAN_MAX_REGIONS = 32
+        private const val CHAIN_SCAN_BUDGET_MS = 120_000L
+        private const val CHAIN_SCAN_COOLDOWN_MS = 120_000L
+
+        /** Until this epoch, region scans are skipped (auto egress used) — set after a fully failed scan so auto-reconnect retries don't rescan pointlessly. */
+        @Volatile private var chainScanCooldownUntil = 0L
     }
 
     init {
@@ -189,6 +222,10 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             baseRx = if (rawRx == TrafficStats.UNSUPPORTED.toLong() || rawRx < 0) 0L else rawRx
             if (psiphonSupported) {
                 psiphonChaining = true
+                // Smart Reconnect (WG + Psiphon Chain ONLY): fast-path probe of
+                // the cached winner region, else a bounded single-concurrency
+                // region scan. MASQUE/GOOL/plain-WG return untouched.
+                effectiveConfig = resolvePsiphonEgressForChain(effectiveConfig, attemptId)
                 if (effectiveConfig.protocol == AetherProtocol.MASQUE) {
                     val masqueOrder = effectiveConfig.psiphonMasqueOrder.lowercase().trim()
                     if (masqueOrder == "psiphon_first") {
@@ -887,11 +924,82 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         return true
     }
 
+    /**
+     * Smart Reconnect for WG + Psiphon Chain ONLY (never reached for other
+     * protocols — the caller gates on psiphonSupported which requires WG):
+     *  - A user-pinned egress region always wins — no probe, no scan.
+     *  - Fast path: probe the cached winner region (bounded); on success no
+     *    scan happens at all.
+     *  - Fast-path failure invalidates only that cache entry, then a bounded
+     *    single-concurrency scan (max 32 regions, 120s global watchdog) runs;
+     *    the first healthy candidate wins and is persisted per profile/chain
+     *    hash.
+     *  - Scan exhaustion or cooldown falls back to today's auto-egress
+     *    behavior (EgressRegion="").
+     */
+    private suspend fun resolvePsiphonEgressForChain(effectiveConfig: AetherConfig, attemptId: Long): AetherConfig {
+        if (effectiveConfig.protocol != AetherProtocol.WG) return effectiveConfig
+        if (!effectiveConfig.psiphonEnabled) return effectiveConfig
+        if (effectiveConfig.psiphonEgressRegion.isNotBlank()) return effectiveConfig
+        val repo = AetherConfigRepository.getInstance(getSettings(PlatformContext(appContext)))
+        val hash = chainProfileHash(effectiveConfig)
+        val cached = repo.getChainFastRegion(hash)
+        if (cached.isNotBlank()) {
+            LogRepository.i("[Controller] Chain fast-path: probing cached region $cached")
+            val ok = withContext(Dispatchers.IO) {
+                PsiphonController.probeRegion(appContext, effectiveConfig, cached, CHAIN_PROBE_CONNECT_MS, CHAIN_PROBE_STABLE_MS)
+            }
+            if (ok) {
+                LogRepository.i("[Controller] Chain fast-path: $cached healthy — skipping scan")
+                return effectiveConfig.copy(psiphonEgressRegion = cached)
+            }
+            LogRepository.w("[Controller] Chain fast-path: cached region $cached failed — invalidating, scanning")
+            repo.invalidateChainFastRegion(hash, cached)
+        }
+        if (System.currentTimeMillis() < chainScanCooldownUntil) {
+            LogRepository.i("[Controller] Chain region scan on cooldown — using auto egress")
+            return effectiveConfig
+        }
+        chainScanCooldownUntil = System.currentTimeMillis() + CHAIN_SCAN_COOLDOWN_MS
+        var tried = 0
+        val scanStart = System.currentTimeMillis()
+        for (region in repo.getChainScanRegions()) {
+            if (activeAttemptId.get() != attemptId) return effectiveConfig // attempt stale/aborted
+            if (System.currentTimeMillis() - scanStart > CHAIN_SCAN_BUDGET_MS) {
+                LogRepository.w("[Controller] Chain region scan budget exhausted after $tried probes")
+                break
+            }
+            if (region == cached) continue // already probed on the fast path
+            tried++
+            LogRepository.i("[Controller] Chain region scan $tried/$CHAIN_SCAN_MAX_REGIONS: probing $region")
+            val ok = withContext(Dispatchers.IO) {
+                PsiphonController.probeRegion(appContext, effectiveConfig, region, CHAIN_PROBE_CONNECT_MS, CHAIN_PROBE_STABLE_MS)
+            }
+            if (ok) {
+                LogRepository.i("[Controller] Chain region scan: winner $region after $tried probes")
+                repo.setChainFastRegion(hash, region)
+                return effectiveConfig.copy(psiphonEgressRegion = region)
+            }
+        }
+        LogRepository.w("[Controller] Chain region scan finished ($tried probes) — falling back to auto egress")
+        return effectiveConfig
+    }
+
+    /** Stable per-profile/per-chain identity for the fast-path cache (never shared across profiles or chain configs). */
+    private fun chainProfileHash(cfg: AetherConfig): String {
+        val basis = "${cfg.wgPeer}|${cfg.psiphonChainOuter}|${cfg.psiphonChainMode.name}|${cfg.psiphonSocksPort}"
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(basis.toByteArray(Charsets.UTF_8))
+            .take(4)
+            .joinToString("") { "%02x".format(it) }
+    }
+
     override suspend fun stop() {
         mutex.withLock {
             if (_status.value == ConnectionStatus.STOPPED) {
                 stopTimer()
                 ActiveProxyProvider.psiphonProxyUrl = null
+                clearGlobalRuntimeState()
                 return@withLock
             }
 
@@ -915,6 +1023,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             ActiveProxyProvider.psiphonProxyUrl = null
             stopTimer()
             runCatching { withTimeoutOrNull(2000.milliseconds) { cleanup(attemptId) } }
+            clearGlobalRuntimeState()
             notifyStatusChanged(appContext, ConnectionStatus.STOPPED)
             LogRepository.i("[Controller] Core stopped")
         }

@@ -64,6 +64,41 @@ class AetherConfigRepository private constructor(private val settings: Settings)
         PsiphonEgressRegistry.setAvailableRegions(normalized)
     }
 
+    // --- Psiphon chain fast-path cache (Smart Reconnect) --------------------
+    // WG + Psiphon Chain scope ONLY. Keys are versioned
+    // (psiphon_chain_fast_v1.<profileHash>) and are never written by any
+    // other protocol/engine, so a WG profile without the chain, another WG
+    // profile, or another engine can never read another chain's winner.
+
+    /** Last Psiphon egress region that completed a healthy chain for this profile, or "" when unknown. */
+    fun getChainFastRegion(profileHash: String): String {
+        return settings.getString("psiphon_chain_fast_v1.$profileHash", "") ?: ""
+    }
+
+    fun setChainFastRegion(profileHash: String, region: String) {
+        if (!region.matches(Regex("^[A-Z]{2}$"))) return
+        settings.putString("psiphon_chain_fast_v1.$profileHash", region)
+        settings.putString("psiphon_chain_fast_v1.$profileHash.success_epoch", System.currentTimeMillis().toString())
+        settings.putString("psiphon_chain_fast_v1.$profileHash.fail_streak", "0")
+    }
+
+    /** Marks one failure on the cached winner; two consecutive failures drop the entry entirely. */
+    fun invalidateChainFastRegion(profileHash: String, region: String) {
+        if (getChainFastRegion(profileHash) != region) return
+        val fails = (settings.getString("psiphon_chain_fast_v1.$profileHash.fail_streak", "0") ?: "0").toIntOrNull() ?: 0
+        if (fails + 1 >= 2) {
+            settings.putString("psiphon_chain_fast_v1.$profileHash", "")
+            settings.putString("psiphon_chain_fast_v1.$profileHash.success_epoch", "")
+            settings.putString("psiphon_chain_fast_v1.$profileHash.fail_streak", "")
+        } else {
+            settings.putString("psiphon_chain_fast_v1.$profileHash.fail_streak", (fails + 1).toString())
+        }
+    }
+
+    /** Bounded scan order: live regions first, then the rest of the built-in defaults, capped at 32. */
+    fun getChainScanRegions(): List<String> =
+        (PsiphonEgressRegistry.availableRegions.value + DEFAULT_EGRESS_REGIONS).distinct().take(32)
+
     private fun loadConfig(): AetherConfig {
         migrateCoreLoggingDefault()
         return readFromSettings("")

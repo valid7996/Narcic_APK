@@ -369,6 +369,10 @@ private fun UserAssetItem(
         stringResource(R.string.msg_file_not_found)
     }
     val showEditButton = item.assetUrl.locked != true && item.assetUrl.url != "file"
+    // Built-in (locked) geo assets must not be deletable: removing the updated
+    // runtime file makes the next initAssets() re-seed the OLDER APK-bundled
+    // copy over it — the classic "updated asset reverts" bug.
+    val showDeleteButton = item.assetUrl.locked != true
 
     Row(
         modifier = Modifier
@@ -405,12 +409,14 @@ private fun UserAssetItem(
                 )
             }
         }
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                painter = painterResource(R.drawable.ic_delete_24dp),
-                contentDescription = stringResource(R.string.menu_item_del_config),
-                modifier = Modifier.size(24.dp)
-            )
+        if (showDeleteButton) {
+            IconButton(onClick = onDeleteClick) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete_24dp),
+                    contentDescription = stringResource(R.string.menu_item_del_config),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }

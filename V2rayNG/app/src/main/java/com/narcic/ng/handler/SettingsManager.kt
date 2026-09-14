@@ -334,6 +334,7 @@ object SettingsManager {
      */
     fun initAssets(context: Context, assets: AssetManager) {
         val extFolder = Utils.userAssetPath(context)
+        if (extFolder.isEmpty()) return
 
         try {
             val geo = arrayOf(AppConfig.GEOSITE_DAT, AppConfig.GEOIP_DAT, AppConfig.GEOIP_ONLY_CN_PRIVATE_DAT)
@@ -342,12 +343,29 @@ object SettingsManager {
                 ?.filter { !File(extFolder, it).exists() }
                 ?.forEach {
                     val target = File(extFolder, it)
-                    assets.open(it).use { input ->
-                        FileOutputStream(target).use { output ->
-                            input.copyTo(output)
+                    val temp = File(extFolder, "$it.tmp")
+                    // Seed via temp + checked rename: a half-written seed
+                    // (storage race, crash mid-copy) must never masquerade as
+                    // a complete file — the exists() gate would then block any
+                    // real update path forever. Only an intact copy is renamed
+                    // into place; existing (possibly updated) files are never
+                    // touched, so the runtime asset always outranks the APK.
+                    runCatching {
+                        assets.open(it).use { input ->
+                            FileOutputStream(temp).use { output ->
+                                input.copyTo(output)
+                            }
                         }
+                        if (temp.length() > 0 && temp.renameTo(target)) {
+                            LogUtil.i(AppConfig.TAG, "Copied from apk assets folder to ${target.absolutePath}")
+                        } else {
+                            LogUtil.e(AppConfig.TAG, "asset seed failed for $it; keeping runtime file authoritative")
+                            temp.delete()
+                        }
+                    }.onFailure { error ->
+                        LogUtil.e(ANG_PACKAGE, "asset copy failed", error)
+                        temp.delete()
                     }
-                    LogUtil.i(AppConfig.TAG, "Copied from apk assets folder to ${target.absolutePath}")
                 }
         } catch (e: Exception) {
             LogUtil.e(ANG_PACKAGE, "asset copy failed", e)

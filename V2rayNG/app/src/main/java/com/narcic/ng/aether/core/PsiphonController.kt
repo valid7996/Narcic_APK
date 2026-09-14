@@ -6,7 +6,6 @@ import com.narcic.ng.aether.platform.PlatformContext
 import com.narcic.ng.aether.platform.getSettings
 import com.narcic.ng.aether.shared.data.AetherConfigRepository
 import com.narcic.ng.aether.shared.data.LogRepository
-import com.narcic.ng.aether.shared.data.PsiphonEgressRegistry
 import com.narcic.ng.aether.shared.model.AetherConfig
 import java.io.File
 import java.lang.ref.WeakReference
@@ -23,6 +22,16 @@ object PsiphonController {
 
     fun setVpnService(service: VpnService) {
         vpnServiceRef = WeakReference(service)
+    }
+
+    /**
+     * Releases the VpnService reference without a full stop() — used by
+     * AetherVpnService.onDestroy() so a dead service is never pinned and the
+     * Psiphon state stays strictly Aether-scoped.
+     */
+    fun clearVpnService() {
+        vpnServiceRef?.clear()
+        vpnServiceRef = null
     }
 
     fun isSupported(config: AetherConfig): Boolean {
@@ -82,8 +91,19 @@ object PsiphonController {
                         }
                         "onAvailableEgressRegions" -> {
                             val list = (args?.get(0) as? List<*>)?.mapNotNull { it?.toString()?.trim()?.uppercase() }?.filter { it.matches(Regex("^[A-Z]{2}$")) } ?: emptyList()
-                            PsiphonEgressRegistry.setAvailableRegions(list)
-                            runCatching { AetherConfigRepository.getInstance(getSettings(PlatformContext(context))).cacheEgressRegions(list) }
+                            // Append-only: the runtime notice lists the regions the
+                            // CURRENT server-entry set can egress through today —
+                            // it must never replace (shrink) the canonical country
+                            // list. cacheEgressRegions unions the reported regions
+                            // with DEFAULT_EGRESS_REGIONS + persisted cache and
+                            // republishes the full set to PsiphonEgressRegistry, so
+                            // every country (and its name/flag) stays visible even
+                            // when the bundled server_entries lack it.
+                            runCatching {
+                                AetherConfigRepository.getInstance(getSettings(PlatformContext(context))).cacheEgressRegions(list)
+                            }.onFailure {
+                                LogRepository.w("Failed to persist egress regions: ${it.message}", "Psiphon")
+                            }
                             LogRepository.i("Psiphon available egress regions: ${list.joinToString()}", "Psiphon")
                             null
                         }
@@ -173,6 +193,66 @@ object PsiphonController {
         vpnServiceRef?.clear()
         vpnServiceRef = null
         LogRepository.i("Psiphon stopped", "Psiphon")
+    }
+
+    /**
+     * Bounded single-tunnel region probe for the WG + Psiphon Chain fast-path
+     * (Smart Reconnect). Starts Psiphon pinned to [egressRegion] (EgressRegion
+     * override on a copy of [baseConfig]), requires onConnected within
+     * [connectTimeoutMs] plus a short stability window of [stableMs], then
+     * ALWAYS stops the tunnel before returning — winner or loser.
+     *
+     * The psi runtime is a single-tunnel singleton: callers MUST enforce
+     * concurrency = 1. The guard below refuses to stack a second tunnel
+     * instead of racing them.
+     *
+     * stop() clears the host VpnService WeakReference; it is restored right
+     * after so the real chain start following this probe keeps bindToDevice()
+     * working.
+     */
+    fun probeRegion(
+        context: Context,
+        baseConfig: AetherConfig,
+        egressRegion: String,
+        connectTimeoutMs: Long = 8000L,
+        stableMs: Long = 2000L,
+    ): Boolean {
+        if (running) return false
+        val host = vpnServiceRef?.get()
+        var started = false
+        val probe = Thread {
+            started = try {
+                start(context, baseConfig.copy(psiphonEgressRegion = egressRegion), upstream = null)
+            } catch (_: Throwable) {
+                false
+            }
+        }
+        probe.isDaemon = true
+        probe.name = "psiphon-probe-$egressRegion"
+        probe.start()
+        probe.join(connectTimeoutMs)
+        var healthy = false
+        if (!probe.isAlive) {
+            healthy = started && isConnected()
+            if (healthy) {
+                val deadline = System.currentTimeMillis() + stableMs
+                while (System.currentTimeMillis() < deadline) {
+                    if (!isConnected()) { healthy = false; break }
+                    Thread.sleep(200L)
+                }
+                healthy = healthy && stableFor(stableMs)
+            }
+        }
+        val stopper = Thread {
+            runCatching { stop() }
+            runCatching { host?.let { setVpnService(it) } }
+        }
+        stopper.isDaemon = true
+        stopper.name = "psiphon-probe-stop"
+        stopper.start()
+        stopper.join(3000L)
+        Thread.sleep(200L) // let the psi runtime fully release before next start
+        return healthy
     }
 
     fun isRunning(): Boolean {
