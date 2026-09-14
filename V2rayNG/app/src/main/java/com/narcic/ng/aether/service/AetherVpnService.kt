@@ -41,6 +41,7 @@ import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.model.LogLevel
 import com.narcic.ng.aether.shared.model.TunnelEngine
 import com.narcic.ng.aether.shared.platform.Bridge
+import com.narcic.ng.core.EngineHandoff
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -311,6 +313,9 @@ class AetherVpnService : VpnService() {
         when (intent?.action) {
             ACTION_START -> {
                 isUserInitiatedStop = false
+                // Engine handoff liveness flag: Aether is (re)taking TUN
+                // ownership; other engines wait on this before starting.
+                EngineHandoff.setAetherAlive(true)
                 autoReconnectJob?.cancel()
                 autoReconnectJob = null
                 showInitialNotification()
@@ -318,6 +323,7 @@ class AetherVpnService : VpnService() {
             }
             ACTION_RESTART -> {
                 isUserInitiatedStop = false
+                EngineHandoff.setAetherAlive(true)
                 showInitialNotification()
                 restartTunnel(commandCounter.incrementAndGet())
             }
@@ -327,6 +333,7 @@ class AetherVpnService : VpnService() {
                 stopVpnService(commandCounter.incrementAndGet())
             }
             ACTION_SWITCH_HEV -> {
+                EngineHandoff.setAetherAlive(true)
                 showInitialNotification()
                 val host = intent.getStringExtra("host") ?: "127.0.0.1"
                 val port = intent.getIntExtra("port", 3080)
@@ -678,6 +685,12 @@ class AetherVpnService : VpnService() {
             }
 
             if (commandCounter.get() != commandId) return@launch
+
+            // Engine handoff liveness flag: Aether released the TUN/resources
+            // (and cleared all Aether-only runtime state above). Guarded by the
+            // command counter so a newer START that already re-claimed the
+            // flag is not clobbered by this older teardown.
+            EngineHandoff.setAetherAlive(false)
 
             scope.launch(Dispatchers.Main) {
                 if (isActive && commandCounter.get() == commandId) {
@@ -1099,6 +1112,35 @@ class AetherVpnService : VpnService() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
+
+        // Engine handoff liveness flag: the service is gone — other engines
+        // may take TUN ownership.
+        EngineHandoff.setAetherAlive(false)
+
+        // Aether-only runtime state lives in main-process singletons (this
+        // service has no android:process) and must never outlive the service
+        // into a V2Ray/AWG session. Clear the cheap state synchronously; the
+        // full core teardown runs bounded on a daemon thread because
+        // onDestroy must never block the main thread (ConnectionController
+        // owns its own scope, so cancelling the service scope above does not
+        // cancel it).
+        runCatching { PsiphonController.clearVpnService() }
+        ActiveProxyProvider.psiphonProxyUrl = null
+        ConnectionController.clearGlobalRuntimeState()
+        Thread {
+            try {
+                runBlocking {
+                    withTimeoutOrNull(4000L) { getController().stop() }
+                        ?: LogRepository.w("[VpnService] onDestroy: controller stop did not finish within 4s")
+                }
+            } catch (e: Throwable) {
+                LogRepository.w("[VpnService] onDestroy: controller stop error: ${e.message}")
+            }
+        }.apply {
+            isDaemon = true
+            name = "Aether-destroy-stop"
+        }.start()
+
         super.onDestroy()
     }
 }

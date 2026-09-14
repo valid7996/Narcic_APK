@@ -25,6 +25,16 @@ object PsiphonController {
         vpnServiceRef = WeakReference(service)
     }
 
+    /**
+     * Releases the VpnService reference without a full stop() — used by
+     * AetherVpnService.onDestroy() so a dead service is never pinned and the
+     * Psiphon state stays strictly Aether-scoped.
+     */
+    fun clearVpnService() {
+        vpnServiceRef?.clear()
+        vpnServiceRef = null
+    }
+
     fun isSupported(config: AetherConfig): Boolean {
         return config.psiphonEnabled
     }

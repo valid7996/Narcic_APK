@@ -98,6 +98,29 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             _isWaitingForCode.value = waiting
             Bridge.isWaitingForCode.value = waiting
         }
+
+        /**
+         * The ONLY sanctioned read path for the Psiphon chain's upstream SOCKS
+         * URL from outside the Aether package. Psiphon chain state is
+         * Aether-owned runtime state; V2Ray/AWG code must never import
+         * [ActiveProxyProvider] directly.
+         */
+        fun currentChainSocksUrl(): String? = ActiveProxyProvider.psiphonProxyUrl
+
+        /**
+         * Fully clears Aether-only global runtime state (Psiphon chain flag,
+         * login-code wait, status). Called from ConnectionController.stop()
+         * and AetherVpnService.onDestroy() so a stale RUNNING/chaining value
+         * can never leak into a V2Ray or AmneziaWG session in this process.
+         */
+        fun clearGlobalRuntimeState() {
+            psiphonChaining = false
+            _isWaitingForCode.value = false
+            Bridge.isWaitingForCode.value = false
+            lastKnownStatus = ConnectionStatus.STOPPED
+            _status.value = ConnectionStatus.STOPPED
+            Bridge.statusOverride.value = ConnectionStatus.STOPPED
+        }
     }
 
     init {
@@ -892,6 +915,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             if (_status.value == ConnectionStatus.STOPPED) {
                 stopTimer()
                 ActiveProxyProvider.psiphonProxyUrl = null
+                clearGlobalRuntimeState()
                 return@withLock
             }
 
@@ -915,6 +939,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             ActiveProxyProvider.psiphonProxyUrl = null
             stopTimer()
             runCatching { withTimeoutOrNull(2000.milliseconds) { cleanup(attemptId) } }
+            clearGlobalRuntimeState()
             notifyStatusChanged(appContext, ConnectionStatus.STOPPED)
             LogRepository.i("[Controller] Core stopped")
         }

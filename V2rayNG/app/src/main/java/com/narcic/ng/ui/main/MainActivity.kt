@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.narcic.ng.AngApplication
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
+import com.narcic.ng.core.EngineHandoff
 import com.narcic.ng.core.LauncherManager
 import com.narcic.ng.service.CoreVpnService
 import com.narcic.ng.dto.entities.ProfileItem
@@ -261,12 +262,19 @@ class MainActivity : HelperBaseComponentActivity() {
      */
     private fun startAwgTunnel(configText: String) {
         // VPN engines are mutually exclusive (one TUN interface per app): stop
-        // V2Ray and Aether before taking ownership so no stale engine keeps
-        // reporting CONNECTED.
-        LauncherManager.stopService(this)
-        com.narcic.ng.aether.service.AetherVpnService.stopVpn(this)
+        // V2Ray and Aether and wait (bounded) for them to release the TUN
+        // before taking ownership — on timeout, fail cleanly instead of
+        // starting a second TUN engine.
         mainViewModel.setAwgConnectingState(true, "در حال اتصال، لطفاً صبر کنید...")
         lifecycleScope.launch(Dispatchers.IO) {
+            val handoffError = EngineHandoff.releaseFor(EngineHandoff.Engine.AWG, applicationContext)
+            if (handoffError != null) {
+                withContext(Dispatchers.Main) {
+                    mainViewModel.setAwgConnectingState(false)
+                    toast(handoffError)
+                }
+                return@launch
+            }
             val error = com.narcic.ng.awg.AwgManager.connectWithAutoRetry(
                 context = this@MainActivity,
                 rawConfigText = configText,
@@ -318,7 +326,12 @@ class MainActivity : HelperBaseComponentActivity() {
         ) {
             checkAndRequestPermission(PermissionType.ACCESS_LOCAL_NETWORK) {}
         }
-        LauncherManager.startService(this)
+        // Bounded engine handoff (stop + settle Aether/AWG) runs off the main
+        // thread so the settle wait can never ANR; the actual service start
+        // happens once the previous engine has released the TUN.
+        lifecycleScope.launch {
+            LauncherManager.startServiceAwaitingHandoff(this@MainActivity)
+        }
     }
 
     private fun restartV2Ray() {

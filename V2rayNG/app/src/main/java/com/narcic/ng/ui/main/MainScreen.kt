@@ -48,8 +48,8 @@ import com.narcic.ng.aether.shared.data.PingRepository
 import com.narcic.ng.aether.shared.data.PsiphonEgressRegistry
 import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.platform.Bridge
-import com.narcic.ng.awg.AwgManager
-import com.narcic.ng.core.LauncherManager
+import com.narcic.ng.core.EngineHandoff
+import com.narcic.ng.extension.toast
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
@@ -187,6 +187,7 @@ fun MainScreen(
     // comes straight from the existing Aether stack (no fake data). When a
     // server profile is selected, the LaunchedEffect above resets engineIsPs.
     val npsContext = androidx.compose.ui.platform.LocalContext.current
+    val npsScope = rememberCoroutineScope()
     val npsConfigRepository = if (engineIsPs) {
         remember {
             AetherConfigRepository.getInstance(
@@ -199,9 +200,11 @@ fun MainScreen(
     val npsConfig = if (npsConfigRepository != null) {
         npsConfigRepository.config.collectAsStateWithLifecycle().value
     } else null
-    val npsStatus = if (engineIsPs) {
-        ConnectionController.status.collectAsStateWithLifecycle().value
-    } else ConnectionStatus.STOPPED
+    // Real Aether runtime state — collected regardless of the selected tab,
+    // so the UI can never pretend Aether/Psiphon is stopped while its engine
+    // actually holds the TUN. Tab selection is display-only; engine ownership
+    // is decided by the real ConnectionController status.
+    val npsStatus = ConnectionController.status.collectAsStateWithLifecycle().value
     val npsTraffic = if (engineIsPs) {
         Bridge.trafficOverride.collectAsStateWithLifecycle().value
     } else null
@@ -218,6 +221,12 @@ fun MainScreen(
     // Same mutual-exclusion semantics AetherScreen uses: the three engines
     // never run at the same time (one TUN interface per app).
     val npsRunning = engineIsPs && npsStatus != ConnectionStatus.STOPPED &&
+        npsStatus != ConnectionStatus.ERROR && npsStatus != ConnectionStatus.FAILED
+    // Ungated Aether liveness: true whenever the Aether engine (Psiphon chain
+    // included) actually owns the TUN, on any tab. Drives the EngineSwitch
+    // lock so the user cannot browse away from a running engine and have the
+    // UI claim everything is stopped.
+    val aetherRunning = npsStatus != ConnectionStatus.STOPPED &&
         npsStatus != ConnectionStatus.ERROR && npsStatus != ConnectionStatus.FAILED
     val npsConnected = engineIsPs && npsStatus == ConnectionStatus.RUNNING
     // Narcic PS handshake states (STARTING/VALIDATING/DATAPLANE/SOCKS_READY/
@@ -246,7 +255,7 @@ fun MainScreen(
     LaunchedEffect(npsConnected, npsConfig?.psiphonEnabled) {
         if (npsConnected && npsConfig != null && npsConfigRepository != null) {
             val socksPort = npsConfig.socksPort.toIntOrNull() ?: 1819
-            val psiphonUrl = com.narcic.ng.aether.shared.data.ActiveProxyProvider.psiphonProxyUrl
+            val psiphonUrl = ConnectionController.currentChainSocksUrl()
             launch {
                 PingRepository.runPing(
                     socksHost = npsConfig.socksHost,
@@ -502,7 +511,10 @@ fun MainScreen(
                         else -> "v2ray"
                     },
                     accent = accentPair.main,
-                    enabled = !isRunning && !npsRunning,
+                    // Locked while ANY engine truly owns the TUN (ungated
+                    // Aether liveness included) so browsing to another tab can
+                    // never hide a running engine behind a "stopped" UI.
+                    enabled = !isRunning && !aetherRunning,
                     onSelect = { id ->
                         engineIsAwg = id == "awg"
                         engineIsPs = id == "ps"
@@ -554,17 +566,25 @@ fun MainScreen(
                                     // chain reaches ConnectionController (STARTING),
                                     // which is seconds away from the tap.
                                     isConnectingLocal = true
-                                    // Same mutual exclusion AetherScreen enforces
-                                    // before taking ownership of the TUN interface.
-                                    LauncherManager.stopService(npsContext)
-                                    runCatching { AwgManager.disconnect() }
-                                    val prep = VpnService.prepare(npsContext)
-                                    if (prep != null) npsVpnPermissionLauncher.launch(prep)
-                                    else {
-                                        val intent = Intent(npsContext, AetherVpnService::class.java).apply {
-                                            action = AetherVpnService.ACTION_START
+                                    // Bounded mutual-exclusion handoff: stop the
+                                    // other engines and wait for them to release
+                                    // the TUN before taking ownership; on timeout,
+                                    // fail cleanly instead of starting a second
+                                    // TUN engine.
+                                    npsScope.launch {
+                                        EngineHandoff.releaseFor(EngineHandoff.Engine.AETHER, npsContext)?.let { error ->
+                                            isConnectingLocal = false
+                                            npsContext.toast(error)
+                                            return@launch
                                         }
-                                        ContextCompat.startForegroundService(npsContext, intent)
+                                        val prep = VpnService.prepare(npsContext)
+                                        if (prep != null) npsVpnPermissionLauncher.launch(prep)
+                                        else {
+                                            val intent = Intent(npsContext, AetherVpnService::class.java).apply {
+                                                action = AetherVpnService.ACTION_START
+                                            }
+                                            ContextCompat.startForegroundService(npsContext, intent)
+                                        }
                                     }
                                 }
                             }

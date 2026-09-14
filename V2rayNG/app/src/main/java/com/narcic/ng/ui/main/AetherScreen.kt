@@ -58,8 +58,8 @@ import com.narcic.ng.aether.shared.model.ConnectionStatus
 import com.narcic.ng.aether.shared.model.SessionTraffic
 import com.narcic.ng.aether.shared.platform.Bridge
 import com.narcic.ng.aether.shared.util.CountryNames
-import com.narcic.ng.awg.AwgManager
-import com.narcic.ng.core.LauncherManager
+import com.narcic.ng.core.EngineHandoff
+import com.narcic.ng.extension.toast
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
 import kotlinx.coroutines.delay
@@ -115,19 +115,25 @@ private fun flagFor(countryCode: String): String {
  * The three VPN engines (Aether / V2Ray / AmneziaWG) are mutually exclusive —
  * Android grants only one TUN interface per app, and each engine keeps its own
  * UI state, so a stale engine would keep showing CONNECTED. Stop the other two
- * BEFORE taking ownership.
+ * and wait (bounded) for them to actually release the TUN BEFORE taking
+ * ownership; on timeout return an error instead of starting a second engine.
  */
-private fun stopOtherEngines(context: android.content.Context) {
-    // V2Ray (Xray core) — asynchronous stop message to the daemon process.
-    LauncherManager.stopService(context)
-    // AmneziaWG — synchronous in-process teardown; blocks until settled DOWN.
-    runCatching { AwgManager.disconnect() }
-}
+private suspend fun stopOtherEngines(context: android.content.Context): String? =
+    EngineHandoff.releaseFor(EngineHandoff.Engine.AETHER, context)
 
-private fun startAetherService(context: android.content.Context) {
-    stopOtherEngines(context)
-    val intent = Intent(context, AetherVpnService::class.java).apply { action = AetherVpnService.ACTION_START }
-    ContextCompat.startForegroundService(context, intent)
+private fun startAetherService(
+    context: android.content.Context,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onError: (String) -> Unit,
+) {
+    scope.launch {
+        stopOtherEngines(context)?.let { error ->
+            onError(error)
+            return@launch
+        }
+        val intent = Intent(context, AetherVpnService::class.java).apply { action = AetherVpnService.ACTION_START }
+        ContextCompat.startForegroundService(context, intent)
+    }
 }
 
 // endregion
@@ -173,7 +179,7 @@ fun AetherScreen() {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            startAetherService(context)
+            startAetherService(context, scope) { error -> context.toast(error) }
         }
     }
 
@@ -183,7 +189,7 @@ fun AetherScreen() {
     LaunchedEffect(connected, chainOn) {
         if (connected) {
             val socksPort = config.socksPort.toIntOrNull() ?: 1819
-            val psiphonUrl = com.narcic.ng.aether.shared.data.ActiveProxyProvider.psiphonProxyUrl
+            val psiphonUrl = ConnectionController.currentChainSocksUrl()
             scope.launch {
                 PingRepository.runPing(
                     socksHost = config.socksHost,
@@ -453,7 +459,7 @@ fun AetherScreen() {
                             context.startService(intent)
                         } else {
                             val prep = VpnService.prepare(context)
-                            if (prep != null) vpnPermissionLauncher.launch(prep) else startAetherService(context)
+                            if (prep != null) vpnPermissionLauncher.launch(prep) else startAetherService(context, scope) { error -> context.toast(error) }
                         }
                     },
                 contentAlignment = Alignment.Center,

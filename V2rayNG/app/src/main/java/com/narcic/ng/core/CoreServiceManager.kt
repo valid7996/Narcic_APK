@@ -217,6 +217,9 @@ object CoreServiceManager {
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
         NotificationManager.startSpeedNotification()
+        // Engine handoff liveness flag: the V2Ray engine now owns the TUN
+        // (or proxy mode); other engines wait on this before taking over.
+        EngineHandoff.setV2RayAlive(true)
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
 
@@ -256,6 +259,9 @@ object CoreServiceManager {
         }
 
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
+        // Engine handoff liveness flag: V2Ray released the TUN/resources —
+        // unblocks any bounded handoff wait in another process.
+        EngineHandoff.setV2RayAlive(false)
         NotificationManager.cancelNotification()
 
         try {

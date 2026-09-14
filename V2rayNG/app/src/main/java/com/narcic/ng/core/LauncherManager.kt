@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.narcic.ng.aether.service.AetherVpnService
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.extension.isComplexType
@@ -27,6 +26,7 @@ object LauncherManager {
             context.toast(R.string.app_tile_first_use)
             return false
         }
+        if (!releaseForV2RayBlocking(context)) return false
         try {
             startContextService(context)
         } catch (e: Exception) {
@@ -44,12 +44,52 @@ object LauncherManager {
             MmkvManager.setSelectServer(guid)
         }
 
+        if (!releaseForV2RayBlocking(context)) return
+
         try {
             startContextService(context)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "LauncherManager: ${e.message}", e)
             context.toast(e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    /**
+     * Same as [startService], but awaits the engine handoff on the caller's
+     * coroutine instead of blocking the thread. Use from UI code (main thread)
+     * so a bounded settle wait can never ANR.
+     */
+    suspend fun startServiceAwaitingHandoff(context: Context, guid: String? = null) {
+        LogUtil.i(AppConfig.TAG, "LauncherManager: startServiceAwaitingHandoff from ${context::class.java.simpleName}")
+
+        if (guid != null) {
+            MmkvManager.setSelectServer(guid)
+        }
+
+        val handoffError = EngineHandoff.releaseFor(EngineHandoff.Engine.V2RAY, context)
+        if (handoffError != null) {
+            LogUtil.e(AppConfig.TAG, "LauncherManager: engine handoff failed: $handoffError")
+            context.toast(handoffError)
+            return
+        }
+
+        try {
+            startContextService(context)
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "LauncherManager: ${e.message}", e)
+            context.toast(e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /** Blocking bounded handoff for thread-based callers (tiles, receivers, daemon). */
+    private fun releaseForV2RayBlocking(context: Context): Boolean {
+        val handoffError = EngineHandoff.releaseForBlocking(EngineHandoff.Engine.V2RAY, context)
+        if (handoffError != null) {
+            LogUtil.e(AppConfig.TAG, "LauncherManager: engine handoff failed: $handoffError")
+            context.toast(handoffError)
+            return false
+        }
+        return true
     }
 
     fun stopService(context: Context) {
@@ -59,11 +99,9 @@ object LauncherManager {
 
     @Throws(Exception::class)
     private fun startContextService(context: Context) {
-        // VPN engines are mutually exclusive (one TUN interface per app): stop
-        // the other two before taking ownership so no stale engine keeps
-        // reporting CONNECTED.
-        AetherVpnService.stopVpn(context)
-        runCatching { com.narcic.ng.awg.AwgManager.disconnect() }
+        // VPN engines are mutually exclusive (one TUN interface per app) and
+        // the handoff (bounded stop + settle of Aether/AWG) has already run in
+        // the callers above before reaching here.
 
         // Note: isRunning check is removed here to avoid loading Native libraries in the UI process.
         // The check is performed in CoreServiceManager when the service starts in the daemon process.
@@ -117,6 +155,12 @@ object LauncherManager {
             LogUtil.i(AppConfig.TAG, "LauncherManager: Starting Proxy service")
             Intent(context.applicationContext, CoreProxyOnlyService::class.java)
         }
+
+        // Engine handoff liveness flag: set BEFORE the service starts so a
+        // concurrent handoff from another engine sees V2Ray as owning (or
+        // about to own) the TUN — CoreServiceManager keeps it true after a
+        // successful start and clears it on stop.
+        EngineHandoff.setV2RayAlive(true)
 
         try {
             ContextCompat.startForegroundService(context, intent)
