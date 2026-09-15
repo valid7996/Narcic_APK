@@ -45,7 +45,7 @@ import kotlinx.coroutines.delay
  * تنظیمات «نرسیس اسپوف» — a local SNI-spoofing / TLS-fragmentation forwarder
  * ported from the RSTA Spoof feature. Lets the person pick a real remote
  * IP:port, a fake SNI to present during the TLS handshake, and an obfuscation
- * method; the engine then listens on 127.0.0.1:[NarcisSpoofConfig.LISTEN_PORT].
+ * method; the engine then listens on 127.0.0.1:[NarcisSpoofConfig.listenPort].
  * To route a server through it, create a server entry whose address/port
  * point at that loopback listener — [com.narcic.ng.core.CoreServiceManager]
  * starts/stops the engine automatically around the VPN connection.
@@ -100,7 +100,7 @@ fun NarcisSpoofSettingScreen(onBackClick: () -> Unit) {
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = stringResource(R.string.title_narcis_spoof_explain, NarcisSpoofConfig.LISTEN_PORT),
+                text = stringResource(R.string.title_narcis_spoof_explain, NarcisSpoofConfig.listenPort),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -179,7 +179,7 @@ fun NarcisSpoofSettingScreen(onBackClick: () -> Unit) {
                 text = stringResource(
                     R.string.summary_narcis_spoof_footer,
                     NarcisSpoofConfig.LISTEN_HOST,
-                    NarcisSpoofConfig.LISTEN_PORT
+                    NarcisSpoofConfig.listenPort
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

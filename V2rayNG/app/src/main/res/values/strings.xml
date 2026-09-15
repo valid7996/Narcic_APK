@@ -555,4 +555,12 @@
         <item>WebDAV</item>
     </string-array>
 
+    <!-- AetherST widget (ported) -->
+    <string name="widget_title">Aether Tunnel</string>
+    <string name="widget_status_disconnected">Disconnected</string>
+    <string name="proto_masque">MASQUE</string>
+    <string name="proto_wire">WireGuard</string>
+    <string name="proto_gool">Gool</string>
+    <string name="widget_button_desc">Toggle Aether connection</string>
+
 </resources>

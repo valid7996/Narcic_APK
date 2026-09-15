@@ -100,6 +100,7 @@ fun MainScreen(
     // Bottom-nav overlay screens.
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
+    var showAether by remember { mutableStateOf(false) }
 
     // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
     // "Manage configs" (test/sort/export-all + bulk delete).
@@ -283,6 +284,13 @@ fun MainScreen(
         return
     }
 
+    // ---- Full-screen overlay: Aether tunnel (third engine) ----
+    if (showAether) {
+        BackHandler { showAether = false }
+        AetherScreen()
+        return
+    }
+
     // No overlay is showing (all branches above return early), so this is
     // the root connection screen: back should minimize the app instead of
     // finishing the activity — unless the drawer is open, in which case back
@@ -348,6 +356,7 @@ fun MainScreen(
                     selectedTab = MainHomeTab.VPN,
                     onSelectTab = { tab ->
                         if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
+                        if (tab == MainHomeTab.AETHER) showAether = true
                     },
                     onSettingsClick = { onNavigate("settings") },
                     onStatisticsClick = { onNavigate("statistics") },

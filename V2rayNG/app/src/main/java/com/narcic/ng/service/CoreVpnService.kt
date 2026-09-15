@@ -35,12 +35,18 @@ class CoreVpnService : VpnService(), ServiceControl {
     private val isStartingLock = AtomicBoolean(false)
 
     companion object {
-        /** Set in onCreate, cleared in onDestroy. Lets the UI distinguish
+        private const val MMKV_CORE_ALIVE = "core_vpn_service_alive"
+
+        /** Cross-process liveness flag. CoreVpnService runs in
+         *  :RunSoLibV2RayDaemon while the UI runs in the main process, so a
+         *  JVM static would be invisible to the UI — MMKV (MULTI_PROCESS_MODE)
+         *  is the shared source of truth. Lets the UI distinguish
          *  "no attempt at all" from "service exists but core not up yet"
          *  so a second tap during the handshake can act as a hard stop. */
-        @Volatile
-        var isServiceAlive: Boolean = false
-            private set
+        @JvmStatic
+        var isServiceAlive: Boolean
+            get() = MmkvManager.decodeSettingsBool(MMKV_CORE_ALIVE, false)
+            private set(value) = MmkvManager.encodeSettings(MMKV_CORE_ALIVE, value)
     }
 
     override fun onCreate() {

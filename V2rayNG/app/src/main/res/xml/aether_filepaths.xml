@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Share paths for the Aether tunnel engine (ported from AetherST). -->
+<paths>
+    <cache-path name="aether_cache" path="." />
+</paths>

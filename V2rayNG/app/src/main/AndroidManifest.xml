@@ -28,6 +28,8 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="PackageVisibilityPolicy,QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -402,6 +404,57 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/cache_paths" />
         </provider>
+
+        <!-- ================= AetherST tunnel engine (ported from
+             github.com/immaghzbad/AetherST) — third engine: MASQUE /
+             WireGuard / Gool / Cloudflare Zero Trust, optional Psiphon chain. -->
+
+        <service
+            android:name="com.narcic.ng.aether.service.AetherVpnService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            tools:ignore="VpnServicePolicy">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Aether Core Tunnel SOCKS5 Proxy &amp; VPN Wrapper" />
+        </service>
+
+        <service
+            android:name="com.narcic.ng.aether.service.AetherProxyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Aether Core Proxy SOCKS5 Proxy Mode" />
+        </service>
+
+        <service
+            android:name="com.narcic.ng.aether.service.AetherTileService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Aether"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="com.narcic.ng.aether.service.AetherWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.narcic.ng.aether.WIDGET_TOGGLE" />
+                <action android:name="com.narcic.ng.aether.WIDGET_CHANGE_PROTOCOL" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/aether_widget_info" />
+        </receiver>
 
     </application>
 

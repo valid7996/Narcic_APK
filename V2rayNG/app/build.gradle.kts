@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     id("com.jaredsburrows.license")
 }
 
@@ -150,6 +151,14 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // libv2ray.aar (Xray core) and psiphontunnel-2.0.41.aar both ship a
+            // gomobile-built libgojni.so with DIFFERENT content (verified: MD5s
+            // differ, zero shared bind refs). The APK can only carry one file
+            // with that name, so pick the Xray one — it powers the core VPN
+            // engine. Psiphon chain degrades gracefully: PsiphonController
+            // binds ca.psiphon classes reflectively and reports a clear error
+            // at connect time instead of crashing the app.
+            pickFirsts += "lib/*/libgojni.so"
         }
     }
 
@@ -187,6 +196,7 @@ dependencies {
     // Reactive and Utility Libraries
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
 
     // QR Code: CameraX + ZXing
     implementation(libs.camerax.core)

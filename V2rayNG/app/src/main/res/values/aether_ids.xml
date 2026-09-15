@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IDs for the AetherST home-screen widget (ported from AetherST). -->
+<resources>
+    <item name="widget_root" type="id" />
+    <item name="widget_title" type="id" />
+    <item name="widget_status" type="id" />
+    <item name="widget_button" type="id" />
+    <item name="widget_button_container" type="id" />
+    <item name="widget_protocols_row" type="id" />
+    <item name="proto_masque" type="id" />
+    <item name="proto_wire" type="id" />
+    <item name="proto_gool" type="id" />
+</resources>

@@ -12,7 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: 'recursive'
           fetch-depth: '0'
@@ -67,6 +67,26 @@ jobs:
           latest: true
           fileName: 'libv2ray.aar'
           out-file-path: V2rayNG/app/libs/
+
+      # libv2ray.aar (Xray core) and psiphontunnel AAR both ship a gomobile
+      # libgojni.so with DIFFERENT content (MD5-verified; zero shared bind
+      # refs) — an APK can hold only one file of that name and the two bind
+      # sets cannot be merged without a gomobile rebuild. Keep the Xray one
+      # (core VPN engine); strip it from the Psiphon AAR so packaging never
+      # sees a duplicate. Psiphon chain degrades cleanly at runtime:
+      # PsiphonController loads ca.psiphon classes reflectively and reports a
+      # clear connect-time error instead of crashing the app.
+      - name: Deduplicate libgojni (keep Xray)
+        run: |
+          cd V2rayNG/app/libs
+          mkdir -p /tmp/psi_patch
+          cd /tmp/psi_patch
+          unzip -o -q "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" -d psi
+          rm -f psi/jni/*/libgojni.so
+          rm -f "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar"
+          cd psi && zip -qr "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" . && cd ..
+          echo "psiphon AAR libgojni count (expect 0):"
+          unzip -l "$GITHUB_WORKSPACE/V2rayNG/app/libs/psiphontunnel-2.0.41.aar" | grep -c "libgojni" || true
 
       - name: Setup Java
         uses: actions/setup-java@v4
