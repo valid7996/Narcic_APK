@@ -14,6 +14,7 @@ import com.narcic.ng.dto.entities.SubscriptionItem
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.extension.isNotNullEmpty
 import com.narcic.ng.fmt.CustomFmt
+import com.narcic.ng.fmt.AetherFmt
 import com.narcic.ng.fmt.Hysteria2Fmt
 import com.narcic.ng.fmt.ShadowsocksFmt
 import com.narcic.ng.fmt.SocksFmt
