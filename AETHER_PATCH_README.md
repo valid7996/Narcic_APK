@@ -61,3 +61,9 @@ cd V2rayNG
 ./gradlew :app:testPlaystoreDebugUnitTest
 ./gradlew assembleDebug
 ```
+
+## آپدیت بعدی: رفع باگ برگشتن دکمه‌ی اتصال حین اسکن Aether
+سه فایل زیر هم به پچ اضافه شدن (این‌ها فایل‌های عمومی UI هستن، نه اختصاصی Aether، ولی برای رفع باگ دکمه لازم بودن):
+- V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainContract.kt
+- V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainViewModel.kt
+- V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainScreen.kt

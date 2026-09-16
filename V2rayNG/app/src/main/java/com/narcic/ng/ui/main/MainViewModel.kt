@@ -132,6 +132,7 @@ class MainViewModel(
                     toastError(R.string.toast_services_failure)
                 }
                 updateRunningState(false)
+                _uiState.update { it.copy(connectFailedTick = it.connectFailedTick + 1) }
             }
 
             MainServiceEvent.StateStopSuccess -> updateRunningState(false)

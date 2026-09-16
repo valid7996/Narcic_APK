@@ -181,11 +181,20 @@ fun MainScreen(
     // Auto-clears after a timeout in case a start attempt fails silently;
     // the service now also reports MSG_STATE_NOT_RUNNING on a failed start,
     // which clears isRunning-independent state sooner.
+    // An Aether profile can spend well over 15s scanning for a working
+    // endpoint before the tunnel is actually up (longer still on Stealth/
+    // Ironclad scan modes or a slow carrier), so it gets a much longer
+    // budget than every other protocol to avoid the button appearing to
+    // give up while the service is still legitimately trying.
     var isConnectingLocal by remember { mutableStateOf(false) }
     LaunchedEffect(isRunning) { if (isRunning) isConnectingLocal = false }
-    LaunchedEffect(isConnectingLocal) {
+    LaunchedEffect(uiState.connectFailedTick) {
+        if (uiState.connectFailedTick > 0) isConnectingLocal = false
+    }
+    LaunchedEffect(isConnectingLocal, connectedServer) {
         if (isConnectingLocal) {
-            delay(15_000)
+            val isAether = connectedServer?.profile?.configType == EConfigType.AETHER
+            delay(if (isAether) 120_000 else 15_000)
             isConnectingLocal = false
         }
     }

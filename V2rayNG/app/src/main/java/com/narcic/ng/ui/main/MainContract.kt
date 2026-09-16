@@ -11,6 +11,10 @@ data class MainUiState(
     val selectedGroupId: String = "",
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
+    /** Bumped on every MSG_STATE_START_FAILURE so the home screen's local
+     *  "connecting..." spinner can clear immediately instead of waiting out
+     *  its guess-timeout when the service reports a real, prompt failure. */
+    val connectFailedTick: Int = 0,
     val isTesting: Boolean = false,
     val isAwgConnecting: Boolean = false,
     val awgConnectingMessage: String = "",
