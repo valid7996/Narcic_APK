@@ -67,3 +67,10 @@ cd V2rayNG
 - V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainContract.kt
 - V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainViewModel.kt
 - V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainScreen.kt
+
+## آپدیت بعدی: دکمه‌ی + توی لیست کانفیگ‌ها (V2Ray و AmneziaWG)
+- V2rayNG/app/src/main/java/com/narcic/ng/ui/main/MainVpnConfigList.kt
+حالا دیالوگ "افزودن کانفیگ" که از دکمه‌ی + بالای لیست باز می‌شه، یه گزینه‌ی سوم هم داره:
+- توی تب V2Ray: «افزودن دستی کانفیگ Aether»
+- توی تب AmneziaWG: «افزودن دستی WARP to WARP»
+هر دو همون صفحه‌ی Aether رو باز می‌کنن (چون WARP-in-WARP یکی از پروتکل‌های همون صفحه‌ست)، فقط برچسبشون فرق داره.

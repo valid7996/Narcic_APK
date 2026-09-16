@@ -62,6 +62,7 @@ fun MainServerListSection(
     onDeleteAllServers: () -> Unit,
     onAddFromClipboard: () -> Unit,
     onScanVpnQr: () -> Unit,
+    onAddManualConfig: (Int) -> Unit,
     onRetest: () -> Unit,
     onAutoSelectBest: () -> Unit,
     modifier: Modifier = Modifier
@@ -105,6 +106,21 @@ fun MainServerListSection(
                         Icon(painterResource(R.drawable.ic_scan_24dp), contentDescription = null, Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
                         Text("اسکن بارکد QR")
+                    }
+                    // V2Ray: افزودن دستی یه کانفیگ Aether. AmneziaWG: افزودن دستی یه
+                    // کانفیگ WARP to WARP -- که هر دو همون صفحه‌ی Aether رو باز
+                    // می‌کنن، چون GOOL/"WARP-in-WARP" یکی از پروتکل‌های همون صفحه‌ست.
+                    OutlinedButton(
+                        onClick = {
+                            showAddOptionsDialog = false
+                            onAddManualConfig(EConfigType.AETHER.value)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_edit_24dp), contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text(if (engineIsAwg) "افزودن دستی WARP to WARP" else "افزودن دستی کانفیگ Aether")
                     }
                 }
             },
