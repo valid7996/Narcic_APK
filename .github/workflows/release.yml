@@ -60,6 +60,36 @@ jobs:
         run: |
           cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.98.1"
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Restore cached libaether
+        id: cache-libaether-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/libs-aether
+          key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-1.98.1-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
+
+      - name: Build libaether
+        if: steps.cache-libaether-restore.outputs.cache-hit != 'true'
+        run: |
+          bash compile-aether.sh
+
+      - name: Save libaether
+        if: steps.cache-libaether-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/libs-aether
+          key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-1.98.1-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
+
+      - name: Copy libaether
+        run: |
+          mkdir -p ${{ github.workspace }}/V2rayNG/app/libs
+          cp -r ${{ github.workspace }}/libs-aether/. ${{ github.workspace }}/V2rayNG/app/libs/
+
       - name: Download libv2ray
         uses: robinraju/release-downloader@v1.13
         with:
