@@ -45,6 +45,7 @@ object Nc {
     val BadgeVless = Color(0xFFA78BFA)
     val BadgeVmess = Color(0xFF818CF8)
     val BadgeHy2 = Amber
+    val BadgeAether = Color(0xFFF97316)
 
     // Week usage chart gradients.
     val ChartDownloadTop = Color(0xFF67E8F9)

@@ -1,6 +1,7 @@
 package com.narcic.ng.service
 
 import android.content.Context
+import com.narcic.ng.core.AetherDelayTester
 import com.narcic.ng.core.CoreConfigManager
 import com.narcic.ng.core.CoreNativeManager
 import com.narcic.ng.dto.RealPingEvent
@@ -82,10 +83,13 @@ class RealPingWorkerService(
         }
     }
 
-    private fun startRealPing(guid: String): Long {
+    private suspend fun startRealPing(guid: String): Long {
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
+        if (config.configType == EConfigType.AETHER) {
+            return AetherDelayTester.measure(context, guid, config, SettingsManager.getDelayTestUrl())
+        }
 
         // نرسیس اسپوف: configs pointing at 127.0.0.1:<LISTEN_PORT> need the local
         // spoof engine alive, otherwise the ping always fails and the user can't
@@ -127,10 +131,13 @@ class RealPingWorkerService(
         return CoreNativeManager.measureOutboundDelay(configResult.content, SettingsManager.getDelayTestUrl())
     }
 
-    private fun startTcping(guid: String): Long {
+    private suspend fun startTcping(guid: String): Long {
         val retFailure = -1L
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
+        if (config.configType == EConfigType.AETHER) {
+            return AetherDelayTester.reachability(config)
+        }
 
         // Spoof configs: a raw TCP connect to 127.0.0.1 only measures the local
         // listener, not the real remote. Route through the real-ping path instead

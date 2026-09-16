@@ -1,5 +1,7 @@
 package com.narcic.ng.helper
 
+import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -25,6 +27,41 @@ object MessageHelper {
      */
     fun sendMsg2Service(ctx: Context, what: Int, content: Serializable) {
         sendMsg(ctx, AppConfig.BROADCAST_ACTION_SERVICE, what, content)
+    }
+
+    /**
+     * Sends an ordered service message and reports whether a daemon receiver handled it.
+     * With no running daemon, the initial canceled result reaches [onResult] unchanged.
+     */
+    internal fun sendMsg2ServiceForResult(
+        ctx: Context,
+        what: Int,
+        content: Serializable,
+        onResult: (handled: Boolean) -> Unit,
+    ) {
+        val resultReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                onResult(resultCode == Activity.RESULT_OK)
+            }
+        }
+        try {
+            ctx.sendOrderedBroadcast(
+                Intent(AppConfig.BROADCAST_ACTION_SERVICE).apply {
+                    `package` = AppConfig.ANG_PACKAGE
+                    putExtra("key", what)
+                    putExtra("content", content)
+                },
+                null,
+                resultReceiver,
+                null,
+                Activity.RESULT_CANCELED,
+                null,
+                null,
+            )
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to send ordered message to service", e)
+            onResult(false)
+        }
     }
 
     /**

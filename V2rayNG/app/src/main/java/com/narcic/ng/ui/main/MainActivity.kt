@@ -26,6 +26,7 @@ import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
+import com.narcic.ng.ui.server.ServerAetherActivity
 import com.narcic.ng.ui.server.ServerAmneziaWgActivity
 import com.narcic.ng.ui.server.ServerCustomConfigActivity
 import com.narcic.ng.ui.server.ServerGroupActivity
@@ -336,6 +337,7 @@ class MainActivity : HelperBaseComponentActivity() {
             EConfigType.TROJAN.value -> Intent(this, ServerTrojanActivity::class.java)
             EConfigType.WIREGUARD.value -> Intent(this, ServerWireguardActivity::class.java)
             EConfigType.HYSTERIA2.value -> Intent(this, ServerHysteria2Activity::class.java)
+            EConfigType.AETHER.value -> Intent(this, ServerAetherActivity::class.java)
             else -> Intent(this, ServerHttpActivity::class.java).apply {
                 putExtra("createConfigType", createConfigType)
             }
@@ -497,6 +499,7 @@ class MainActivity : HelperBaseComponentActivity() {
             EConfigType.WIREGUARD -> ServerWireguardActivity::class.java
             EConfigType.AMNEZIAWG -> ServerAmneziaWgActivity::class.java
             EConfigType.HYSTERIA2 -> ServerHysteria2Activity::class.java
+            EConfigType.AETHER -> ServerAetherActivity::class.java
             else -> ServerHttpActivity::class.java
         }
         val intent = Intent(this, activityClass).apply {

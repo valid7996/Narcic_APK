@@ -15,6 +15,7 @@ fun EConfigType.displayLabel(): String = when (this) {
     EConfigType.TROJAN -> "Trojan"
     EConfigType.WIREGUARD -> "WireGuard"
     EConfigType.HYSTERIA2 -> "Hysteria2"
+    EConfigType.AETHER -> "Aether"
     EConfigType.CUSTOM -> "Custom"
     else -> name
 }

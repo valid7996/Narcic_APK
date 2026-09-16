@@ -3,6 +3,7 @@ package com.narcic.ng.core
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.narcic.ng.AppConfig
+import com.narcic.ng.core.AetherCoreManager
 import com.narcic.ng.dto.V2rayConfig.OutboundBean
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.EConfigType
@@ -32,6 +33,7 @@ object CoreOutboundBuilder {
             EConfigType.WIREGUARD -> toOutboundWireguard(profileItem)
             EConfigType.HYSTERIA2 -> toOutboundHysteria2(profileItem)
             EConfigType.HTTP -> toOutboundHttp(profileItem)
+            EConfigType.AETHER -> toOutboundAether()
             else -> null
         }
 
@@ -214,6 +216,18 @@ object CoreOutboundBuilder {
                 settings.user = profileItem.username.orEmpty()
                 settings.pass = profileItem.password.orEmpty()
             }
+        }
+
+        return outboundBean
+    }
+
+    private fun toOutboundAether(): OutboundBean? {
+        val outboundBean = createInitOutbound(EConfigType.SOCKS)
+
+        outboundBean?.settings?.let { settings ->
+            settings.address = AppConfig.LOOPBACK
+            settings.port = AetherCoreManager.socksPort
+            settings.level = AppConfig.DEFAULT_LEVEL
         }
 
         return outboundBean

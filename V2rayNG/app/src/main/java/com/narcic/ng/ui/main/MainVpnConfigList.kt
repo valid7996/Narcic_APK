@@ -288,6 +288,7 @@ private fun protocolBadge(type: EConfigType): ProtocolBadge = when (type) {
     EConfigType.CUSTOM -> ProtocolBadge("CF", Nc.Violet)
     EConfigType.POLICYGROUP -> ProtocolBadge("PG", Nc.Violet)
     EConfigType.PROXYCHAIN -> ProtocolBadge("PC", Nc.Cyan)
+    EConfigType.AETHER -> ProtocolBadge("AE", Nc.BadgeAether)
 }
 
 /** AmneziaWG engine == WireGuard-family config types (WIREGUARD + AMNEZIAWG). */

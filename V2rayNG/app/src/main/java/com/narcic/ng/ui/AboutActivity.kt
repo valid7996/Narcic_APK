@@ -81,6 +81,14 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 title = stringResource(R.string.title_oss_license),
                 onClick = { showOssDialog = true }
             )
+            // The Aether binary is not a Gradle dependency, so the generated license report
+            // cannot list it; its AGPL-3.0 notice and source link live here instead.
+            SettingsMenuItem(
+                icon = painterResource(R.drawable.license_24px),
+                title = stringResource(R.string.title_aether_core),
+                subtitle = stringResource(R.string.summary_aether_core),
+                onClick = { Utils.openUri(context, AppConfig.AETHER_URL) }
+            )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_feedback_24dp),
                 title = stringResource(R.string.title_pref_feedback),

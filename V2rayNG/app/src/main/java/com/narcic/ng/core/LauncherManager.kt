@@ -6,6 +6,8 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
+import com.narcic.ng.dto.entities.ProfileItem
+import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.extension.isComplexType
 import com.narcic.ng.extension.toast
 import com.narcic.ng.extension.toastError
@@ -56,6 +58,24 @@ object LauncherManager {
         MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_STOP, "")
     }
 
+    /** Restarts the active daemon without starting a stopped service. */
+    fun restartService(context: Context) {
+        MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_RESTART, "")
+    }
+
+    /** Restarts the active daemon, or delegates to the caller's permission-aware start flow. */
+    fun restartServiceOrStart(context: Context, startIfStopped: () -> Unit) {
+        MessageHelper.sendMsg2ServiceForResult(context, AppConfig.MSG_STATE_RESTART, "") { handled ->
+            if (!handled) startIfStopped()
+        }
+    }
+
+    internal fun hasUsableServer(config: ProfileItem): Boolean =
+        config.configType.isComplexType()
+            || config.configType == EConfigType.AETHER
+            || Utils.isPureIpAddress(config.server.orEmpty())
+            || Utils.isValidUrl(config.server)
+
     @Throws(Exception::class)
     private fun startContextService(context: Context) {
         // Note: isRunning check is removed here to avoid loading Native libraries in the UI process.
@@ -73,10 +93,7 @@ object LauncherManager {
                 error(context.getString(R.string.toast_config_file_invalid))
             }
 
-        if (!config.configType.isComplexType()
-            && !Utils.isValidUrl(config.server)
-            && !Utils.isPureIpAddress(config.server.orEmpty())
-        ) {
+        if (!hasUsableServer(config)) {
             LogUtil.e(AppConfig.TAG, "LauncherManager: Invalid server configuration")
             error(context.getString(R.string.toast_config_file_invalid))
         }
