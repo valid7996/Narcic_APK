@@ -248,6 +248,7 @@
         <item>masque</item>
         <item>wg</item>
         <item>gool</item>
+        <item>mim</item>
     </string-array>
     <string-array name="aether_transport_entries" translatable="false">
         <item>HTTP/3</item>
@@ -261,13 +262,16 @@
         <item>turbo</item>
         <item>balanced</item>
         <item>thorough</item>
-        <item>stealth</item>
+        <item>verified</item>
         <item>ironclad</item>
     </string-array>
     <string-array name="aether_obfuscation_values" translatable="false">
+        <item>auto</item>
         <item>off</item>
         <item>light</item>
+        <item>firewall</item>
         <item>balanced</item>
+        <item>gfw</item>
         <item>aggressive</item>
     </string-array>
     <string-array name="aether_ip_entries" translatable="false">
@@ -279,6 +283,34 @@
         <item>v4</item>
         <item>v6</item>
         <item>both</item>
+    </string-array>
+    <string-array name="aether_psiphon_values" translatable="false">
+        <item>off</item>
+        <item>chain</item>
+        <item>reverse</item>
+        <item>only</item>
+    </string-array>
+    <string-array name="aether_psiphon_mode_values" translatable="false">
+        <item>auto</item>
+        <item>cdn</item>
+        <item>direct</item>
+    </string-array>
+    <string-array name="aether_tor_values" translatable="false">
+        <item>off</item>
+        <item>chain</item>
+        <item>reverse</item>
+        <item>only</item>
+    </string-array>
+    <string-array name="aether_tor_bridges_values" translatable="false">
+        <item>auto</item>
+        <item>first</item>
+        <item>never</item>
+        <item>own</item>
+    </string-array>
+    <string-array name="aether_tor_relays_values" translatable="false">
+        <item>auto</item>
+        <item>only</item>
+        <item>off</item>
     </string-array>
 
 </resources>

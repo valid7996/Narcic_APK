@@ -46,16 +46,25 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.narcic.ng.AppConfig
 import com.narcic.ng.R
+import com.narcic.ng.core.AetherCore
 import com.narcic.ng.core.AetherScanResult
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.AetherProtocol
+import com.narcic.ng.enums.AetherPsiphon
+import com.narcic.ng.enums.AetherPsiphonMode
+import com.narcic.ng.enums.AetherTor
+import com.narcic.ng.enums.AetherTorBridges
+import com.narcic.ng.enums.AetherTorRelays
 import com.narcic.ng.enums.AetherTransport
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.extension.toast
 import com.narcic.ng.extension.toastError
 import com.narcic.ng.extension.toastSuccess
 import com.narcic.ng.fmt.AetherFmt
+import com.narcic.ng.handler.SettingsManager
+import com.narcic.ng.ui.compose.CollapsiblePreferenceGroupHeader
 import com.narcic.ng.ui.compose.ConfirmDialog
 import com.narcic.ng.ui.compose.FormDropdownField
 import com.narcic.ng.ui.compose.FormTextField
@@ -92,11 +101,15 @@ class ServerAetherActivity : BaseServerActivity() {
             configType = serverConfigType
         }
         val isCoreAvailable by viewModel.isCoreAvailable.collectAsStateWithLifecycle()
+        val isPsiphonAvailable by viewModel.isPsiphonAvailable.collectAsStateWithLifecycle()
+        val isTorTransportsAvailable by viewModel.isTorTransportsAvailable.collectAsStateWithLifecycle()
         val scanState by viewModel.scanState.collectAsStateWithLifecycle()
         val isRenewingIdentity by viewModel.isRenewingIdentity.collectAsStateWithLifecycle()
         val session by viewModel.session.collectAsStateWithLifecycle()
         val log by viewModel.log.collectAsStateWithLifecycle()
         var showRenewConfirm by rememberSaveable { mutableStateOf(false) }
+        // Folded away unless one of its settings holds a value, so a profile that set one shows it at once.
+        var showAdvanced by rememberSaveable { mutableStateOf(uiState.hasAdvancedAetherSettings) }
         val isScanning = scanState == AetherScanState.Scanning
         val isBusy = isScanning || isRenewingIdentity
         // The key files are shared by every Aether profile, so a live session on any of them blocks renewal.
@@ -104,7 +117,13 @@ class ServerAetherActivity : BaseServerActivity() {
         val renewBlocked = session != null
 
         val protocol = AetherProtocol.fromString(uiState.aetherProtocol)
-        val usesHttp2 = protocol == AetherProtocol.MASQUE &&
+        val psiphon = AetherPsiphon.fromString(uiState.aetherPsiphon)
+        val psiphonMode = AetherPsiphonMode.fromString(uiState.aetherPsiphonMode)
+        val tor = AetherTor.fromString(uiState.aetherTor)
+        val torBridges = AetherTorBridges.fromString(uiState.aetherTorBridges)
+        // With Psiphon or Tor alone there is no WARP tunnel, and nothing about one to set.
+        val warpUsed = psiphon != AetherPsiphon.ONLY && tor != AetherTor.ONLY
+        val usesHttp2 = protocol.overMasque &&
             AetherTransport.fromString(uiState.aetherTransport) == AetherTransport.HTTP2
         // A scan opens a second tunnel on this protocol's key; a live session on that key must not be disturbed.
         val scanBlocked = session?.disturbedByScanOf(protocol) == true
@@ -139,140 +158,295 @@ class ServerAetherActivity : BaseServerActivity() {
                 uiState.remarks,
                 { uiState.remarks = it }
             )
-            AetherDropdownField(
-                label = R.string.aether_lab_protocol,
-                value = uiState.aetherProtocol,
-                entries = R.array.aether_protocol_entries,
-                values = R.array.aether_protocol_values,
-                enabled = !isBusy,
-                onValueChange = { uiState.aetherProtocol = it }
-            )
-            if (protocol == AetherProtocol.MASQUE) {
+            if (warpUsed) {
                 AetherDropdownField(
-                    label = R.string.aether_lab_transport,
-                    value = uiState.aetherTransport,
-                    entries = R.array.aether_transport_entries,
-                    values = R.array.aether_transport_values,
-                    onValueChange = { uiState.aetherTransport = it }
+                    label = R.string.aether_lab_protocol,
+                    value = uiState.aetherProtocol,
+                    entries = R.array.aether_protocol_entries,
+                    values = R.array.aether_protocol_values,
+                    enabled = !isBusy,
+                    onValueChange = { uiState.aetherProtocol = it }
+                )
+                if (protocol.overMasque) {
+                    AetherDropdownField(
+                        label = R.string.aether_lab_transport,
+                        value = uiState.aetherTransport,
+                        entries = R.array.aether_transport_entries,
+                        values = R.array.aether_transport_values,
+                        onValueChange = { uiState.aetherTransport = it }
+                    )
+                }
+                if (usesHttp2) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.aether_lab_fragment),
+                        checked = uiState.aetherFragment,
+                        onCheckedChange = { uiState.aetherFragment = it }
+                    )
+                    if (uiState.aetherFragment) {
+                        FormTextField(
+                            stringResource(R.string.aether_lab_fragment_size),
+                            uiState.aetherFragmentSize,
+                            { uiState.aetherFragmentSize = it },
+                            placeholder = stringResource(R.string.aether_hint_fragment_size)
+                        )
+                        FormTextField(
+                            stringResource(R.string.aether_lab_fragment_delay),
+                            uiState.aetherFragmentDelay,
+                            { uiState.aetherFragmentDelay = it },
+                            placeholder = stringResource(R.string.aether_hint_fragment_delay)
+                        )
+                    }
+                }
+                if (protocol.overMasque) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.aether_lab_ech),
+                        summary = stringResource(R.string.aether_hint_ech),
+                        checked = uiState.aetherEch,
+                        onCheckedChange = { uiState.aetherEch = it }
+                    )
+                }
+                AetherDropdownField(
+                    label = R.string.aether_lab_scan_mode,
+                    value = uiState.aetherScanMode,
+                    entries = R.array.aether_scan_entries,
+                    values = R.array.aether_scan_values,
+                    onValueChange = { uiState.aetherScanMode = it }
+                )
+                AetherDropdownField(
+                    label = R.string.aether_lab_obfuscation,
+                    value = uiState.aetherObfuscation,
+                    entries = R.array.aether_obfuscation_entries,
+                    values = R.array.aether_obfuscation_values,
+                    onValueChange = { uiState.aetherObfuscation = it }
+                )
+                AetherDropdownField(
+                    label = R.string.aether_lab_ip_version,
+                    value = uiState.aetherIpVersion,
+                    entries = R.array.aether_ip_entries,
+                    values = R.array.aether_ip_values,
+                    onValueChange = { uiState.aetherIpVersion = it }
                 )
             }
-            if (usesHttp2) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.aether_lab_fragment),
-                    checked = uiState.aetherFragment,
-                    onCheckedChange = { uiState.aetherFragment = it }
-                )
-                if (uiState.aetherFragment) {
-                    FormTextField(
-                        stringResource(R.string.aether_lab_fragment_size),
-                        uiState.aetherFragmentSize,
-                        { uiState.aetherFragmentSize = it },
-                        placeholder = stringResource(R.string.aether_hint_fragment_size)
+            AetherDropdownField(
+                label = R.string.aether_lab_psiphon,
+                value = uiState.aetherPsiphon,
+                entries = R.array.aether_psiphon_entries,
+                values = R.array.aether_psiphon_values,
+                enabled = !isBusy,
+                onValueChange = { uiState.aetherPsiphon = it }
+            )
+            if (psiphon != AetherPsiphon.OFF) {
+                if (!isPsiphonAvailable) {
+                    Text(
+                        text = stringResource(R.string.aether_psiphon_unavailable),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
+                }
+                AetherDropdownField(
+                    label = R.string.aether_lab_psiphon_mode,
+                    value = uiState.aetherPsiphonMode,
+                    entries = R.array.aether_psiphon_mode_entries,
+                    values = R.array.aether_psiphon_mode_values,
+                    onValueChange = { uiState.aetherPsiphonMode = it }
+                )
+                // The CDN lists feed the fronted transports alone, which the direct shape never uses; the
+                // server names count only beside an IP list of one's own, since the built-in list comes whole.
+                if (psiphonMode != AetherPsiphonMode.DIRECT) {
                     FormTextField(
-                        stringResource(R.string.aether_lab_fragment_delay),
-                        uiState.aetherFragmentDelay,
-                        { uiState.aetherFragmentDelay = it },
-                        placeholder = stringResource(R.string.aether_hint_fragment_delay)
+                        stringResource(R.string.aether_lab_psiphon_cdn_ips),
+                        uiState.aetherPsiphonCdnIps,
+                        { uiState.aetherPsiphonCdnIps = it },
+                        placeholder = stringResource(R.string.aether_hint_psiphon_list)
+                    )
+                    if (uiState.aetherPsiphonCdnIps.isNotBlank()) {
+                        FormTextField(
+                            stringResource(R.string.aether_lab_psiphon_cdn_sni),
+                            uiState.aetherPsiphonCdnSni,
+                            { uiState.aetherPsiphonCdnSni = it },
+                            placeholder = stringResource(R.string.aether_hint_psiphon_list)
+                        )
+                    }
+                }
+                FormTextField(
+                    stringResource(R.string.aether_lab_psiphon_region),
+                    uiState.aetherPsiphonRegion,
+                    { uiState.aetherPsiphonRegion = it },
+                    placeholder = stringResource(R.string.aether_hint_psiphon_region)
+                )
+                SettingsSwitchItem(
+                    title = stringResource(R.string.aether_lab_psiphon_bundled_list),
+                    summary = stringResource(R.string.aether_hint_psiphon_bundled_list),
+                    checked = uiState.aetherPsiphonBundledList,
+                    onCheckedChange = { uiState.aetherPsiphonBundledList = it }
+                )
+                // What Psiphon has learned is shared by every profile, like the WARP key, and goes only while no session runs on it.
+                OutlinedButton(
+                    onClick = viewModel::clearPsiphonData,
+                    enabled = isCoreAvailable && !isBusy && !renewBlocked,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Text(stringResource(R.string.aether_action_clear_psiphon))
+                }
+                Text(
+                    text = stringResource(R.string.aether_hint_clear_psiphon),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+            AetherDropdownField(
+                label = R.string.aether_lab_tor,
+                value = uiState.aetherTor,
+                entries = R.array.aether_tor_entries,
+                values = R.array.aether_tor_values,
+                enabled = !isBusy,
+                onValueChange = { uiState.aetherTor = it }
+            )
+            if (tor != AetherTor.OFF) {
+                // Inside the tunnel Tor is never blocked and asks for no bridges unless told to; around it or
+                // alone it has to reach Tor first, and where Tor is blocked that takes the transport program.
+                val bridgesUsed = torBridges != AetherTorBridges.NEVER && !(tor == AetherTor.CHAIN && torBridges == AetherTorBridges.AUTO)
+                if (bridgesUsed && !isTorTransportsAvailable) {
+                    Text(
+                        text = stringResource(R.string.aether_tor_transports_unavailable),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                AetherDropdownField(
+                    label = R.string.aether_lab_tor_bridges,
+                    value = uiState.aetherTorBridges,
+                    entries = R.array.aether_tor_bridges_entries,
+                    values = R.array.aether_tor_bridges_values,
+                    onValueChange = { uiState.aetherTorBridges = it }
+                )
+                if (torBridges == AetherTorBridges.AUTO || torBridges == AetherTorBridges.FIRST) {
+                    AetherDropdownField(
+                        label = R.string.aether_lab_tor_relays,
+                        value = uiState.aetherTorRelays,
+                        entries = R.array.aether_tor_relays_entries,
+                        values = R.array.aether_tor_relays_values,
+                        onValueChange = { uiState.aetherTorRelays = it }
+                    )
+                }
+                if (torBridges == AetherTorBridges.OWN) {
+                    FormTextField(
+                        stringResource(R.string.aether_lab_tor_bridge_lines),
+                        uiState.aetherTorBridgeLines,
+                        { uiState.aetherTorBridgeLines = it },
+                        placeholder = stringResource(R.string.aether_hint_tor_bridge_lines),
+                        maxLines = 6
                     )
                 }
             }
-            AetherDropdownField(
-                label = R.string.aether_lab_scan_mode,
-                value = uiState.aetherScanMode,
-                entries = R.array.aether_scan_entries,
-                values = R.array.aether_scan_values,
-                onValueChange = { uiState.aetherScanMode = it }
-            )
-            AetherDropdownField(
-                label = R.string.aether_lab_obfuscation,
-                value = uiState.aetherObfuscation,
-                entries = R.array.aether_obfuscation_entries,
-                values = R.array.aether_obfuscation_values,
-                onValueChange = { uiState.aetherObfuscation = it }
-            )
-            AetherDropdownField(
-                label = R.string.aether_lab_ip_version,
-                value = uiState.aetherIpVersion,
-                entries = R.array.aether_ip_entries,
-                values = R.array.aether_ip_values,
-                onValueChange = { uiState.aetherIpVersion = it }
-            )
-            if (protocol == AetherProtocol.GOOL) {
-                FormTextField(
-                    stringResource(R.string.aether_lab_wiw_outer),
-                    uiState.aetherWiwOuter,
-                    { uiState.aetherWiwOuter = it },
-                    placeholder = stringResource(R.string.aether_hint_endpoint)
-                )
-                FormTextField(
-                    stringResource(R.string.aether_lab_wiw_inner),
-                    uiState.aetherWiwInner,
-                    { uiState.aetherWiwInner = it },
-                    placeholder = stringResource(R.string.aether_hint_endpoint)
-                )
-            } else {
-                FormTextField(
-                    stringResource(R.string.server_lab_address),
-                    uiState.address,
-                    { uiState.address = it },
-                    placeholder = stringResource(R.string.aether_hint_endpoint)
-                )
-                FormTextField(
-                    stringResource(R.string.server_lab_port),
-                    uiState.port,
-                    { uiState.port = it },
-                    keyboardType = KeyboardType.Number
-                )
-            }
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = { viewModel.scan(uiState.toProfileItem(initialConfig)) },
-                    enabled = isCoreAvailable && !isBusy && !scanBlocked
+            if (warpUsed) {
+                if (protocol.twoHops) {
+                    FormTextField(
+                        stringResource(R.string.aether_lab_wiw_outer),
+                        uiState.aetherWiwOuter,
+                        { uiState.aetherWiwOuter = it },
+                        placeholder = stringResource(R.string.aether_hint_endpoint)
+                    )
+                    FormTextField(
+                        stringResource(R.string.aether_lab_wiw_inner),
+                        uiState.aetherWiwInner,
+                        { uiState.aetherWiwInner = it },
+                        placeholder = stringResource(R.string.aether_hint_endpoint)
+                    )
+                } else {
+                    FormTextField(
+                        stringResource(R.string.server_lab_address),
+                        uiState.address,
+                        { uiState.address = it },
+                        placeholder = stringResource(R.string.aether_hint_endpoint)
+                    )
+                    FormTextField(
+                        stringResource(R.string.server_lab_port),
+                        uiState.port,
+                        { uiState.port = it },
+                        keyboardType = KeyboardType.Number
+                    )
+                }
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Button(
+                        onClick = { viewModel.scan(uiState.toProfileItem(initialConfig)) },
+                        enabled = isCoreAvailable && !isBusy && !scanBlocked
+                    ) {
+                        if (isScanning) {
+                            ProgressMark()
+                        }
+                        Text(stringResource(if (isScanning) R.string.aether_action_scanning else R.string.aether_action_scan))
+                    }
                     if (isScanning) {
+                        TextButton(onClick = viewModel::cancelScan) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    }
+                }
+                if (scanBlocked) {
+                    Text(
+                        text = stringResource(R.string.aether_scan_blocked),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                OutlinedButton(
+                    onClick = { showRenewConfirm = true },
+                    enabled = isCoreAvailable && !isBusy && !renewBlocked,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    if (isRenewingIdentity) {
                         ProgressMark()
                     }
-                    Text(stringResource(if (isScanning) R.string.aether_action_scanning else R.string.aether_action_scan))
-                }
-                if (isScanning) {
-                    TextButton(onClick = viewModel::cancelScan) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-            if (scanBlocked) {
-                Text(
-                    text = stringResource(R.string.aether_scan_blocked),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-            OutlinedButton(
-                onClick = { showRenewConfirm = true },
-                enabled = isCoreAvailable && !isBusy && !renewBlocked,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                if (isRenewingIdentity) {
-                    ProgressMark()
-                }
-                Text(
-                    stringResource(
-                        if (isRenewingIdentity) R.string.aether_action_renewing_key else R.string.aether_action_renew_key
+                    Text(
+                        stringResource(
+                            if (isRenewingIdentity) R.string.aether_action_renewing_key else R.string.aether_action_renew_key
+                        )
                     )
-                )
+                }
+                if (renewBlocked) {
+                    Text(
+                        text = stringResource(R.string.aether_renew_blocked),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
-            if (renewBlocked) {
-                Text(
-                    text = stringResource(R.string.aether_renew_blocked),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+            CollapsiblePreferenceGroupHeader(
+                title = stringResource(R.string.aether_lab_advanced),
+                expanded = showAdvanced,
+                onExpandedChange = { showAdvanced = it }
+            )
+            if (showAdvanced) {
+                if (warpUsed) {
+                    FormTextField(
+                        stringResource(R.string.aether_lab_dns),
+                        uiState.aetherDns,
+                        { uiState.aetherDns = it },
+                        placeholder = stringResource(R.string.aether_hint_dns)
+                    )
+                    FormTextField(
+                        stringResource(R.string.aether_lab_exit_loc),
+                        uiState.aetherExitLoc,
+                        { uiState.aetherExitLoc = it },
+                        placeholder = stringResource(R.string.aether_hint_exit_loc)
+                    )
+                }
+                FormTextField(
+                    stringResource(R.string.aether_lab_listen_port),
+                    uiState.aetherListenPort,
+                    { uiState.aetherListenPort = it },
+                    keyboardType = KeyboardType.Number,
+                    placeholder = AppConfig.PORT_AETHER_SOCKS
                 )
             }
             if (!isCoreAvailable) {
@@ -280,6 +454,25 @@ class ServerAetherActivity : BaseServerActivity() {
                     text = stringResource(R.string.aether_unsupported_abi),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
+            }
+            // The command the core is started with, built from the settings above and open to a hand
+            // that needs an option the settings have no field for.
+            val builtCommand = AetherCore.of(uiState.toProfileItem(initialConfig).copy(aetherCommand = null)).command
+            val customCommand = uiState.aetherCommand.isNotBlank() && uiState.aetherCommand.trim() != builtCommand
+            FormTextField(
+                stringResource(R.string.aether_lab_command),
+                uiState.aetherCommand.ifBlank { builtCommand },
+                { uiState.aetherCommand = it },
+                maxLines = 8,
+                supportingText = if (customCommand) stringResource(R.string.aether_command_custom) else null
+            )
+            if (customCommand) {
+                TextButton(
+                    onClick = { uiState.aetherCommand = "" },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Text(stringResource(R.string.aether_action_use_settings))
+                }
             }
             AetherLogPanel(entries = log)
         }
@@ -306,20 +499,31 @@ class ServerAetherActivity : BaseServerActivity() {
     }
 
     override fun validateProtocolConfig(config: ProfileItem): Boolean {
-        val problem = AetherFmt.normalize(config) ?: return true
+        // The core cannot listen where the local proxy of the app does; Xray would get the port first.
+        val problem = AetherFmt.normalize(config, SettingsManager.getLocalProxyPorts()) ?: return true
         toast(
             when (problem) {
                 AetherFmt.Problem.INVALID_PEER -> R.string.aether_invalid_endpoint
                 AetherFmt.Problem.INVALID_HOP -> R.string.aether_invalid_hop
                 AetherFmt.Problem.SHARED_HOP -> R.string.aether_same_hop
                 AetherFmt.Problem.INVALID_FRAGMENT -> R.string.aether_invalid_fragment
+                AetherFmt.Problem.INVALID_DNS -> R.string.aether_invalid_dns
+                AetherFmt.Problem.INVALID_EXIT_LOC -> R.string.aether_invalid_exit_loc
+                AetherFmt.Problem.INVALID_LISTEN_PORT -> R.string.aether_invalid_listen_port
+                AetherFmt.Problem.LISTEN_PORT_TAKEN -> R.string.aether_listen_port_taken
+                AetherFmt.Problem.PSIPHON_NEEDS_MASQUE -> R.string.aether_psiphon_needs_masque
+                AetherFmt.Problem.NEXT_PORT_TAKEN -> R.string.aether_next_port_taken
+                AetherFmt.Problem.TOR_NEEDS_MASQUE -> R.string.aether_tor_needs_masque
+                AetherFmt.Problem.TOR_PSIPHON_CONFLICT -> R.string.aether_tor_psiphon_conflict
+                AetherFmt.Problem.TOR_BRIDGES_MISSING -> R.string.aether_tor_bridges_missing
+                AetherFmt.Problem.INVALID_COMMAND -> R.string.aether_invalid_command
             }
         )
         return false
     }
 
     private fun applyScanResult(state: ServerUiState, result: AetherScanResult) {
-        if (AetherProtocol.fromString(state.aetherProtocol) == AetherProtocol.GOOL) {
+        if (AetherProtocol.fromString(state.aetherProtocol).twoHops) {
             state.aetherWiwOuter = result.endpoint.toString()
             state.aetherWiwInner = result.innerHop?.toString().orEmpty()
         } else {

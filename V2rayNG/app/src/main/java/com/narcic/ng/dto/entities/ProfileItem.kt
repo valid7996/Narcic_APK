@@ -92,6 +92,42 @@ data class ProfileItem(
     var aetherFragment: Boolean? = null,
     var aetherFragmentSize: String? = null,
     var aetherFragmentDelay: String? = null,
+
+    /** Whether the MASQUE handshake hides its server name with Encrypted Client Hello; null means it does not. */
+    var aetherEch: Boolean? = null,
+
+    /** The resolvers names are looked up with inside the tunnel, comma-separated; null means the core's own. */
+    var aetherDns: String? = null,
+
+    /** The exit rule the core holds the tunnel to: country codes to allow, or with a leading ! to refuse; null means any exit. */
+    var aetherExitLoc: String? = null,
+
+    /** Loopback port the Aether core of this profile listens on; null means the default, AppConfig.PORT_AETHER_SOCKS. */
+    var aetherListenPort: String? = null,
+
+    /** Where Psiphon stands in the tunnel, an AetherPsiphon type; null means it is not used. */
+    var aetherPsiphon: String? = null,
+    var aetherPsiphonMode: String? = null,
+    var aetherPsiphonCdnIps: String? = null,
+    var aetherPsiphonCdnSni: String? = null,
+    var aetherPsiphonRegion: String? = null,
+    /** Whether Psiphon starts from the server list the app bundles; null means yes, false means it fetches a fresh list first. */
+    var aetherPsiphonBundledList: Boolean? = null,
+
+    /** Where Tor stands in the tunnel, an AetherTor type; null means it is not used. */
+    var aetherTor: String? = null,
+
+    /** When Tor turns to bridges, an AetherTorBridges type; null means when Tor is blocked. */
+    var aetherTorBridges: String? = null,
+
+    /** The profile's own bridge lines, one per line as torrc writes them, used when aetherTorBridges says so. */
+    var aetherTorBridgeLines: String? = null,
+
+    /** Where Tor's fetched bridges come from, an AetherTorRelays type; null means bridgedb and the public relays. */
+    var aetherTorRelays: String? = null,
+
+    /** The command line of this profile's core, written by hand in place of the one built from the settings; null follows the settings. */
+    var aetherCommand: String? = null,
 ) {
 
     companion object {

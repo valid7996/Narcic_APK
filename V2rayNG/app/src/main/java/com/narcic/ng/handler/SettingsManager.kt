@@ -280,6 +280,10 @@ object SettingsManager {
         encodeSubscription(DEFAULT_SUBSCRIPTION_ID, defaultSub)
     }
 
+    fun getLocalProxyPorts(): Set<Int> {
+        return if (IsDynamicSocksPort()) emptySet() else setOf(getSocksPort(), getHttpPort())
+    }
+
     /**
      * Get the SOCKS port.
      * @return The SOCKS port.

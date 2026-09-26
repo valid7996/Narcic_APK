@@ -74,3 +74,37 @@ cd V2rayNG
 - توی تب V2Ray: «افزودن دستی کانفیگ Aether»
 - توی تب AmneziaWG: «افزودن دستی WARP to WARP»
 هر دو همون صفحه‌ی Aether رو باز می‌کنن (چون WARP-in-WARP یکی از پروتکل‌های همون صفحه‌ست)، فقط برچسبشون فرق داره.
+
+## آپدیت بزرگ: Psiphon on chain + Tor برای Aether
+
+این آپدیت از سورس جدید PattNG پورت شد (نه حدسی). شامل:
+
+### فایل‌های کاملاً جدید
+- V2rayNG/app/src/main/java/com/narcic/ng/core/AetherCore.kt
+- V2rayNG/app/src/main/java/com/narcic/ng/core/PsiphonServerList.kt
+- compile-psiphon.sh (باینری psiphon-tunnel-core که خودِ Aether اجراش می‌کنه)
+- compile-pt.sh (لایربرد/pluggable transport برای پل‌های Tor)
+- fetch-psiphon-servers.sh (لیست سرور امضاشده‌ی عمومی Psiphon، در بیلد دانلود می‌شه)
+
+### فایل‌های به‌روزشده (Overwrite کامل)
+- core/AetherCoreManager.kt (بازنویسی کامل، شامل Psiphon و Tor)
+- core/AetherDelayTester.kt, core/AetherIdentityManager.kt, core/AetherScanner.kt
+- fmt/AetherFmt.kt (اعتبارسنجی فیلدهای جدید)
+- dto/entities/ProfileItem.kt (فیلدهای جدید Psiphon/Tor/DNS/ExitLoc/Command)
+- enums/AetherOption.kt (enum های AetherPsiphon, AetherTor و...)
+- ui/server/ServerUiState.kt, AetherEditorRepository.kt, ServerAetherViewModel.kt, ServerAetherActivity.kt (کل UI صفحه‌ی Aether، شامل بخش Psiphon، Tor، تنظیمات پیشرفته، خط‌فرمان دستی)
+- core/CoreOutboundBuilder.kt, core/CoreServiceManager.kt (پورت واقعی از AetherCore.of(profile).port)
+- handler/SettingsManager.kt (تابع جدید getLocalProxyPorts)
+- ui/compose/FormFields.kt (پارامتر جدید supportingText)
+- values/strings.xml, values/arrays.xml (~۴۰ رشته و آرایه‌ی جدید)
+- compile-aether.sh (حالا با فلگ --features tor بیلد می‌شه)
+- .github/workflows/release.yml (مراحل ساخت/کش Psiphon و pluggable transport اضافه شد)
+
+### نکته‌ی مهم submodule
+چون compile-aether.sh عوض شده (--features tor)، کش قبلی aether دیگه استفاده نمی‌شه و یه‌بار از نو بیلد می‌شه (کمی طول می‌کشه، عادیه).
+
+### هنوز باقی‌مونده (اختیاری، غیر build-blocking)
+- ترجمه‌ی فارسی رشته‌های جدید Psiphon/Tor (فعلاً فقط انگلیسی نشون داده می‌شن)
+
+### آگاهانه پورت نشد
+سیستم AetherDependency/ReloadOutcome از PattNG (تشخیص تداخل چند پروفایل Aether در یک کانفیگ) — چون Aether در Narcic اصلاً نمی‌تونه زنجیره/chain بشه (قبلاً همین‌جا مسدود شده)، این سناریو پیش نمیاد و نیازی به این پیچیدگی نیست.

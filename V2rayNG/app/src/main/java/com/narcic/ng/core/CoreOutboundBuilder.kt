@@ -33,7 +33,7 @@ object CoreOutboundBuilder {
             EConfigType.WIREGUARD -> toOutboundWireguard(profileItem)
             EConfigType.HYSTERIA2 -> toOutboundHysteria2(profileItem)
             EConfigType.HTTP -> toOutboundHttp(profileItem)
-            EConfigType.AETHER -> toOutboundAether()
+            EConfigType.AETHER -> toOutboundAether(profileItem)
             else -> null
         }
 
@@ -221,12 +221,12 @@ object CoreOutboundBuilder {
         return outboundBean
     }
 
-    private fun toOutboundAether(): OutboundBean? {
+    private fun toOutboundAether(profileItem: ProfileItem): OutboundBean? {
         val outboundBean = createInitOutbound(EConfigType.SOCKS)
 
         outboundBean?.settings?.let { settings ->
             settings.address = AppConfig.LOOPBACK
-            settings.port = AetherCoreManager.socksPort
+            settings.port = AetherCore.of(profileItem).port
             settings.level = AppConfig.DEFAULT_LEVEL
         }
 

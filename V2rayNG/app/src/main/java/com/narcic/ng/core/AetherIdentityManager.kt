@@ -26,6 +26,7 @@ object AetherIdentityManager {
 
     const val BASE_FILE = "aether.toml"
     const val MASQUE_FILE = "aether-masque.toml"
+    const val MASQUE_INNER_FILE = "aether-masque-secondary.toml"
     const val WIREGUARD_FILE = "aether-wg.toml"
     const val WIREGUARD_INNER_FILE = "aether-wg-secondary.toml"
 
@@ -33,10 +34,13 @@ object AetherIdentityManager {
     private const val PREVIOUS_DIR = "aether-previous"
     private const val RENEW_TIMEOUT_MS = 2 * 60_000L
 
+    /** A renewal through Tor or Psiphon around the tunnel waits for the carrier to come up first, which takes what a scan may take. */
+    private const val RENEW_THROUGH_CARRIER_TIMEOUT_MS = 8 * 60_000L
+
     private val identityField = Regex("""^(device_id|ipv4|ipv6)\s*=\s*"([^"]*)"$""")
     private val multilineDelimiter = Regex("\"\"\"|'''")
     private val identityReady = Regex("""identity ready: device=\S+""")
-    private val goolIdentitiesReady = Regex("""outer device=\S+ .*\| inner device=\S+""")
+    private val hopIdentitiesReady = Regex("""outer device=\S+ .*\| inner device=\S+""")
 
     fun workDir(context: Context): File = File(context.filesDir, WORK_DIR)
 
@@ -50,11 +54,12 @@ object AetherIdentityManager {
     ): AetherIdentityStatus? {
         val protocol = AetherProtocol.fromString(profile.aetherProtocol)
         val workDir = workDir(context)
+        val port = withContext(Dispatchers.IO) { AetherCoreManager.scanPort(profile) }
         val renewed = replaceIdentities(workDir, File(context.filesDir, PREVIOUS_DIR)) {
             AetherCoreManager.runUntil(
                 context = context,
-                arguments = AetherCoreManager.buildArguments(profile, 0, scan = true),
-                timeoutMs = RENEW_TIMEOUT_MS,
+                arguments = AetherCoreManager.buildArguments(profile, port, scan = true),
+                timeoutMs = if (AetherCoreManager.reachesWarpThroughCarrier(profile)) RENEW_THROUGH_CARRIER_TIMEOUT_MS else RENEW_TIMEOUT_MS,
                 source = "aether-key",
                 onOutput = onOutput,
             ) { line -> line.takeIf { isReady(protocol, it) } } != null
@@ -69,6 +74,12 @@ object AetherIdentityManager {
             protocol,
             read(File(workDir, WIREGUARD_FILE)),
             read(File(workDir, WIREGUARD_INNER_FILE)),
+        )
+
+        AetherProtocol.MIM -> AetherIdentityStatus(
+            protocol,
+            read(File(workDir, MASQUE_FILE)),
+            read(File(workDir, MASQUE_INNER_FILE)),
         )
     }
 
@@ -88,11 +99,12 @@ object AetherIdentityManager {
         return AetherIdentity(deviceId, fields["ipv4"].orEmpty(), fields["ipv6"].orEmpty())
     }
 
+    /** The tunnels over MASQUE share the MASQUE key and the others the WireGuard key; a two-hop tunnel adds a second key of its kind. */
     fun sharesIdentity(first: AetherProtocol, second: AetherProtocol): Boolean =
-        (first == AetherProtocol.MASQUE) == (second == AetherProtocol.MASQUE)
+        first.overMasque == second.overMasque
 
     internal fun isReady(protocol: AetherProtocol, line: String): Boolean = when (protocol) {
-        AetherProtocol.GOOL -> goolIdentitiesReady.containsMatchIn(line)
+        AetherProtocol.GOOL, AetherProtocol.MIM -> hopIdentitiesReady.containsMatchIn(line)
         AetherProtocol.MASQUE, AetherProtocol.WIREGUARD -> identityReady.containsMatchIn(line)
     }
 

@@ -602,20 +602,100 @@
     <string name="aether_log_inner_key_missing">Inner hop key: none yet; one is registered on the first scan or connection</string>
     <string name="aether_renew_blocked">Disconnect the Aether profile before getting a new WARP key; the running connection uses the current key</string>
     <string name="aether_scan_blocked">Disconnect the Aether profile before scanning; a scan would open a second tunnel on the running connection\'s key</string>
+    <string name="aether_lab_listen_port">Listen port</string>
+    <string name="aether_invalid_listen_port">Use a listen port from 1 to 65535, or leave it empty for the default</string>
+    <string name="aether_listen_port_taken">The listen port cannot be the same as the local proxy port of the app</string>
+    <string name="aether_lab_psiphon">Psiphon</string>
+    <string name="aether_lab_psiphon_mode">Psiphon connection</string>
+    <string name="aether_lab_psiphon_cdn_ips">CDN fronting IPs</string>
+    <string name="aether_lab_psiphon_cdn_sni">CDN fronting server names</string>
+    <string name="aether_hint_psiphon_list">Comma-separated; leave blank for the built-in list</string>
+    <string name="aether_lab_psiphon_region">Exit country</string>
+    <string name="aether_hint_psiphon_region">Country code such as DE; leave blank for any</string>
+    <string name="aether_lab_psiphon_bundled_list">Start from the bundled server list</string>
+    <string name="aether_hint_psiphon_bundled_list">On: Psiphon dials the servers in psiphon_servers.dat at once and fetches a fresh list only when they fail. Off: it fetches a fresh list before its first connection, so the list must be reachable, as it is behind WARP</string>
+    <string name="aether_action_clear_psiphon">Clear Psiphon data</string>
+    <string name="aether_hint_clear_psiphon">Forgets the servers Psiphon has learned and the lists it fetched. Its next start begins from the bundled list again, or from a fresh download when the switch above is off</string>
+    <string name="aether_log_psiphon_cleared">Psiphon data cleared</string>
+    <string name="aether_log_psiphon_clear_failed">Psiphon data could not be cleared</string>
+    <string name="aether_psiphon_clear_blocked">Disconnect the Aether profile before clearing Psiphon data; the running connection uses it</string>
+    <string name="aether_psiphon_unavailable">This build does not include the Psiphon client, so a profile with Psiphon cannot connect</string>
+    <string name="aether_psiphon_needs_masque">Psiphon → WARP works with the MASQUE protocol only</string>
+    <string name="aether_next_port_taken">With Tor or Psiphon in the path the core also uses the ports after the listen port; none of them can be the local proxy port of the app</string>
+    <string name="aether_lab_tor">Tor</string>
+    <string name="aether_lab_tor_bridges">Bridges</string>
+    <string name="aether_lab_tor_bridge_lines">Bridge lines</string>
+    <string name="aether_hint_tor_bridge_lines">One per line, as in torrc: obfs4 1.2.3.4:443 FINGERPRINT cert=… iat-mode=0</string>
+    <string name="aether_tor_transports_unavailable">This build has no pluggable transports, so Tor bridges cannot be used; Tor connects only where it is not blocked</string>
+    <string name="aether_tor_needs_masque">Tor → WARP works with the MASQUE protocol only</string>
+    <string name="aether_tor_psiphon_conflict">Tor and Psiphon go together only with one inside the tunnel and the other around it</string>
+    <string name="aether_tor_bridges_missing">Write at least one bridge line, or choose another bridge setting</string>
+    <string name="aether_lab_ech">Encrypted Client Hello</string>
+    <string name="aether_hint_ech">Hides the server name of the MASQUE handshake, when its key can be fetched</string>
+    <string name="aether_lab_dns">DNS inside the tunnel</string>
+    <string name="aether_hint_dns">Comma-separated; leave blank for 1.1.1.1 and 1.0.0.1</string>
+    <string name="aether_invalid_dns">Write resolver addresses such as 1.1.1.1 or 10.0.0.1:5353, separated by commas</string>
+    <string name="aether_lab_exit_loc">Exit location</string>
+    <string name="aether_hint_exit_loc">DE,SE allows only those; !IR,RU refuses those; blank accepts any</string>
+    <string name="aether_invalid_exit_loc">Write two-letter country codes separated by commas, with a leading ! to refuse them</string>
+    <string name="aether_lab_tor_relays">Bridge sources</string>
+    <string name="aether_lab_advanced">Advanced settings</string>
+    <string name="aether_lab_command">Aether command</string>
+    <string name="aether_command_custom">Edited by hand: this command runs as written, and the settings above are not applied</string>
+    <string name="aether_action_use_settings">Use the settings</string>
+    <string name="aether_invalid_command">The command has to name arguments for the Aether core, with the port it listens on after --bind</string>
+    <string name="aether_chain_entry_only">An Aether profile can only be the first hop of a proxy chain, the one that reaches the internet directly</string>
+    <string name="aether_config_single_profile">A configuration can use only one Aether profile</string>
+    <string name="aether_custom_single_core">Only one Aether core can run: every outbound with aetherSettings has to use the same settings and the same port</string>
+    <string name="aether_custom_no_listener">The SOCKS outbound with aetherSettings has to dial %1$s and a port from 1 to 65535; the Aether core listens there</string>
+    <string name="aether_custom_unknown_entry">aetherSettings has an entry the Aether core does not know: %1$s</string>
+    <string name="aether_custom_no_outbound">No SOCKS outbound of the configuration dials %1$s:%2$d, where the Aether command listens</string>
+    <string name="aether_custom_invalid_command">aetherCommand has to be the command line of the Aether core, as text, with the address it listens on after --bind: %1$s</string>
     <string name="title_aether_core">Aether core</string>
     <string name="summary_aether_core">WARP client by CluvexStudio, bundled under the AGPL-3.0 license. Tap to open its source code.</string>
     <string-array name="aether_scan_entries">
         <item>Turbo</item>
         <item>Balanced</item>
         <item>Thorough</item>
-        <item>Stealth</item>
+        <item>Verified</item>
         <item>Ironclad</item>
     </string-array>
     <string-array name="aether_obfuscation_entries">
+        <item>Automatic</item>
         <item>Off</item>
         <item>Light</item>
+        <item>Firewall</item>
         <item>Balanced</item>
+        <item>GFW</item>
         <item>Aggressive</item>
+    </string-array>
+    <string-array name="aether_psiphon_entries">
+        <item>Off</item>
+        <item>WARP → Psiphon</item>
+        <item>Psiphon → WARP</item>
+        <item>Psiphon only</item>
+    </string-array>
+    <string-array name="aether_psiphon_mode_entries">
+        <item>Automatic</item>
+        <item>CDN fronting only</item>
+        <item>Direct only</item>
+    </string-array>
+    <string-array name="aether_tor_entries">
+        <item>Off</item>
+        <item>WARP → Tor</item>
+        <item>Tor → WARP</item>
+        <item>Tor only</item>
+    </string-array>
+    <string-array name="aether_tor_bridges_entries">
+        <item>When Tor is blocked</item>
+        <item>From the start</item>
+        <item>Never</item>
+        <item>My own bridge lines</item>
+    </string-array>
+    <string-array name="aether_tor_relays_entries">
+        <item>bridgedb and public relays</item>
+        <item>Public relays only</item>
+        <item>bridgedb only</item>
     </string-array>
 
 </resources>

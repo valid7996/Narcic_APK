@@ -178,18 +178,11 @@ object CoreServiceManager {
                 error(service.getString(R.string.aether_unsupported_abi))
             }
             aetherExitHandled = false
-            AetherCoreManager.start(service, config) { onAetherExit(guid) }
         } else {
             AetherCoreManager.stop()
         }
 
-        try {
-            launchNativeCore(service, guid, config, result.content, vpnInterface, isReload)
-        } catch (e: Exception) {
-            // Setup failed after this attempt spawned the Aether process; release it with the rest.
-            AetherCoreManager.stop()
-            throw e
-        }
+        launchNativeCore(service, guid, config, result.content, vpnInterface, isReload)
     }
 
     @Throws(Exception::class)
@@ -242,7 +235,7 @@ object CoreServiceManager {
         }
 
         if (config.configType == EConfigType.AETHER) {
-            announceAetherWarmUp(service, guid, isReload)
+            announceAetherWarmUp(service, guid, config, isReload)
         } else if (!isReload) {
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
@@ -251,13 +244,18 @@ object CoreServiceManager {
     }
 
     /**
-     * Xray is up as soon as it starts, but an Aether profile carries no traffic until the Aether
-     * process has scanned and connected, which can take minutes. The start-success signal is held
-     * back until the Aether SOCKS listener accepts connections, so the UI keeps showing its normal
-     * "starting" state for the duration instead of reporting a connection that cannot carry traffic yet.
+     * Owns the Aether startup end to end, off the calling thread: xray is already running by the
+     * time this is called, but an Aether profile carries no traffic until the core it depends on
+     * has scanned and connected -- and, with Psiphon or Tor inside the tunnel, until that carrier
+     * has connected too, which [AetherCoreManager.awaitListening] already waits on via the core's
+     * own ready word. The start-success signal is held back for all of that, so the UI keeps
+     * showing its normal "starting" state instead of reporting a connection that cannot carry
+     * traffic yet.
      */
-    private fun announceAetherWarmUp(service: Service, guid: String, isReload: Boolean) {
+    private fun announceAetherWarmUp(service: Service, guid: String, config: ProfileItem, isReload: Boolean) {
         aetherWarmUpJob = aetherScope.launch {
+            AetherCoreManager.start(service, AetherCore.of(config), afterProbes = false) { onAetherExit(guid) }
+
             var listening = false
             while (isActive && !listening && AetherCoreManager.isRunning) {
                 listening = AetherCoreManager.awaitListening(AETHER_WARM_UP_MS)

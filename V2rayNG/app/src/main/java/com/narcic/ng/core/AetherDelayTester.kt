@@ -54,12 +54,27 @@ object AetherDelayTester {
         NOT_READY,
     }
 
-    suspend fun measure(context: Context, guid: String, profile: ProfileItem, url: String): Long {
+    suspend fun measure(context: Context, guid: String, profile: ProfileItem, url: String): Long =
+        measureVia(context, guid, AetherCore.of(profile)) { port, deadline -> withContext(Dispatchers.IO) { requestDelay(port, url, deadline) } }
+
+    /**
+     * Runs [probe] against [core]: the live session when it runs this core, a test tunnel on a port
+     * of its own otherwise, and none at all when a second tunnel would share the live session's
+     * key. [probe] gets the core's SOCKS port and the deadline of the budget. A chain, a routing
+     * target, a policy group or a custom configuration that runs on an Aether core is measured this
+     * way, with its own Xray configuration pointed at that port.
+     */
+    suspend fun measureVia(
+        context: Context,
+        guid: String,
+        core: AetherCore,
+        probe: suspend (port: Int, deadline: Long) -> Long,
+    ): Long {
         val activeGuid = MmkvManager.getSelectServer()
         val session = withContext(Dispatchers.IO) { liveSession(context, activeGuid) }
-        return when (route(guid, profile, activeGuid, session)) {
-            Route.ACTIVE_SESSION -> withContext(Dispatchers.IO) { requestDelay(AetherCoreManager.socksPort, url) }
-            Route.NEW_TUNNEL -> tunnels.withLock { throughNewTunnel(context, guid, profile, url) }
+        return when (route(guid, core, activeGuid, session)) {
+            Route.ACTIVE_SESSION -> probe(session?.port ?: AetherCoreManager.socksPort, deadlineAfter(TEST_BUDGET_MS))
+            Route.NEW_TUNNEL -> tunnels.withLock { throughNewTunnel(context, guid, core, probe) }
             Route.SKIP -> {
                 // A second tunnel on the live session's key would disturb it.
                 LogUtil.i(AppConfig.TAG, "AetherTest: left untested, it shares the live session's key, guid=$guid")
@@ -75,22 +90,25 @@ object AetherDelayTester {
 
     /**
      * The daemon's live Aether session: its protocol, its arguments when its process could be read,
-     * and whether its SOCKS listener accepts connections yet.
+     * the port of its SOCKS listener, and whether that listener accepts connections yet.
      */
-    internal class LiveSession(val protocol: AetherProtocol, val arguments: List<String>?, val listening: Boolean)
+    internal class LiveSession(val protocol: AetherProtocol, val arguments: List<String>?, val port: Int, val listening: Boolean)
 
     /**
-     * The daemon's live Aether session, or null without one. Its core process names the protocol
-     * and the running profile, whether it is still scanning or already listening; when /proc
-     * cannot be read, a listener on the session port together with a selected Aether profile
+     * The daemon's live Aether session, or null without one. Its core process names the protocol,
+     * the running profile and the port it listens on, whether it is still scanning or already
+     * listening; when /proc cannot be read, a selected Aether profile with a listener on its port
      * stands in for it.
      */
     private fun liveSession(context: Context, activeGuid: String?): LiveSession? {
-        val listening = AetherCoreManager.acceptsConnections(AetherCoreManager.socksPort)
-        AetherCoreManager.sessionArguments(context)?.let { return LiveSession(AetherCoreManager.protocolOf(it), it, listening) }
-        if (!listening) return null
+        AetherCoreManager.sessionArguments(context)?.let { arguments ->
+            val port = AetherCoreManager.listenerPortOf(arguments) ?: AetherCoreManager.socksPort
+            return LiveSession(AetherCoreManager.protocolOf(arguments), arguments, port, AetherCoreManager.answersSocks(port))
+        }
         val active = activeGuid?.let(MmkvManager::decodeServerConfig)?.takeIf { it.configType == EConfigType.AETHER } ?: return null
-        return LiveSession(AetherProtocol.fromString(active.aetherProtocol), arguments = null, listening = true)
+        val port = AetherCore.of(active).port
+        if (!AetherCoreManager.answersSocks(port)) return null
+        return LiveSession(AetherProtocol.fromString(active.aetherProtocol), arguments = null, port = port, listening = true)
     }
 
     /**
@@ -107,51 +125,66 @@ object AetherDelayTester {
     }
 
     internal fun probeHost(profile: ProfileItem): String? =
-        if (AetherProtocol.fromString(profile.aetherProtocol) == AetherProtocol.GOOL) {
+        if (AetherProtocol.fromString(profile.aetherProtocol).twoHops) {
             AetherEndpoint.parse(profile.aetherWiwOuter)?.host
         } else {
             AetherEndpoint.of(profile.server, profile.serverPort)?.host
         }
 
     /**
-     * Where a test goes: through the live session for the profile it runs, nowhere for another
-     * profile whose key the session uses, and through a tunnel of its own otherwise. The running
-     * profile is told by the session's arguments; without them, the selected profile stands in.
-     * While the session is still connecting, the running profile is left untested rather than failed.
+     * Where a test goes: through the live session for the core it runs, nowhere for another core
+     * whose key the session uses, and through a tunnel of its own otherwise. The running core is
+     * told by the session's arguments; without them, the selected profile stands in. While the
+     * session is still connecting, the running core is left untested rather than failed.
      */
-    internal fun route(guid: String, profile: ProfileItem, activeGuid: String?, session: LiveSession?): Route {
+    internal fun route(guid: String, core: AetherCore, activeGuid: String?, session: LiveSession?): Route {
         if (session == null) return Route.NEW_TUNNEL
-        val running = session.arguments?.let { AetherCoreManager.runsProfile(it, profile) } ?: (guid == activeGuid)
+        val running = session.arguments?.let(core::runsAs) ?: (guid == activeGuid)
         if (running) return if (session.listening) Route.ACTIVE_SESSION else Route.NOT_READY
-        val shared = AetherIdentityManager.sharesIdentity(AetherProtocol.fromString(profile.aetherProtocol), session.protocol)
+        val shared = AetherIdentityManager.sharesIdentity(core.protocol, session.protocol)
         return if (shared) Route.SKIP else Route.NEW_TUNNEL
     }
 
-    private suspend fun throughNewTunnel(context: Context, guid: String, profile: ProfileItem, url: String): Long {
+    private suspend fun throughNewTunnel(
+        context: Context,
+        guid: String,
+        core: AetherCore,
+        probe: suspend (port: Int, deadline: Long) -> Long,
+    ): Long {
         val port = withContext(Dispatchers.IO) { Utils.findRandomFreePort() }
         // The clock starts before the spawn: the budget covers the whole test, as it does for every other profile.
         val deadline = deadlineAfter(TEST_BUDGET_MS)
+        val arguments = core.on(port).arguments
         return AetherCoreManager.withProcess(
             context = context,
-            arguments = AetherCoreManager.buildArguments(profile, port),
+            arguments = arguments,
             source = "aether-test",
             onOutput = {},
         ) { output ->
-            if (!awaitListening(port, output, deadline)) {
+            val needsWord = AetherCoreManager.readyNeedsWord(arguments) && AetherCoreManager.showsInfo(arguments)
+            if (!awaitListening(port, output, deadline, needsWord)) {
                 LogUtil.w(AppConfig.TAG, "AetherTest: the tunnel did not come up, guid=$guid")
                 return@withProcess -1L
             }
-            val delay = withContext(Dispatchers.IO) { requestDelay(port, url, deadline) }
+            val delay = probe(port, deadline)
             if (delay < 0) LogUtil.w(AppConfig.TAG, "AetherTest: no answer through the tunnel, guid=$guid")
             delay
         } ?: -1L
     }
 
-    private suspend fun awaitListening(port: Int, output: ReceiveChannel<String>, deadline: Long): Boolean {
+    /**
+     * Waits until the listener on [port] answers, and, with [needsWord], until the core has also
+     * written its word that the listener carries traffic; false when the core ends or [deadline] passes.
+     */
+    internal suspend fun awaitListening(port: Int, output: ReceiveChannel<String>, deadline: Long, needsWord: Boolean = false): Boolean {
+        var wordSeen = !needsWord
         while (System.nanoTime() < deadline) {
-            while (output.tryReceive().isSuccess) Unit
+            while (true) {
+                val line = output.tryReceive().getOrNull() ?: break
+                if (!wordSeen && AetherCoreManager.isReadyWord(line)) wordSeen = true
+            }
             if (output.isClosedForReceive) return false
-            if (withContext(Dispatchers.IO) { AetherCoreManager.acceptsConnections(port) }) return true
+            if (wordSeen && withContext(Dispatchers.IO) { AetherCoreManager.answersSocks(port) }) return true
             delay(POLL_INTERVAL_MS)
         }
         return false
