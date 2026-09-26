@@ -17,6 +17,21 @@ jobs:
           submodules: 'recursive'
           fetch-depth: '0'
 
+      # GitHub-hosted runners run out of disk with the NDK, the full Rust target dir and three
+      # native programs on board (the build dies with "No space left on device" inside Gradle).
+      # Reclaim the hosted tool caches we never use; the Android SDK stays (android: false) and
+      # Go/Java are (re)installed by their own setup steps afterwards.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -139,6 +154,15 @@ jobs:
       - name: Fetch the Psiphon server list
         run: |
           bash fetch-psiphon-servers.sh
+
+      # The Rust target dir (gigabytes, rebuilt from scratch every run) and the Go build cache are
+      # no longer needed: the caches above already hold the built libraries. Drop them so the Gradle
+      # build that follows does not run out of disk.
+      - name: Reclaim build disk space
+        run: |
+          rm -rf ${{ github.workspace }}/aether/aether/target
+          go clean -cache -modcache -testcache 2>/dev/null || true
+          df -h /
 
       - name: Download libv2ray
         uses: robinraju/release-downloader@v1.13
