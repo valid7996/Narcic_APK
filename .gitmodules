@@ -9,5 +9,5 @@
 	url = https://github.com/amnezia-vpn/amneziawg-android
 [submodule "aether"]
 	path = aether
-	url = https://github.com/CluvexStudio/aether.git
+	url = https://github.com/patterniha/Aether.git
 	branch = main

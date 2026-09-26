@@ -13,7 +13,7 @@ __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # psiphon_servers.stamp beside it records when the list was published, from the download's
 # Last-Modified header, so the app can tell a newer bundled list from an older one.
 
-APP_CONFIG="$__dir/V2rayNG/app/src/main/java/com/v2ray/ang/AppConfig.kt"
+APP_CONFIG="$__dir/V2rayNG/app/src/main/java/com/narcic/ng/AppConfig.kt"
 KEY_SOURCE="$__dir/aether/aether/src/psiphon.rs"
 TARGET="$__dir/V2rayNG/app/src/main/assets/psiphon_servers.dat"
 STAMP="$__dir/V2rayNG/app/src/main/assets/psiphon_servers.stamp"
