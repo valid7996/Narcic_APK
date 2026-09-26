@@ -210,6 +210,13 @@ object AppConfig {
     const val PORT_LOCAL_DNS = "10853"
     const val PORT_SOCKS = "10808"
     const val PORT_AETHER_SOCKS = "10819"
+
+    /** Psiphon's signed server list, as its client downloads it: shipped by every build and kept beside the geo files. */
+    const val PSIPHON_SERVERS_DAT = "psiphon_servers.dat"
+    const val PSIPHON_SERVERS_URL = "https://s3.amazonaws.com//psiphon/web/mjr4-p23r-puwl/server_list_compressed"
+
+    /** When the bundled list was published, as the build recorded it from the download: seconds since the epoch. */
+    const val PSIPHON_SERVERS_STAMP = "psiphon_servers.stamp"
     const val WIREGUARD_LOCAL_ADDRESS_V4 = "172.16.0.2/32"
     const val WIREGUARD_LOCAL_ADDRESS_V6 = "2606:4700:110:8f81:d551:a0:532e:a2b3/128"
     const val WIREGUARD_LOCAL_MTU = "1420"
@@ -222,6 +229,10 @@ object AppConfig {
     const val PREF_NARCIS_SPOOF_CONNECT_PORT = "pref_narcis_spoof_connect_port"
     const val PREF_NARCIS_SPOOF_FAKE_SNI = "pref_narcis_spoof_fake_sni"
     const val PREF_NARCIS_SPOOF_METHOD = "pref_narcis_spoof_method"
+
+    /** Issued by Psiphon Inc. to a registered app -- there is no public/shared value that works. */
+    const val PREF_PSIPHON_PROPAGATION_CHANNEL_ID = "pref_psiphon_propagation_channel_id"
+    const val PREF_PSIPHON_SPONSOR_ID = "pref_psiphon_sponsor_id"
 
     /** Message constants for communication. */
     const val MSG_REGISTER_CLIENT = 1

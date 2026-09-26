@@ -386,7 +386,7 @@ class ServerAetherActivity : BaseServerActivity() {
                     }
                     if (isScanning) {
                         TextButton(onClick = viewModel::cancelScan) {
-                            Text(stringResource(R.string.action_cancel))
+                            Text(stringResource(android.R.string.cancel))
                         }
                     }
                 }
