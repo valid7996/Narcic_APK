@@ -21,14 +21,17 @@ jobs:
       # native programs on board (the build dies with "No space left on device" inside Gradle).
       # Reclaim the hosted tool caches we never use; the Android SDK stays (android: false) and
       # Go/Java are (re)installed by their own setup steps afterwards.
+      # NOTE: large-packages must stay false: it removes the system clang/llvm whose builtin
+      # headers (stddef.h et al.) boring-sys's bindgen needs to build the Aether core; without
+      # them the Rust build fails with "fatal error: 'stddef.h' file not found".
       - name: Free disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          preinstalled-runtimes: true
           android: false
           dotnet: true
           haskell: true
-          large-packages: true
+          large-packages: false
           docker-images: true
           swap-storage: true
 
