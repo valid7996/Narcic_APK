@@ -2,25 +2,28 @@ package com.narcic.ng.ui.main
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,20 +38,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.R
 import com.narcic.ng.enums.EConfigType
+import com.narcic.ng.ui.compose.AccentPair
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
 import com.narcic.ng.ui.compose.AuroraIndigo
 import com.narcic.ng.ui.compose.DeleteConfirmDialog
-import com.narcic.ng.ui.compose.EngineOption
-import com.narcic.ng.ui.compose.EngineSwitch
 import com.narcic.ng.ui.compose.GooOverlay
 import com.narcic.ng.ui.compose.GroupTabs
 import com.narcic.ng.ui.compose.LocalDarkTheme
+import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.compose.QRCodeDialog
 import com.narcic.ng.ui.compose.SpiderWebCorners
 import com.narcic.ng.ui.compose.StatusPill
@@ -57,27 +62,30 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Connection screen — "two engines, one screen":
- *  - Top bar: drawer/menu button + title + fetch-subscriptions action.
- *  - StatusPill + EngineSwitch: pick AmneziaWG vs V2Ray. Locked while a
- *    tunnel is up (the two engines never run at the same time).
- *  - ConnectHero: big connect circle, colored with the active engine's
- *    accent (cyan/sky for AWG, violet/indigo for V2Ray).
- *  - ConnectionStatsPanel: ping / IP / live-speed sparkline card. Hidden
- *    while disconnected.
+ * Connection screen — the 3-page redesign (امنزیا / وی‌تو‌ری / اتر):
+ *  - Top bar: title + fetch-subscriptions + ⋯ "more" sheet + settings gear.
+ *  - MainEngineTabBar (bottom): one tab per engine page; selection is
+ *    UI-local list filtering only, never the ViewModel's selected server.
+ *  - ConnectHero: big connect circle, colored with the active page's accent
+ *    (cyan/sky for AWG, violet/indigo for V2Ray, orange for Aether).
+ *  - ConnectionDashboard: premium live dashboard (big download number,
+ *    smooth area chart, session totals) + the handshake step checklist
+ *    while connecting. Hidden while disconnected.
  *  - GroupTabs: "پیش‌فرض" (manually-entered servers) + one tab per
  *    subscription, each showing a live count scoped to the active engine.
  *  - MainServerListSection: single "Test" button + best-5 + full vertical
- *    list, all scoped to the selected group *and* the active engine.
+ *    list, scoped to the selected group *and* the active page (the Aether
+ *    page shows only EConfigType.AETHER profiles, and its + opens the
+ *    Aether editor directly).
  *  - GooOverlay: full-screen busy state while "تست گروه" is running.
  *  - Every full-screen overlay (subscriptions) registers a BackHandler so
  *    the hardware/gesture back button closes the overlay and returns to
  *    this screen instead of exiting the app. Once no overlay is showing, a
  *    root-level BackHandler takes over and minimizes the app (onMinimize)
  *    instead of finishing the activity.
- *  - Bottom nav: سابسکریپشن / وی‌پی‌ان / آمار / تنظیمات. Only the VPN tab
- *    renders this Scaffold; the other three either open a full-screen
- *    overlay or launch their own Activity (Statistics, Settings).
+ *  - The old 4-item bottom nav (سابسکریپشن / وی‌پی‌ان / آمار / تنظیمات) is
+ *    replaced by the engine tabs; its other entries moved to the top bar
+ *    and the ⋯ sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +108,7 @@ fun MainScreen(
     // Bottom-nav overlay screens.
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
+    var showMoreSheet by remember { mutableStateOf(false) }
 
     // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
     // "Manage configs" (test/sort/export-all + bulk delete).
@@ -113,23 +122,38 @@ fun MainScreen(
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
     }
 
-    // ---- Active engine (AmneziaWG vs V2Ray) -----------------------------
-    // UI-local: which engine's servers are currently *shown*. It starts in
-    // sync with whatever server is actually selected in the ViewModel, but
-    // the user can freely browse the other engine's tab without that
-    // changing the real selection until they tap a server card
-    // (SelectServer) -- the ViewModel's notion of "selected server" is
-    // untouched by this switch.
-    var engineIsAwg by rememberSaveable { mutableStateOf(false) }
+    // ---- Active page (امنزیا / وی‌تو‌ری / اتر) --------------------------
+    // UI-local: which engine page is currently shown. It starts in sync with
+    // whatever server is actually selected in the ViewModel, but the user can
+    // freely browse the other pages without that changing the real selection
+    // until they tap a server card (SelectServer) -- the ViewModel's notion
+    // of "selected server" is untouched by this switch. The Aether page is
+    // list-filtering only: Aether profiles connect through the normal
+    // CoreServiceManager path, so engineIsAwg (the old AWG/V2Ray filter that
+    // the rest of this screen keys off) is simply false there.
+    var selectedTab by rememberSaveable { mutableStateOf("v2") } // "awg" | "v2" | "ae"
+    val engineIsAwg = selectedTab == "awg"
+    val aetherTab = selectedTab == "ae"
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
     LaunchedEffect(selectedGuid) {
         val type = connectedServer?.profile?.configType
         if (type != null) {
-            engineIsAwg = type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
+            selectedTab = when {
+                type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG -> "awg"
+                type == EConfigType.AETHER -> "ae"
+                else -> "v2"
+            }
         }
     }
-    val accentPair = remember(engineIsAwg) { accentFor(engineIsAwg) }
-    val engineLabel = if (engineIsAwg) "AWG" else "V2Ray"
+    val accentPair = when (selectedTab) {
+        "ae" -> AccentPair(Nc.BadgeAether, Color(0xFFFB923C))
+        else -> accentFor(engineIsAwg)
+    }
+    val engineLabel = when (selectedTab) {
+        "ae" -> "AE"
+        "awg" -> "AWG"
+        else -> "V2Ray"
+    }
 
     // If switching engines hides the currently-selected tab (e.g. the
     // WireGuard sub was selected and the user flips to V2Ray), jump to the
@@ -164,16 +188,8 @@ fun MainScreen(
         }
     }
 
-    // Global per-engine totals shown as the small counter badge on each
-    // EngineSwitch tab (sums every group's servers, not just the selected
-    // one) -- each group's flow is shared/cached in the ViewModel, so this
-    // read is cheap even though GroupTabs also reads the same flows below.
-    val allServers = groups.flatMap { g -> mainViewModel.serversForGroup(g.id).collectAsStateWithLifecycle().value }
-    val awgTotal = allServers.count { s ->
-        val t = s.profile.configType
-        t == EConfigType.WIREGUARD || t == EConfigType.AMNEZIAWG
-    }
-    val v2Total = allServers.size - awgTotal
+    // Global per-engine totals were shown on the old EngineSwitch; the
+    // 3-page tab bar doesn't use them, so the counters were dropped with it.
 
     // ---- "Connecting..." handshake state (UI-local) ----------------------
     // The ViewModel doesn't expose a dedicated handshake flag, only the
@@ -300,6 +316,8 @@ fun MainScreen(
         coroutineScope.launch { drawerState.close() }
     }
     BackHandler(enabled = !drawerState.isOpen) { onMinimize() }
+    // Registered after the root handler so an open "more" sheet wins back.
+    BackHandler(enabled = showMoreSheet) { showMoreSheet = false }
 
     val isDark = LocalDarkTheme.current
     val backdrop = remember(isDark) {
@@ -350,16 +368,14 @@ fun MainScreen(
                     isLoading = isLoading,
                     onFetchConfig = { onAction(MainAction.UpdateSubscriptions) },
                     onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                    onSettingsClick = { onNavigate("settings") },
+                    onMoreClick = { showMoreSheet = true },
                 )
             },
             bottomBar = {
-                MainVpnBottomNav(
-                    selectedTab = MainHomeTab.VPN,
-                    onSelectTab = { tab ->
-                        if (tab == MainHomeTab.SUBSCRIPTIONS) showSubscriptions = true
-                    },
-                    onSettingsClick = { onNavigate("settings") },
-                    onStatisticsClick = { onNavigate("statistics") },
+                MainEngineTabBar(
+                    selectedTab = selectedTab,
+                    onSelect = { selectedTab = it },
                 )
             },
         ) { innerPadding ->
@@ -376,20 +392,6 @@ fun MainScreen(
                         engineLabel = engineLabel,
                     )
                 }
-
-                Spacer(Modifier.height(10.dp))
-
-                EngineSwitch(
-                    options = listOf(
-                        EngineOption("awg", "AmneziaWG", awgTotal) { tint -> Icon(Icons.Rounded.Shield, null, tint = tint, modifier = Modifier.size(16.dp)) },
-                        EngineOption("v2ray", "V2Ray", v2Total) { tint -> Icon(Icons.Rounded.Bolt, null, tint = tint, modifier = Modifier.size(16.dp)) },
-                    ),
-                    selectedId = if (engineIsAwg) "awg" else "v2ray",
-                    accent = accentPair.main,
-                    enabled = !isRunning,
-                    onSelect = { id -> engineIsAwg = id == "awg" },
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
 
                 Spacer(Modifier.height(10.dp))
 
@@ -432,12 +434,18 @@ fun MainScreen(
                     onCheckConnection = { onAction(MainAction.TestCurrentServer) },
                 )
 
-                // Ping / IP / speed card — stays hidden until the user has
-                // picked a server below and actually connected.
-                ConnectionStatsPanel(
+                // Premium dashboard — big live download number, smooth area
+                // chart, session totals; while a handshake is in flight it
+                // shows the step checklist instead. Hidden while disconnected.
+                ConnectionDashboard(
                     isRunning = isRunning,
-                    pingText = uiState.livePingMillis?.let { "${it}ms" }
-                        ?: connectedServer?.testDelayString.orEmpty(),
+                    isConnecting = isConnectingLocal,
+                    isAwgProfile = connectedServer?.profile?.let {
+                        it.configType == EConfigType.WIREGUARD || it.configType == EConfigType.AMNEZIAWG
+                    } == true,
+                    isAetherProfile = connectedServer?.profile?.configType == EConfigType.AETHER,
+                    pingText = uiState.livePingMillis?.let { it.toString() }
+                        ?: connectedServer?.testDelayString?.filter { ch -> ch.isDigit() }.orEmpty(),
                     downloadSpeedText = uiState.downloadSpeedText,
                     uploadSpeedText = uiState.uploadSpeedText,
                     connectionDurationText = uiState.connectionDurationText,
@@ -445,6 +453,7 @@ fun MainScreen(
                     remoteCountryName = uiState.remoteCountryName,
                     remoteCountryCode = uiState.remoteCountryCode,
                     engineLabel = engineLabel,
+                    protocolLabel = connectedServer?.profile?.configType?.toString() ?: engineLabel,
                     accent = accentPair.main,
                     speedHistory = speedHistory,
                 )
@@ -462,6 +471,28 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
 
+                // Aether page guard: matches the Aether core's own rule —
+                // only one Aether profile can run, and scanning/renewing are
+                // locked while the session is alive (enforced in
+                // ServerAetherViewModel; this is just the heads-up text).
+                if (aetherTab) {
+                    Text(
+                        text = "⚠ فقط یک کانفیگ Aether در هر لحظه می‌تواند اجرا شود؛ هنگام اجرا، اسکن اندپوینت و تعویض کلید WARP قفل می‌شوند.",
+                        color = accentPair.main.copy(alpha = .9f),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .background(accentPair.main.copy(alpha = .08f))
+                            .border(
+                                1.dp,
+                                accentPair.main.copy(alpha = .35f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(13.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 9.dp)
+                    )
+                }
+
                 // ---- تست + لیست عمودی سرورها (فیلترشده روی گروه + موتور فعال) ----
                 MainServerListSection(
                     mainViewModel = mainViewModel,
@@ -470,6 +501,7 @@ fun MainScreen(
                     selectedGuid = selectedGuid,
                     isTesting = uiState.isTesting,
                     engineIsAwg = engineIsAwg,
+                    aetherOnly = aetherTab,
                     accent = accentPair.main,
                     onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
                     onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
@@ -501,6 +533,65 @@ fun MainScreen(
             message = uiState.awgConnectingMessage.ifBlank { "در حال اتصال، لطفاً صبر کنید..." },
             accent = accentPair.main,
         )
+
+        // ── "more" sheet: the entries that used to live in the 4-item
+        // bottom nav (سابسکریپشن / آمار) plus the previously-unreachable
+        // management screens (logs / backup / routing) and the import drawer.
+        if (showMoreSheet) {
+            ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_subscriptions_24dp), null, tint = accentPair.main) },
+                    label = "سابسکریپشن‌ها",
+                ) { showMoreSheet = false; showSubscriptions = true }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_stats_24dp), null, tint = accentPair.main) },
+                    label = "آمار ترافیک",
+                ) { showMoreSheet = false; onNavigate("statistics") }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_menu_24dp), null, tint = accentPair.main) },
+                    label = "ورود کانفیگ (کلیپ‌بورد / QR / دستی)",
+                ) {
+                    showMoreSheet = false
+                    coroutineScope.launch { drawerState.open() }
+                }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_logcat_24dp), null, tint = accentPair.main) },
+                    label = "گزارشات هسته",
+                ) { showMoreSheet = false; onNavigate("logcat") }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_backup_24dp), null, tint = accentPair.main) },
+                    label = "پشتیبان‌گیری و بازیابی",
+                ) { showMoreSheet = false; onNavigate("backup") }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_routing_24dp), null, tint = accentPair.main) },
+                    label = "تنظیمات مسیریابی",
+                ) { showMoreSheet = false; onNavigate("routing") }
+                MoreSheetRow(
+                    icon = { Icon(painterResource(com.narcic.ng.R.drawable.ic_settings_24dp), null, tint = accentPair.main) },
+                    label = "تنظیمات",
+                ) { showMoreSheet = false; onNavigate("settings") }
+                Spacer(Modifier.height(14.dp))
+            }
+        }
+        }
     }
+}
+
+@Composable
+private fun MoreSheetRow(
+    icon: @Composable () -> Unit,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 13.dp)
+    ) {
+        icon()
+        Spacer(Modifier.width(13.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }

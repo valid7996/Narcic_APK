@@ -64,8 +64,10 @@ class MainImportMenuTest {
 
     @Test
     fun shareMenuIncludesActionsForManualConfig() {
-        val profile = ProfileItem().apply {
-            configType = EConfigType.VMESS
+        // ProfileItem.configType is a constructor val (Aether patch), so the
+        // old ProfileItem().apply { configType = ... } no longer compiles;
+        // ProfileItem.create() is the companion factory for the same intent.
+        val profile = ProfileItem.create(EConfigType.VMESS).apply {
             subscriptionId = ""
         }
         assertEquals(
@@ -83,8 +85,7 @@ class MainImportMenuTest {
 
     @Test
     fun shareMenuNoLongerExcludesEditAndShareForDefaultSubEvenWithManagement() {
-        val profile = ProfileItem().apply {
-            configType = EConfigType.VMESS
+        val profile = ProfileItem.create(EConfigType.VMESS).apply {
             subscriptionId = "__default_subscription__"
         }
         assertEquals(
@@ -102,8 +103,7 @@ class MainImportMenuTest {
 
     @Test
     fun shareMenuStillFiltersComplexProfiles() {
-        val profile = ProfileItem().apply {
-            configType = EConfigType.POLICYGROUP
+        val profile = ProfileItem.create(EConfigType.POLICYGROUP).apply {
             subscriptionId = ""
         }
         assertEquals(

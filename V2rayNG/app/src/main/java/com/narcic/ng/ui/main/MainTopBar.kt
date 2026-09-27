@@ -10,9 +10,11 @@ import com.narcic.ng.R
 import com.narcic.ng.ui.compose.AppTopBar
 
 /**
- * Top bar for the connection screen: a drawer/menu button on the top-left
- * (import config via link/QR + bulk manage actions live in that drawer),
- * the title, and the "fetch/update subscriptions" action on the right.
+ * Top bar for the connection screen: the title, the "fetch/update
+ * subscriptions" action, the ⋯ "more" sheet (subscriptions / statistics /
+ * logs / backup / routing / import drawer) and the settings gear — the three
+ * entries that used to live in the 4-item bottom nav before the 3-page
+ * redesign moved the bottom bar to the engine tabs.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +22,8 @@ fun MainTopBar(
     isLoading: Boolean,
     onFetchConfig: () -> Unit,
     onMenuClick: () -> Unit,
+    onSettingsClick: () -> Unit = {},
+    onMoreClick: () -> Unit = {},
 ) {
     AppTopBar(
         title = stringResource(R.string.title_server),
@@ -31,6 +35,12 @@ fun MainTopBar(
         actions = {
             IconButton(onClick = onFetchConfig) {
                 Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = "Get configs")
+            }
+            IconButton(onClick = onMoreClick) {
+                Icon(painterResource(R.drawable.ic_more_vert_24dp), contentDescription = "More")
+            }
+            IconButton(onClick = onSettingsClick) {
+                Icon(painterResource(R.drawable.ic_settings_24dp), contentDescription = "Settings")
             }
         }
     )

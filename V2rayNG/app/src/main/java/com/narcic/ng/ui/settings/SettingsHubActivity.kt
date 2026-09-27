@@ -16,12 +16,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.narcic.ng.R
 import com.narcic.ng.ui.AboutActivity
+import com.narcic.ng.ui.backup.BackupActivity
 import com.narcic.ng.ui.base.BaseComponentActivity
 import com.narcic.ng.ui.checkupdate.CheckUpdateActivity
 import com.narcic.ng.ui.compose.AppDivider
 import com.narcic.ng.ui.compose.AppTopBar
 import com.narcic.ng.ui.compose.SettingsMenuItem
+import com.narcic.ng.ui.logcat.LogcatActivity
 import com.narcic.ng.ui.perappproxy.PerAppProxyActivity
+import com.narcic.ng.ui.routing.RoutingSettingActivity
 import com.narcic.ng.ui.userasset.UserAssetActivity
 
 /**
@@ -47,6 +50,9 @@ class SettingsHubActivity : BaseComponentActivity() {
             onOpenUserAsset = { startActivity(Intent(this, UserAssetActivity::class.java)) },
             onOpenCheckUpdate = { startActivity(Intent(this, CheckUpdateActivity::class.java)) },
             onOpenAbout = { startActivity(Intent(this, AboutActivity::class.java)) },
+            onOpenRouting = { startActivity(Intent(this, RoutingSettingActivity::class.java)) },
+            onOpenBackup = { startActivity(Intent(this, BackupActivity::class.java)) },
+            onOpenLogcat = { startActivity(Intent(this, LogcatActivity::class.java)) },
         )
     }
 }
@@ -62,6 +68,9 @@ fun SettingsHubScreen(
     onOpenUserAsset: () -> Unit,
     onOpenCheckUpdate: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenRouting: () -> Unit = {},
+    onOpenBackup: () -> Unit = {},
+    onOpenLogcat: () -> Unit = {},
 ) {
     Scaffold(
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -118,6 +127,28 @@ fun SettingsHubScreen(
                 icon = painterResource(R.drawable.ic_about_24dp),
                 title = stringResource(R.string.title_about),
                 onClick = onOpenAbout
+            )
+
+            // Screens that were declared in the manifest but had no launch
+            // point after the Compose redesign — surfaced again here.
+            AppDivider()
+            SettingsMenuItem(
+                icon = painterResource(R.drawable.ic_routing_24dp),
+                title = "تنظیمات مسیریابی",
+                subtitle = "قواعد مسیریابی، لیست‌های آماده و استراتژی دامنه",
+                onClick = onOpenRouting
+            )
+            SettingsMenuItem(
+                icon = painterResource(R.drawable.ic_backup_24dp),
+                title = "پشتیبان‌گیری و بازیابی",
+                subtitle = "خروجی/ورودی کانفیگ‌ها و تنظیمات · لوکال و WebDAV",
+                onClick = onOpenBackup
+            )
+            SettingsMenuItem(
+                icon = painterResource(R.drawable.ic_logcat_24dp),
+                title = "گزارشات هسته",
+                subtitle = "لاگ زنده‌ی سرویس و هسته",
+                onClick = onOpenLogcat
             )
         }
     }

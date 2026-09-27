@@ -54,6 +54,7 @@ fun MainServerListSection(
     selectedGuid: String?,
     isTesting: Boolean,
     engineIsAwg: Boolean,
+    aetherOnly: Boolean = false,
     accent: Color,
     onSelectServer: (String) -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
@@ -107,21 +108,10 @@ fun MainServerListSection(
                         Spacer(Modifier.size(8.dp))
                         Text("اسکن بارکد QR")
                     }
-                    // V2Ray: افزودن دستی یه کانفیگ Aether. AmneziaWG: افزودن دستی یه
-                    // کانفیگ WARP to WARP -- که هر دو همون صفحه‌ی Aether رو باز
-                    // می‌کنن، چون GOOL/"WARP-in-WARP" یکی از پروتکل‌های همون صفحه‌ست.
-                    OutlinedButton(
-                        onClick = {
-                            showAddOptionsDialog = false
-                            onAddManualConfig(EConfigType.AETHER.value)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(painterResource(R.drawable.ic_edit_24dp), contentDescription = null, Modifier.size(18.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text(if (engineIsAwg) "افزودن دستی WARP to WARP" else "افزودن دستی کانفیگ Aether")
-                    }
+                    // The "افزودن دستی کانفیگ Aether" / "افزودن دستی WARP to
+                    // WARP" shortcut that used to live here was removed per
+                    // the 3-page redesign: manual Aether entry now lives only
+                    // on the Aether page's + button (aetherOnly below).
                 }
             },
             confirmButton = {},
@@ -156,8 +146,13 @@ fun MainServerListSection(
         )
     }
 
-    val sorted = remember(sortedAll, engineIsAwg) {
-        sortedAll.filter { isAwgConfig(it.profile.configType) == engineIsAwg }
+    val sorted = remember(sortedAll, engineIsAwg, aetherOnly) {
+        sortedAll.filter {
+            when {
+                aetherOnly -> it.profile.configType == EConfigType.AETHER
+                else -> isAwgConfig(it.profile.configType) == engineIsAwg
+            }
+        }
     }
     val top5 = remember(sorted) { sorted.filter { it.testDelayMillis > 0L }.take(5) }
     val isDefaultGroup = selectedGroupId == AppConfig.DEFAULT_SUBSCRIPTION_ID || selectedGroupId.isEmpty()
@@ -166,10 +161,20 @@ fun MainServerListSection(
 
         // ---- Header Bar: کلاینت‌های AmneziaWG + دکمه‌های عملیاتی ----
         ConfigsHeaderBar(
-            title = if (engineIsAwg) "کلاینت‌های AmneziaWG" else "کلاینت‌های V2Ray",
+            title = when {
+                aetherOnly -> "کانفیگ‌های Aether"
+                engineIsAwg -> "کلاینت‌های AmneziaWG"
+                else -> "کلاینت‌های V2Ray"
+            },
             count = sorted.size,
             accent = accent,
-            onAddClick = { showAddOptionsDialog = true },
+            // Aether page: the + opens the Aether editor directly — no
+            // intermediate dialog (manual Aether entry lives only here now).
+            onAddClick = if (aetherOnly) {
+                { onAddManualConfig(EConfigType.AETHER.value) }
+            } else {
+                { showAddOptionsDialog = true }
+            },
             onSortClick = onAutoSelectBest,
             onTestClick = onRetest,
             onDeleteAllClick = onDeleteAllServers,
@@ -253,6 +258,8 @@ fun MainServerListSection(
             ) {
                 Text(
                     text = when {
+                        aetherOnly ->
+                            "هنوز کانفیگ Aether ندارید\nاز دکمه + بالای لیست یکی اضافه کنید"
                         sortedAll.isNotEmpty() ->
                             "این گروه کانفیگ " + (if (engineIsAwg) "AmneziaWG" else "V2Ray") + " ندارد\nموتور دیگر را امتحان کنید"
                         isDefaultGroup ->

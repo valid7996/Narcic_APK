@@ -1,0 +1,47 @@
+[
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\conev.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\conev.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\conev.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\desync.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\desync.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\desync.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\extend.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\extend.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\extend.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\main.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\main.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\main.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\mpool.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\mpool.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\mpool.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\packets.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\packets.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\packets.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\desync_engine\\proxy.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\proxy.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\desync_engine\\proxy.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\native-lib.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\native-lib.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\native-lib.c"
+},
+{
+  "directory": "C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/armeabi-v7a",
+  "command": "C:\\Users\\NG\\devtools\\android-sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=armv7-none-linux-androideabi24 --sysroot=C:/Users/NG/devtools/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID_APP -Dnarcicdesync_EXPORTS -IC:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/src/main/cpp/desync_engine -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=c99 -O2 -D_XOPEN_SOURCE=500 -o CMakeFiles\\narcicdesync.dir\\utils.c.o -c C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\utils.c",
+  "file": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\utils.c"
+}
+]

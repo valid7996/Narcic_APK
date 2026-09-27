@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\NG\\devtools\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\.cxx\\Debug\\c4x4w1bm\\arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\NG\\devtools\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\.cxx\\Debug\\c4x4w1bm\\arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "narcicdesync::@6890427a1f51a3e7e1df": {
+      "artifactName": "narcicdesync",
+      "abi": "arm64-v8a",
+      "output": "C:\\Users\\NG\\Documents\\GitHub\\Narcic_APK\\V2rayNG\\app\\build\\intermediates\\cxx\\Debug\\c4x4w1bm\\obj\\arm64-v8a\\libnarcicdesync.so",
+      "runtimeFiles": []
+    }
+  }
+}

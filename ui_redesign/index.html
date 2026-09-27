@@ -1,0 +1,1333 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پروتوتایپ تعاملی — Narcic NG (سه‌صفحه‌ای)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070B14; --surface:rgba(255,255,255,.045); --surface2:rgba(255,255,255,.08);
+  --stroke:rgba(255,255,255,.09); --text:#F1F5F9; --sub:#8B95A9;
+  --awg:#22D3EE; --awg2:#0EA5E9; --v2:#8B5CF6; --v22:#6366F1; --ae:#F97316; --ae2:#FB923C;
+  --ok:#34D399; --warn:#FBBF24; --off:#FB7185;
+  --accent:var(--v2); --accent2:var(--v22);
+}
+body[data-engine="awg"]{--accent:var(--awg);--accent2:var(--awg2)}
+body[data-engine="ae"]{--accent:var(--ae);--accent2:var(--ae2)}
+body[data-engine="set"]{--accent:var(--v2);--accent2:var(--v22)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Vazirmatn','Segoe UI',Tahoma,sans-serif;background:#04060c;color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+}
+#app{
+  width:min(440px,100vw);height:100dvh;background:var(--bg);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+@media(min-width:480px){
+  #app{border-inline:1px solid rgba(255,255,255,.07);box-shadow:0 0 80px rgba(0,0,0,.8)}
+}
+/* ───── نوار بالا ───── */
+#appbar{display:flex;align-items:center;gap:9px;padding:14px 14px 10px;flex:0 0 auto;
+  background:linear-gradient(180deg,rgba(13,19,33,.9),rgba(13,19,33,.4));backdrop-filter:blur(8px);z-index:20}
+.logo{width:32px;height:32px;border-radius:10px;background:conic-gradient(from 210deg,var(--accent),var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.logo svg{width:17px;height:17px;fill:#070B14}
+#appbar .tt{font-weight:800;font-size:15.5px}
+#appbar .ts{font-size:10px;color:var(--sub)}
+.chip-status{margin-inline-start:auto;display:flex;align-items:center;gap:6px;border:1px solid var(--stroke);
+  background:var(--surface);border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;color:var(--sub);transition:.3s}
+.chip-status .dot{width:7px;height:7px;border-radius:50%;background:var(--off)}
+body.connected .chip-status{color:#c7f9e5;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.12)}
+body.connected .chip-status .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.iconbtn{width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.iconbtn:hover{background:var(--surface2)}
+.iconbtn svg{width:16px;height:16px;fill:var(--sub)}
+.backbtn{display:none;width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke);background:var(--surface);
+  align-items:center;justify-content:center;cursor:pointer}
+body[data-sub="1"] .backbtn{display:flex}
+.backbtn svg{width:16px;height:16px;fill:var(--text)}
+/* ───── صفحه‌ها ───── */
+#stack{flex:1;position:relative;overflow:hidden}
+.scr{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 14px 26px;display:none;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+.scr.on{display:block;animation:fin .2s ease}
+@keyframes fin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.scrtitle{font-size:16px;font-weight:800;margin:10px 2px 2px}
+.scrlbl{font-size:10.5px;color:var(--sub);margin:2px 2px 12px;line-height:1.8}
+/* ───── Hero اتصال ───── */
+.hero{display:flex;flex-direction:column;align-items:center;gap:9px;padding:10px 0 4px}
+.ring{width:140px;height:140px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:3px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent) 26%,#0B1220) 0%,#0B1220 70%);
+  border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);
+  box-shadow:0 0 0 9px color-mix(in srgb,var(--accent) 7%,transparent),0 0 38px color-mix(in srgb,var(--accent) 28%,transparent);transition:.3s}
+.ring:active{transform:scale(.97)}
+.ring svg{width:30px;height:30px;fill:var(--accent)}
+.ring .st{font-size:14px;font-weight:800}
+.ring .tm{font-size:10.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.ring .hint{font-size:9.5px;color:var(--sub)}
+body.connected .ring{box-shadow:0 0 0 11px color-mix(in srgb,var(--accent) 9%,transparent),0 0 55px color-mix(in srgb,var(--accent) 42%,transparent)}
+.engline{font-size:10.5px;color:var(--sub)}
+.engline b{color:var(--text)}
+/* ───── اجزای مشترک ───── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 2px}
+.stat{background:var(--surface);border:1px solid var(--stroke);border-radius:13px;padding:8px 6px;text-align:center}
+.stat .k{font-size:9px;color:var(--sub);margin-bottom:3px}
+.stat .v{font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .v.ok{color:var(--ok)}
+/* ───── اتصال حرفه‌ای: حلقه پیشرفت، مراحل، نوار زنده ───── */
+.ringwrap{position:relative;width:140px;height:140px;margin:0 auto}
+.prg{position:absolute;inset:-7px;pointer-events:none;opacity:0;transition:opacity .35s}
+.prg circle{fill:none;stroke-width:3;stroke-linecap:round}
+.prg .pbg{stroke:rgba(255,255,255,.06)}
+.prg .pfg{stroke:var(--warn);stroke-dasharray:459;stroke-dashoffset:459;transition:stroke-dashoffset .55s ease,stroke .3s}
+body.connecting .prg,body.connected .prg{opacity:1}
+body.connected .prg .pfg{stroke:var(--ok)}
+body.connecting .ring{border-color:rgba(251,191,36,.55);box-shadow:0 0 0 9px rgba(251,191,36,.07),0 0 42px rgba(251,191,36,.28)}
+body.connecting .ring .st{color:var(--warn)}
+body.connecting .chip-status{color:#FDE68A;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.1)}
+body.connecting .chip-status .dot{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.steps{max-width:320px;margin:10px auto 0;border:1px solid var(--stroke);background:rgba(13,19,33,.7);border-radius:15px;
+  padding:5px 13px;display:none;backdrop-filter:blur(8px)}
+.steps.on{display:block;animation:fin .3s ease}
+.step{display:flex;align-items:center;gap:8px;padding:6.5px 0;font-size:10px;color:var(--sub);
+  border-bottom:1px dashed var(--stroke);opacity:.4;transition:.35s}
+.step:last-child{border-bottom:0}
+.step .sic{width:14px;height:14px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.step .sp{width:11px;height:11px;border:2px solid var(--warn);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.step .ck{display:none;width:13px;height:13px;fill:var(--ok)}
+.step.run{opacity:1;color:var(--text)}
+.step.run .sp{border-color:var(--accent);border-top-color:transparent}
+.step.done{opacity:.8}
+.step.done .sp{display:none}
+.step.done .ck{display:block}
+.step .ms{margin-inline-start:auto;font-size:8.5px;color:var(--sub);font-variant-numeric:tabular-nums;direction:ltr}
+@keyframes spin{to{transform:rotate(360deg)}}
+.strip{display:none}
+/* ───── داشبورد پرمیوم ───── */
+.dash{display:none;position:relative;overflow:hidden;margin:10px 0 4px;border-radius:20px;padding:13px 16px 9px;
+  background:linear-gradient(165deg,rgba(255,255,255,.065),rgba(255,255,255,.02));border:1px solid var(--stroke);
+  box-shadow:0 12px 34px rgba(0,0,0,.4)}
+.dash::before{content:'';position:absolute;inset-inline-start:-25%;top:-70%;width:55%;height:130%;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 16%,transparent),transparent)}
+.dash.on{display:block;animation:fin .45s ease}
+.dash-top{display:flex;align-items:center;position:relative}
+.dash-top .live{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;color:var(--ok);letter-spacing:.3px}
+.dash-top .live i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(52,211,153,.18)}50%{box-shadow:0 0 0 7px rgba(52,211,153,.04)}}
+.dash-top .dur{margin-inline-start:auto;direction:ltr;font-family:Consolas,monospace;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+.dash-loc{display:flex;align-items:center;gap:11px;margin:11px 0 0;position:relative}
+.dash-loc .flag{font-size:24px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.45))}
+.dash-loc .city{font-size:13.5px;font-weight:800;line-height:1.4}
+.dash-loc .ipx{direction:ltr;text-align:right;font-family:Consolas,monospace;font-size:9.5px;color:var(--sub);margin-top:2px}
+.dash-speed{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:13px 2px 4px;position:relative}
+.dash-speed .lbl{font-size:8px;color:var(--sub);letter-spacing:.6px;white-space:nowrap}
+.ds-main .big{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr;line-height:1.1;letter-spacing:-.5px}
+.ds-main .big small{font-size:11px;color:var(--sub);font-weight:700;margin-inline-start:5px;letter-spacing:0}
+.ds-side{direction:ltr;text-align:right;flex:0 0 auto}
+.ds-side .mid{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.ds-side .mid small{font-size:8.5px;color:var(--sub);margin-inline-start:3px;font-weight:700}
+.ds-side .mid.ok{color:var(--ok)}
+.chart{width:100%;height:54px;display:block;margin:2px 0 0;position:relative}
+.chart .cline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 6px color-mix(in srgb,var(--accent) 45%,transparent))}
+.dash-foot{display:flex;border-top:1px solid var(--stroke);margin-top:7px;padding-top:8px;position:relative}
+.dash-foot>div{flex:1;display:flex;flex-direction:column;gap:2px;align-items:center}
+.dash-foot>div:not(:first-child){border-inline-start:1px solid var(--stroke)}
+.dash-foot .k{font-size:7.5px;color:var(--sub);letter-spacing:.4px}
+.dash-foot .v{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr;white-space:nowrap}
+body.connected .ring{animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 11px color-mix(in srgb,var(--accent) 9%,transparent),0 0 55px color-mix(in srgb,var(--accent) 42%,transparent)}
+50%{box-shadow:0 0 0 15px color-mix(in srgb,var(--accent) 12%,transparent),0 0 78px color-mix(in srgb,var(--accent) 55%,transparent)}}
+.sechead{display:flex;align-items:center;gap:8px;margin:14px 2px 8px}
+.sechead .t{font-size:12.5px;font-weight:700}
+.sechead .n{font-size:9.5px;color:var(--sub);background:var(--surface2);border-radius:999px;padding:2px 8px}
+.sechead .acts{margin-inline-start:auto;display:flex;gap:6px}
+.mini{width:27px;height:27px;border-radius:9px;border:1px solid var(--stroke);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.mini:hover{background:var(--surface2)}
+.mini svg{width:13px;height:13px;fill:var(--sub)}
+.card{background:var(--surface);border:1px solid var(--stroke);border-radius:15px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:.2s}
+.card:hover{background:var(--surface2)}
+.card.static{cursor:default}
+.card.sel{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.row{display:flex;align-items:center;gap:9px}
+.badge{font-size:8.5px;font-weight:800;border-radius:7px;padding:3px 7px;letter-spacing:.4px;flex:0 0 auto;
+  background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.sname{font-size:12px;font-weight:600}
+.ssub{font-size:9.5px;color:var(--sub);margin-top:3px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.chip{font-size:8.5px;color:var(--sub);border:1px solid var(--stroke);background:rgba(255,255,255,.03);border-radius:999px;padding:1.5px 7px}
+.ping{margin-inline-start:auto;font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.bars{display:flex;align-items:flex-end;gap:1.5px}
+.bars i{width:3px;border-radius:1px;background:var(--sub);opacity:.3;display:block}
+.bars i.on{background:var(--ok);opacity:1}
+.g1{height:4px}.g2{height:6px}.g3{height:8.5px}.g4{height:11px}
+.pillrow{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px}
+.pill{font-size:10px;font-weight:600;border:1px solid var(--stroke);background:var(--surface);color:var(--sub);
+  border-radius:999px;padding:4.5px 11px;cursor:pointer;transition:.2s}
+.pill.on{color:var(--text);border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.note{font-size:10px;color:var(--sub);line-height:1.9;border:1px dashed color-mix(in srgb,var(--accent) 35%,transparent);
+  background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:13px;padding:9px 11px;margin:9px 0}
+.note b{color:var(--text)}
+.warnbox{font-size:10px;line-height:1.9;color:#FDE3D6;border:1px dashed rgba(249,115,22,.5);background:rgba(249,115,22,.08);
+  border-radius:13px;padding:9px 11px;margin:9px 0}
+.warnbox b{color:#fff}
+.btnrow{display:flex;gap:7px;margin:9px 0}
+.btn{flex:1;text-align:center;font-size:10.5px;font-weight:700;padding:9px 4px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--stroke);background:var(--surface);transition:.2s;user-select:none}
+.btn:hover{background:var(--surface2)}
+.btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0B1220;border:none;
+  box-shadow:0 5px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
+.btn.danger{color:#FDA4AF;border-color:rgba(251,113,133,.4)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.log{direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:9px;line-height:1.8;
+  background:rgba(0,0,0,.38);border:1px solid var(--stroke);border-radius:11px;padding:8px 10px;color:#9fb0c8;white-space:pre-wrap}
+.log .e{color:#FB7185}.log .w{color:#FBBF24}.log .g{color:#34D399}
+/* ───── ردیف تنظیمات ───── */
+.acc{border:1px solid var(--stroke);border-radius:15px;background:var(--surface);margin-bottom:9px;overflow:hidden}
+.acc>.ahead{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;user-select:none}
+.acc>.ahead .at{font-size:12px;font-weight:700}
+.acc>.ahead .arr{margin-inline-start:auto;color:var(--sub);transition:.25s;font-size:11px}
+.acc.open>.ahead .arr{transform:rotate(90deg)}
+.acc>.abody{display:none;padding:2px 11px 11px}
+.acc.open>.abody{display:block}
+.irow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px dashed var(--stroke);min-height:44px}
+.irow:last-child{border-bottom:0}
+.irow .it{font-size:11px;font-weight:600;line-height:1.6}
+.irow .is{font-size:9px;color:var(--sub);margin-top:2px;line-height:1.8}
+.irow .key{direction:ltr;display:block;font-family:Consolas,monospace;font-size:7.5px;color:#475569;margin-top:3px}
+.irow .ctl{margin-inline-start:auto;flex:0 0 auto;max-width:52%}
+.sw{width:33px;height:19px;border-radius:999px;background:rgba(255,255,255,.13);position:relative;cursor:pointer;transition:.25s;flex:0 0 auto}
+.sw::after{content:'';position:absolute;top:2.5px;inset-inline-end:2.5px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.25s}
+.sw.on{background:var(--accent)}
+.sw.on::after{inset-inline-end:16px}
+select.tsel,input.tin{width:100%;background:var(--surface2);border:1px solid var(--stroke);color:var(--text);
+  border-radius:9px;padding:6px 9px;font-family:inherit;font-size:10px;outline:none}
+select.tsel:focus,input.tin:focus{border-color:var(--accent)}
+input.tin{direction:ltr;text-align:left}
+.tbtn{font-size:9.5px;font-weight:700;border:1px solid var(--stroke);background:var(--surface2);color:var(--text);
+  border-radius:9px;padding:6px 12px;cursor:pointer}
+.tbtn:hover{background:var(--surface)}
+/* ───── تب‌بار ───── */
+#tabbar{display:none;gap:6px;margin:6px 12px 12px;padding:6px;background:rgba(13,19,33,.9);border:1px solid var(--stroke);
+  border-radius:20px;backdrop-filter:blur(12px);box-shadow:0 8px 26px rgba(0,0,0,.5);flex:0 0 auto}
+body[data-home="1"] #tabbar{display:flex}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;border-radius:15px;
+  cursor:pointer;color:var(--sub);transition:.25s;position:relative;user-select:none}
+.tab svg{width:18px;height:18px;fill:currentColor}
+.tab .lb{font-size:9.5px;font-weight:700}
+.tab.on{color:var(--text);background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.tab.on::after{content:'';position:absolute;bottom:2.5px;width:13px;height:2.5px;border-radius:2px;background:var(--accent)}
+body[data-engine="awg"] .tab[data-t="awg"].on{color:var(--awg)}
+body[data-engine="ae"] .tab[data-t="ae"].on{color:var(--ae)}
+body[data-engine="v2"] .tab[data-t="v2"].on{color:var(--v2)}
+/* ───── شیت و دیالوگ ───── */
+.ov{position:absolute;inset:0;background:rgba(3,6,12,.65);backdrop-filter:blur(3px);display:none;align-items:flex-end;z-index:60}
+.ov.open{display:flex}
+.ov .inner{width:100%;background:#0D1321;border:1px solid var(--stroke);border-radius:22px 22px 0 0;padding:15px 15px 20px;animation:up .22s ease;max-height:80%;overflow-y:auto}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.ov h3{font-size:13px;margin-bottom:9px}
+.mrow{display:flex;align-items:center;gap:11px;padding:10px 9px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600}
+.mrow:hover{background:var(--surface2)}
+.mrow .ic{width:29px;height:29px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.mrow .ic svg{width:14px;height:14px;fill:var(--accent)}
+#toast{position:absolute;bottom:86px;inset-inline:0;margin:auto;width:max-content;max-width:80%;background:#1E293B;border:1px solid var(--stroke);
+  color:#E2E8F0;font-size:10.5px;font-weight:600;border-radius:999px;padding:7px 16px;opacity:0;transition:.3s;z-index:99;pointer-events:none}
+#toast.on{opacity:1;bottom:96px}
+.best{display:flex;align-items:center;gap:8px;padding:6px 1px;border-bottom:1px dashed var(--stroke)}
+.best:last-child{border-bottom:0}
+.best .bar{flex:1;height:4.5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.best .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.appcheck{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:11px;border:1px solid var(--stroke);background:var(--surface);margin-bottom:6px;cursor:pointer}
+.appcheck .nm{font-size:11px;font-weight:600}
+.appcheck .pk{direction:ltr;font-family:Consolas,monospace;font-size:8px;color:#475569}
+.appcheck .bx{margin-inline-start:auto;width:17px;height:17px;border-radius:5.5px;border:1.5px solid var(--sub);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.appcheck.on .bx{background:var(--accent);border-color:var(--accent)}
+.appcheck .bx svg{width:10px;height:10px;fill:#0B1220;display:none}
+.appcheck.on .bx svg{display:block}
+.hbars{display:flex;align-items:flex-end;gap:7px;height:90px;padding:8px 4px 0}
+.hbars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.hbars .b i{width:100%;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+.hbars .b span{font-size:7.5px;color:var(--sub)}
+.subcard .url{direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:8.5px;color:#64748B;margin-top:3px;word-break:break-all}
+</style>
+</head>
+<body data-engine="v2">
+<div id="app">
+
+  <div id="appbar">
+    <div class="backbtn" onclick="back()"><svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2z"/></svg></div>
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C8 6 4 7 4 7v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7s-4-1-8-5z"/></svg></div>
+    <div><div class="tt" id="barT">Narcic NG</div><div class="ts" id="barS">وی‌تو‌ری</div></div>
+    <div class="chip-status"><span class="dot"></span><span id="stTxt">قطع</span></div>
+    <div class="iconbtn" id="btnMore" onclick="ov('sheetMore',1)" title="بیشتر"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z"/></svg></div>
+    <div class="iconbtn" id="btnSet" onclick="go('settings-hub')" title="تنظیمات"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 000-2l2.1-1.6a.5.5 0 00.1-.7l-2-3.4a.5.5 0 00-.6-.2l-2.5 1a7.7 7.7 0 00-1.7-1L14.4 2.4A.5.5 0 0014 2h-4a.5.5 0 00-.5.4L9.2 5.1a7.7 7.7 0 00-1.7 1L5 5.1a.5.5 0 00-.6.2l-2 3.4a.5.5 0 00.1.7L4.6 11a7.9 7.9 0 000 2l-2.1 1.6a.5.5 0 00-.1.7l2 3.4c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.3 2.7c0 .2.3.4.5.4h4c.2 0 .5-.2.5-.4l.3-2.7c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.4a.5.5 0 00-.1-.7L19.4 13zM12 15.5A3.5 3.5 0 1112 8.5a3.5 3.5 0 010 7z"/></svg></div>
+  </div>
+
+  <div id="stack">
+
+    <!-- ═══════════ خانه: امنزیا ═══════════ -->
+    <section class="scr" id="scr-home-awg">
+      <div class="hero">
+        <div class="ringwrap">
+          <svg class="prg" viewBox="0 0 152 152"><circle class="pbg" cx="76" cy="76" r="73"/><circle class="pfg" cx="76" cy="76" r="73"/></svg>
+          <div class="ring" onclick="connectTap()"><svg viewBox="0 0 24 24"><path d="M12 2C8 6 4 7 4 7v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7s-4-1-8-5z"/></svg>
+          <div class="st stEng">قطع</div><div class="tm tmEng">00:00:00</div><div class="hint hintEng">برای اتصال لمس کنید</div></div>
+        </div>
+        <div class="engline">موتور <b>AmneziaWG</b> · <span data-live="mode">حالت VPN</span> · <span data-live="mtu">MTU 1500</span></div>
+      </div>
+      <div class="dash" id="dash-awg">
+        <div class="dash-top"><span class="live"><i></i>متصل</span><span class="dur" id="dur-awg">00:00:00</span></div>
+        <div class="dash-loc"><span class="flag">🇩🇪</span>
+          <div><div class="city">فرانکفورت — آلمان</div><div class="ipx">5.20.31.8 · narcic-awg</div></div></div>
+        <div class="dash-speed">
+          <div class="ds-main"><div class="lbl">سرعت دانلود لحظه‌ای</div>
+            <div class="big"><span id="down-awg">0.00</span><small id="du-awg">MB/s</small></div></div>
+          <div class="ds-side">
+            <div class="lbl">آپلود</div>
+            <div class="mid"><span id="up-awg">0</span><small id="uu-awg">KB/s</small></div>
+            <div class="lbl" style="margin-top:9px">تأخیر</div>
+            <div class="mid ok"><span id="ping-awg">—</span><small>ms</small></div>
+          </div>
+        </div>
+        <svg class="chart" viewBox="0 0 300 64" preserveAspectRatio="none">
+          <defs><linearGradient id="grad-awg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#22D3EE" stop-opacity=".32"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+          </linearGradient></defs>
+          <path class="cfill" id="cf-awg" fill="url(#grad-awg)"/><path class="cline" id="cl-awg"/>
+        </svg>
+        <div class="dash-foot">
+          <div><span class="k">مجموع دانلود</span><span class="v" id="td-awg">0 KB</span></div>
+          <div><span class="k">مجموع آپلود</span><span class="v" id="tu-awg">0 KB</span></div>
+          <div><span class="k">پروتکل</span><span class="v" style="font-size:9px" id="pr-awg">AmneziaWG</span></div>
+        </div>
+      </div>
+      <div class="steps" id="steps-awg"></div>
+      <div class="sechead"><div class="t">کلاینت‌های AmneziaWG</div><div class="n">۴</div>
+        <div class="acts">
+          <div class="mini" title="افزودن" onclick="ov('dlgAddAwg',1)"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg></div>
+          <div class="mini" title="پینگ همه" onclick="pingAll(this)"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4v2h-5.5l-1.5-4-3 12-3-8H3z"/></svg></div>
+          <div class="mini" title="مرتب‌سازی"><svg viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg></div>
+        </div>
+      </div>
+      <div id="awgList"></div>
+      <div class="note">کانفیگ‌های AmneziaWG به‌صورت <b>.conf</b> وارد می‌شوند. مقادیر آشوب (Jc / Jmin / Jmax / H1-H4 / I1-I5) از متن کانفیگ خوانده و به‌صورت چیپ نمایش داده می‌شوند. ویرایش، ادیتور .conf را باز می‌کند.</div>
+    </section>
+
+    <!-- ═══════════ خانه: وی‌تو‌ری ═══════════ -->
+    <section class="scr on" id="scr-home-v2">
+      <div class="hero">
+        <div class="ringwrap">
+          <svg class="prg" viewBox="0 0 152 152"><circle class="pbg" cx="76" cy="76" r="73"/><circle class="pfg" cx="76" cy="76" r="73"/></svg>
+          <div class="ring" onclick="connectTap()"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z"/></svg>
+          <div class="st stEng">قطع</div><div class="tm tmEng">00:00:00</div><div class="hint hintEng">برای اتصال لمس کنید</div></div>
+        </div>
+        <div class="engline">موتور <b>V2Ray / Xray</b> · <span data-live="mode">حالت VPN</span> · Sniffing روشن</div>
+      </div>
+      <div class="dash" id="dash-v2">
+        <div class="dash-top"><span class="live"><i></i>متصل</span><span class="dur" id="dur-v2">00:00:00</span></div>
+        <div class="dash-loc"><span class="flag">🇳🇱</span>
+          <div><div class="city">آمستردام — هتزنر</div><div class="ipx">185.2.90.4 · Reality</div></div></div>
+        <div class="dash-speed">
+          <div class="ds-main"><div class="lbl">سرعت دانلود لحظه‌ای</div>
+            <div class="big"><span id="down-v2">0.00</span><small id="du-v2">MB/s</small></div></div>
+          <div class="ds-side">
+            <div class="lbl">آپلود</div>
+            <div class="mid"><span id="up-v2">0</span><small id="uu-v2">KB/s</small></div>
+            <div class="lbl" style="margin-top:9px">تأخیر</div>
+            <div class="mid ok"><span id="ping-v2">—</span><small>ms</small></div>
+          </div>
+        </div>
+        <svg class="chart" viewBox="0 0 300 64" preserveAspectRatio="none">
+          <defs><linearGradient id="grad-v2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#8B5CF6" stop-opacity=".32"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+          </linearGradient></defs>
+          <path class="cfill" id="cf-v2" fill="url(#grad-v2)"/><path class="cline" id="cl-v2"/>
+        </svg>
+        <div class="dash-foot">
+          <div><span class="k">مجموع دانلود</span><span class="v" id="td-v2">0 KB</span></div>
+          <div><span class="k">مجموع آپلود</span><span class="v" id="tu-v2">0 KB</span></div>
+          <div><span class="k">پروتکل</span><span class="v" style="font-size:9px" id="pr-v2">Reality · VLESS</span></div>
+        </div>
+      </div>
+      <div class="steps" id="steps-v2"></div>
+      <div class="pillrow" id="v2Groups">
+        <div class="pill on">همه (۱۸)</div><div class="pill">نارسیس ایرانسل (۴)</div>
+        <div class="pill">Narcic NG - JSON (۷)</div><div class="pill">سرورهای من (۷)</div>
+      </div>
+      <div class="card static" style="padding:9px 12px">
+        <div class="sechead" style="margin:1px 0 4px"><div class="t" style="font-size:11px">بهترین سرورها</div><div class="n">۵</div></div>
+        <div class="best"><span class="badge">VL</span><span style="font-size:10px">سنگاپور — DO</span><span class="bar"><i style="width:22%"></i></span><span style="font-size:10px;color:var(--ok)">۳۸ms</span></div>
+        <div class="best"><span class="badge">VL</span><span style="font-size:10px">آلمان — هتزنر</span><span class="bar"><i style="width:34%"></i></span><span style="font-size:10px;color:var(--ok)">۵۱ms</span></div>
+        <div class="best"><span class="badge">VM</span><span style="font-size:10px">ترکیه — اوزیسوم</span><span class="bar"><i style="width:55%"></i></span><span style="font-size:10px;color:var(--warn)">۹۸ms</span></div>
+      </div>
+      <div class="sechead"><div class="t">کلاینت‌های V2Ray</div><div class="n">۱۸</div>
+        <div class="acts">
+          <div class="mini" title="افزودن" onclick="ov('dlgAddV2',1)"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg></div>
+          <div class="mini" title="پینگ همه" onclick="pingAll(this)"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4v2h-5.5l-1.5-4-3 12-3-8H3z"/></svg></div>
+          <div class="mini" title="مرتب‌سازی"><svg viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg></div>
+        </div>
+      </div>
+      <div id="v2List"></div>
+    </section>
+
+    <!-- ═══════════ خانه: اتر ═══════════ -->
+    <section class="scr" id="scr-home-ae">
+      <div class="hero">
+        <div class="ringwrap">
+          <svg class="prg" viewBox="0 0 152 152"><circle class="pbg" cx="76" cy="76" r="73"/><circle class="pfg" cx="76" cy="76" r="73"/></svg>
+          <div class="ring" onclick="connectTap()"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.9 9h-3a15.6 15.6 0 00-1.2-5.5A8 8 0 0119.9 11zM12 4c.9 1.3 1.9 3.7 2 7h-4c.1-3.3 1.1-5.7 2-7zM8.3 5.5A15.6 15.6 0 007.1 11h-3a8 8 0 014.2-5.5zM4.1 13h3c.1 2 .5 3.9 1.2 5.5A8 8 0 014.1 13zm7.9 7c-.9-1.3-1.9-3.7-2-7h4c-.1 3.3-1.1 5.7-2 7zm3.7-1.5c.7-1.6 1.1-3.5 1.2-5.5h3a8 8 0 01-4.2 5.5z"/></svg>
+          <div class="st stEng">قطع</div><div class="tm tmEng">00:00:00</div><div class="hint hintEng">برای اتصال لمس کنید</div></div>
+        </div>
+        <div class="engline">موتور <b>Aether (WARP)</b> · حداکثر ۱۲۰ ثانیه برای اتصال</div>
+      </div>
+      <div class="dash" id="dash-ae">
+        <div class="dash-top"><span class="live"><i></i>متصل</span><span class="dur" id="dur-ae">00:00:00</span></div>
+        <div class="dash-loc"><span class="flag">🇩🇪</span>
+          <div><div class="city">خروجی WARP — آلمان</div><div class="ipx">104.28.214.73 · 127.0.0.1:10819</div></div></div>
+        <div class="dash-speed">
+          <div class="ds-main"><div class="lbl">سرعت دانلود لحظه‌ای</div>
+            <div class="big"><span id="down-ae">0.00</span><small id="du-ae">MB/s</small></div></div>
+          <div class="ds-side">
+            <div class="lbl">آپلود</div>
+            <div class="mid"><span id="up-ae">0</span><small id="uu-ae">KB/s</small></div>
+            <div class="lbl" style="margin-top:9px">تأخیر</div>
+            <div class="mid ok"><span id="ping-ae">—</span><small>ms</small></div>
+          </div>
+        </div>
+        <svg class="chart" viewBox="0 0 300 64" preserveAspectRatio="none">
+          <defs><linearGradient id="grad-ae" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#F97316" stop-opacity=".32"/><stop offset="1" stop-color="#F97316" stop-opacity="0"/>
+          </linearGradient></defs>
+          <path class="cfill" id="cf-ae" fill="url(#grad-ae)"/><path class="cline" id="cl-ae"/>
+        </svg>
+        <div class="dash-foot">
+          <div><span class="k">مجموع دانلود</span><span class="v" id="td-ae">0 KB</span></div>
+          <div><span class="k">مجموع آپلود</span><span class="v" id="tu-ae">0 KB</span></div>
+          <div><span class="k">پروتکل</span><span class="v" style="font-size:9px" id="pr-ae">MASQUE · H3</span></div>
+        </div>
+      </div>
+      <div class="steps" id="steps-ae"></div>
+      <div class="sechead"><div class="t">کانفیگ‌های Aether</div><div class="n">۳</div>
+        <div class="acts">
+          <div class="mini" title="افزودن دستی کانفیگ Aether" onclick="go('edit-aether')"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg></div>
+          <div class="mini" title="تست تأخیر همه" onclick="pingAll(this)"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10h-2a8 8 0 11-8-8V2zm1 5h-2v6l5 3 1-1.7-4-2.3V7z"/></svg></div>
+        </div>
+      </div>
+      <div id="aeList"></div>
+      <div class="sechead"><div class="t">لاگ هسته Aether</div><div class="n">۵۰۰ خط آخر</div>
+        <div class="acts"><div class="mini" title="کپی" onclick="toast('لاگ در کلیپ‌بورد کپی شد')"><svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/></svg></div></div>
+      </div>
+      <div class="log" id="aeLog"><span class="g">INFO</span> socks5 listening on 127.0.0.1:10819
+<span class="w">WARN</span> کلید MASQUE: هنوز ثبت نشده؛ در اولین اسکن یا اتصال ثبت می‌شود</div>
+      <div class="warnbox">⚠️ فقط <b>یک پروفایل Aether</b> در هر لحظه می‌تواند اجرا شود. وقتی هسته در حال اجراست، اسکن اندپوینت و تعویض کلید WARP قفل می‌شوند تا کلید مشترک خراب نشود.</div>
+    </section>
+
+    <!-- ═══════════ هاب تنظیمات ═══════════ -->
+    <section class="scr" id="scr-settings-hub">
+      <div class="scrtitle">تنظیمات</div>
+      <div class="scrlbl">صفحه‌ی هاب — معادل واقعی SettingsHubActivity با افزودن صفحه‌های بی‌سر (مسیریابی، پشتیبان‌گیری، لاگ)</div>
+      <div id="hubList"></div>
+      <div class="note" style="margin-top:14px"><b>درباره‌ی این پروتوتایپ:</b> بازطراحی سه‌صفحه‌ای Narcic NG. همه‌ی برچسب‌ها، مقادیر پیش‌فرض و کلیدها از سورس واقعی (values-fa/strings.xml و AppConfig.kt) برداشته شده‌اند. منطق اتصال، سرویس‌ها و MMKV دست‌نخورده می‌مانند.</div>
+    </section>
+
+    <!-- ═══════════ تنظیمات کامل ═══════════ -->
+    <section class="scr" id="scr-settings">
+      <div class="scrtitle">تنظیمات فنی</div>
+      <div class="scrlbl">هر ۷۴ کلید واقعی MMKV در ۸ گروه — همان چیزی که SettingsActivity نشان می‌دهد. زیر هر آیتم، کلید واقعی MMKV نوشته شده است.</div>
+      <div id="settingsRoot"></div>
+    </section>
+
+    <!-- ═══════════ اتصال خودکار ═══════════ -->
+    <section class="scr" id="scr-autoconnect">
+      <div class="scrtitle">تنظیم اتصال خودکار</div>
+      <div class="scrlbl">مشخص کنید گزینه‌ی «خودکار» چقدر تست بگیرد تا متصل شود</div>
+      <div class="note">وقتی روی یک سابسکریپشن که هنوز نتیجه‌ی تستی ندارد، گزینه‌ی «خودکار» را می‌زنید، کانفیگ‌های همان سابسکریپشن تست می‌شوند تا به یکی از آن‌ها متصل شوید. نحوه‌ی این کار را از پایین انتخاب کنید.</div>
+      <div class="card static">
+        <div class="row"><div><div class="sname">محدود کردن پینگ برای اتصال خودکار</div>
+          <div class="is" style="font-size:9px;color:var(--sub);margin-top:3px;line-height:1.9">وقتی روشن باشد، به‌محض اینکه کانفیگی با پینگ برابر یا کمتر از مقدار زیر پیدا شود، تست متوقف شده و بلافاصله متصل می‌شود؛ به‌جای اینکه صبر کند تا همه‌ی کانفیگ‌ها تست شوند.</div>
+          <span class="key">pref_auto_connect_ping_limit_enabled</span></div>
+          <div class="ctl" style="margin-inline-start:auto"><div class="sw on" data-skey="pref_auto_connect_ping_limit_enabled"></div></div></div>
+        <div class="irow"><div class="it">حداکثر پینگ (میلی‌ثانیه)<span class="key">pref_auto_connect_ping_limit_ms</span></div>
+          <div class="ctl"><input class="tin" style="max-width:90px" value="300"></div></div>
+      </div>
+      <div class="note">وقتی خاموش باشد، «خودکار» مثل قبل همه‌ی کانفیگ‌های همان سابسکریپشن را تست می‌کند و به سریع‌ترین کانفیگ متصل می‌شود.</div>
+    </section>
+
+    <!-- ═══════════ نرسیس اسپوف ═══════════ -->
+    <section class="scr" id="scr-spoof">
+      <div class="scrtitle">نرسیس اسپوف</div>
+      <div class="scrlbl">جعل SNI و فرگمنتیشن TLS به‌صورت محلی</div>
+      <div class="note">نرسیس اسپوف یک فورواردر محلی اجرا می‌کند که دست‌دهی TLS را با روش‌هایی مثل جعل SNI، فرگمنتیشن و ترفند TTL پنهان می‌کند تا از تشخیص و فیلترینگ DPI عبور کند. آی‌پی واقعی مقصد، یک SNI جعلی و روش موردنظر را پایین انتخاب کنید، سپس یک سرور با آدرس 127.0.0.1 و پورت 40443 بسازید تا از این موتور عبور کند.</div>
+      <div class="card static">
+        <div class="irow"><div class="it">آی‌پی مقصد<span class="key">pref_narcis_spoof_connect_ip</span></div>
+          <div class="ctl"><input class="tin" id="spoofIp" value="104.21.33.58"></div></div>
+        <div class="irow"><div class="it">پورت مقصد<span class="key">pref_narcis_spoof_connect_port</span></div>
+          <div class="ctl"><input class="tin" style="max-width:90px" value="443"></div></div>
+        <div class="irow"><div class="it">SNI جعلی<span class="key">pref_narcis_spoof_fake_sni</span></div>
+          <div class="ctl"><input class="tin" value="www.sciencedirect.com"></div></div>
+        <div class="irow"><div class="it">روش<span class="key">pref_narcis_spoof_method</span></div>
+          <div class="ctl"><select class="tsel" style="max-width:150px"><option>combined</option><option>fragment</option><option>random_split</option><option>seg2delay</option><option>sni_triplicate</option><option>oob</option></select></div></div>
+      </div>
+      <div class="sechead"><div class="t">وضعیت موتور</div></div>
+      <div class="card static">
+        <div class="row"><div class="sname" id="spoofState" style="color:var(--off)">● متوقف</div>
+          <div style="margin-inline-start:auto;display:flex;gap:7px">
+            <div class="tbtn" onclick="spoofToggle(this)">شروع موتور</div>
+            <div class="tbtn" onclick="toast('لاگ اسپوف: هنوز لاگی ثبت نشده است')">مشاهده لاگ</div>
+          </div></div>
+      </div>
+      <div class="card static">
+        <div class="row"><div><div class="sname">فعال‌سازی نرسیس اسپوف</div>
+          <div class="is" style="font-size:9px;color:var(--sub);margin-top:2px">روشن یا خاموش کردن موتور اسپوف. وقتی روشن باشد، برای سرورهایی که به 127.0.0.1 اشاره می‌کنند هم به‌صورت خودکار اجرا می‌شود</div>
+          <span class="key">pref_narcis_spoof_enabled</span></div>
+          <div class="ctl" style="margin-inline-start:auto"><div class="sw" data-skey="pref_narcis_spoof_enabled"></div></div></div>
+      </div>
+      <div class="scrlbl" style="margin-top:8px">در حال گوش‌دادن روی 127.0.0.1:40443 — برای عبور خودکار از نرسیس اسپوف، یک سرور با همین آدرس بسازید.</div>
+    </section>
+
+    <!-- ═══════════ پروکسی هر اپ ═══════════ -->
+    <section class="scr" id="scr-perapp">
+      <div class="scrtitle">پروکسی به تفکیک برنامه</div>
+      <div class="scrlbl">عمومی: برنامه انتخاب شده از طریق یک پروکسی متصل می‌شود، برنامه انتخاب نشده مستقیماً متصل می‌شود.<br>حالت دور زدن: برنامه انتخاب شده مستقیماً متصل می‌شود، برنامه انتخاب نشده از طریق یک پروکسی متصل می‌شود.</div>
+      <div class="card static">
+        <div class="irow"><div class="it">فعال‌سازی پروکسی هر اپ<span class="key">pref_per_app_proxy</span></div>
+          <div class="ctl"><div class="sw on" data-skey="pref_per_app_proxy"></div></div></div>
+        <div class="irow"><div class="it">حالت دور زدن (Bypass)<span class="key">pref_bypass_apps</span></div>
+          <div class="ctl"><div class="sw" data-skey="pref_bypass_apps"></div></div></div>
+      </div>
+      <div class="irow" style="padding:4px 0"><input class="tin" style="max-width:none;direction:rtl;text-align:right" placeholder="جستجوی برنامه…" oninput="filterApps(this.value)"></div>
+      <div class="sechead"><div class="t">برنامه‌ها</div><div class="n" id="appCount">۴ از ۶</div>
+        <div class="acts">
+          <div class="mini" title="انتخاب همه" onclick="appSelAll(true)"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></div>
+          <div class="mini" title="معکوس کردن انتخاب‌ها" onclick="appSelAll(false)"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm0 2v14h14V5H5z"/></svg></div>
+          <div class="mini" title="انتخاب خودکار برنامه‌های نیازمند پروکسی" onclick="toast('۴ برنامه‌ی نیازمند پروکسی انتخاب شد')"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg></div>
+        </div>
+      </div>
+      <div id="appList"></div>
+    </section>
+
+    <!-- ═══════════ فایل‌های جغرافیایی ═══════════ -->
+    <section class="scr" id="scr-asset">
+      <div class="scrtitle">فایل های منبع جغرافیایی</div>
+      <div class="scrlbl">geoip.dat و geosite.dat در مسیر Android/data/com.narcic.ng/files/assets قرار دارن</div>
+      <div class="irow"><div class="it">منبع فایل‌های Geo<span class="key">pref_geo_files_sources</span></div>
+        <div class="ctl"><select class="tsel" style="max-width:180px"><option>Loyalsoldier</option><option>runetfreedom (روسیه)</option><option>Chocolate4U (ایران)</option></select></div></div>
+      <div class="card static"><div class="row">
+        <div><div class="sname" style="direction:ltr;text-align:left">geoip.dat</div><div class="ssub"><span class="chip">۲٫۴ MB</span><span class="chip">۱۴۰۴/۰۶/۲۱</span></div></div>
+        <div class="tbtn" style="margin-inline-start:auto" onclick="dlAsset(this,'geoip.dat')">دانلود</div></div></div>
+      <div class="card static"><div class="row">
+        <div><div class="sname" style="direction:ltr;text-align:left">geosite.dat</div><div class="ssub"><span class="chip">۱٫۱ MB</span><span class="chip">۱۴۰۴/۰۶/۲۱</span></div></div>
+        <div class="tbtn" style="margin-inline-start:auto" onclick="dlAsset(this,'geosite.dat')">دانلود</div></div></div>
+      <div class="btnrow">
+        <div class="btn" onclick="toast('اسکن QRcode')">اسکن QRcode</div>
+        <div class="btn" onclick="toast('افزودن فایل ها')">افزودن فایل ها</div>
+      </div>
+      <div class="note">امکان وارد کردن دستی لیست دامنه‌ها (domain-list-community) و لیست IP (geoip) هم وجود داره.</div>
+    </section>
+
+    <!-- ═══════════ بروزرسانی ═══════════ -->
+    <section class="scr" id="scr-update">
+      <div class="scrtitle">بروزرسانی</div>
+      <div class="card static">
+        <div class="irow"><div><div class="it">بررسی نسخه‌های pre-release</div>
+          <span class="key">pref_check_update_pre_release</span></div>
+          <div class="ctl"><div class="sw" data-skey="pref_check_update_pre_release"></div></div></div>
+      </div>
+      <div class="btnrow"><div class="btn pri" onclick="toast('آخرین نسخه: v2.3.3 — شما به‌روز هستید')">بررسی بروزرسانی</div></div>
+      <div class="note">انتشار از طریق ورک‌فلوی گیت‌هاب اکشنز و با پوش کردن تگ انجام می‌شه. سه نسخه arm64 / armeabi / universal ساخته می‌شه.</div>
+    </section>
+
+    <!-- ═══════════ درباره ═══════════ -->
+    <section class="scr" id="scr-about">
+      <div class="scrtitle">درباره</div>
+      <div class="card static" style="text-align:center;padding:20px">
+        <div class="logo" style="width:52px;height:52px;margin:0 auto 10px"><svg viewBox="0 0 24 24" style="width:26px;height:26px"><path d="M12 2C8 6 4 7 4 7v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7s-4-1-8-5z"/></svg></div>
+        <div style="font-size:16px;font-weight:800">Narcic NG</div>
+        <div style="font-size:10px;color:var(--sub);margin-top:3px">نسخه 2.3.3 · com.narcic.ng · GPLv3</div>
+        <div style="font-size:9.5px;color:var(--sub);margin-top:6px">کلاینت اندرویدی V2Ray/Xray — فورکی از v2rayNG با برندینگ و بهبودهای اختصاصی «Narcic»</div>
+      </div>
+      <div id="aboutList"></div>
+    </section>
+
+    <!-- ═══════════ مسیریابی ═══════════ -->
+    <section class="scr" id="scr-routing">
+      <div class="scrtitle">تنظیمات مسیریابی</div>
+      <div class="scrlbl">صفحه‌ی بی‌سری که در این بازطراحی به «بیشتر» برگردانده شده است</div>
+      <div class="irow"><div class="it">استراتژی دامنه<span class="key">pref_routing_domain_strategy</span></div>
+        <div class="ctl"><select class="tsel" style="max-width:160px"><option>AsIs</option><option>IPIfNonMatch</option><option>IPOnDemand</option></select></div></div>
+      <div class="sechead"><div class="t">قواعد</div><div class="n">۳</div>
+        <div class="acts"><div class="mini" title="وارد کردن قواعد آماده" onclick="ov('dlgRules',1)"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg></div></div></div>
+      <div class="card static"><div class="row"><div class="sw on"></div>
+        <div><div class="sname">پروکسی — دامنه‌های ایرانی</div><div class="ssub"><span class="chip">geosite:ir</span><span class="chip">geoip:ir</span></div></div>
+        <div class="more" style="margin-inline-start:auto;color:var(--sub)">⋮</div></div></div>
+      <div class="card static"><div class="row"><div class="sw on"></div>
+        <div><div class="sname">مستقیم — LAN</div><div class="ssub"><span class="chip">geoip:private</span></div></div>
+        <div class="more" style="margin-inline-start:auto;color:var(--sub)">⋮</div></div></div>
+      <div class="card static"><div class="row"><div class="sw"></div>
+        <div><div class="sname">مسدودسازی — تبلیغات</div><div class="ssub"><span class="chip">geosite:category-ads-all</span></div></div>
+        <div class="more" style="margin-inline-start:auto;color:var(--sub)">⋮</div></div></div>
+    </section>
+
+    <!-- ═══════════ پشتیبان‌گیری ═══════════ -->
+    <section class="scr" id="scr-backup">
+      <div class="scrtitle">پشتیبان‌گیری و بازیابی</div>
+      <div class="scrlbl">خروجی: فایل backup_ng.zip در پوشه‌ی backups — بازیابی، تنظیمات را دوباره init می‌کند</div>
+      <div class="btnrow">
+        <div class="btn pri" onclick="toast('پشتیبان‌گیری کامل شد → backups/backup_ng.zip')">پشتیبان‌گیری</div>
+        <div class="btn" onclick="toast('اشتراک‌گذاری فایل پشتیبان')">اشتراک‌گذاری</div>
+        <div class="btn" onclick="toast('بازیابی انجام شد · initApp()')">بازیابی</div>
+      </div>
+      <div class="sechead"><div class="t">وب‌داو (WebDAV)</div></div>
+      <div class="card static">
+        <div class="irow"><div class="it">آدرس وب‌داو</div><div class="ctl"><input class="tin" style="max-width:170px" placeholder="https://dav.example.com/dav"></div></div>
+        <div class="irow"><div class="it">نام کاربری</div><div class="ctl"><input class="tin" style="max-width:130px"></div></div>
+        <div class="irow"><div class="it">رمز عبور</div><div class="ctl"><input class="tin" style="max-width:130px" type="password"></div></div>
+        <div class="irow"><div class="it">مسیر ریموت</div><div class="ctl"><input class="tin" style="max-width:130px" value="/narcic/"></div></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ لاگ هسته ═══════════ -->
+    <section class="scr" id="scr-logcat">
+      <div class="scrtitle">گزارشات</div>
+      <div class="scrlbl">لاگ زنده‌ی هسته — همان رویدادهایی که با BROADCAST_ACTION_ACTIVITY به UI می‌رسند</div>
+      <div class="log" id="coreLog"><span class="g">INFO</span> [CoreService] startCoreLoop: profile=«سنگاپور — DO» mode=VPN
+<span class="g">INFO</span> [CoreService] MSG_STATE_START_SUCCESS
+<span class="g">INFO</span> [Traffic] downBps=3.4MB upBps=880KB
+<span class="g">INFO</span> [Speedtest] getRemoteIPInfo: 🇳🇱 185.2.90.4
+<span class="w">WARN</span> [CoreService] testTimeout profile=«ترکیه — اوزیسوم»
+<span class="g">INFO</span> [Subscription] auto-update: 3 subscription(s) checked</div>
+      <div class="btnrow"><div class="btn" onclick="toast('لاگ کپی شد')">کپی</div><div class="btn" onclick="toast('اشتراک‌گذاری لاگ')">اشتراک‌گذاری</div></div>
+    </section>
+
+    <!-- ═══════════ آمار ═══════════ -->
+    <section class="scr" id="scr-stats">
+      <div class="scrtitle">آمار ترافیک</div>
+      <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stat"><div class="k">دانلود امروز</div><div class="v ok" style="font-size:14px">۴٫۲ GB</div></div>
+        <div class="stat"><div class="k">آپلود امروز</div><div class="v" style="font-size:14px">۸۲۰ MB</div></div>
+      </div>
+      <div class="card static"><div class="sechead" style="margin:2px 0 2px"><div class="t" style="font-size:11px">هفته‌ی گذشته</div></div>
+        <div class="hbars">
+          <div class="b"><i style="height:42%"></i><span>ش</span></div><div class="b"><i style="height:61%"></i><span>ی</span></div>
+          <div class="b"><i style="height:35%"></i><span>د</span></div><div class="b"><i style="height:78%"></i><span>س</span></div>
+          <div class="b"><i style="height:54%"></i><span>چ</span></div><div class="b"><i style="height:88%"></i><span>پ</span></div>
+          <div class="b"><i style="height:66%"></i><span>ج</span></div>
+        </div></div>
+      <div class="card static"><div class="row"><div><div class="sname">بازنشانی آمار ماهانه</div><div class="ssub">آمار با TRAFFIC broadcast لحظه‌ای به‌روز می‌شود</div></div>
+        <div class="tbtn" style="margin-inline-start:auto" onclick="toast('آمار بازنشانی شد')">بازنشانی</div></div></div>
+    </section>
+
+    <!-- ═══════════ سابسکریپشن‌ها ═══════════ -->
+    <section class="scr" id="scr-subs">
+      <div class="scrtitle">سابسکریپشن‌ها</div>
+      <div class="scrlbl">سه سابسکریپشن داخلی Narcic — محافظت‌شده از ویرایش/حذف</div>
+      <div id="subList"></div>
+      <div class="btnrow"><div class="btn pri" onclick="ov('dlgSub',1)">+ افزودن سابسکریپشن</div></div>
+      <div class="card static"><div class="irow"><div><div class="it">به‌روزرسانی خودکار اشتراک ها</div>
+        <span class="key">pref_auto_update_subscription</span></div>
+        <div class="ctl"><div class="sw on" data-skey="pref_auto_update_subscription"></div></div></div>
+      <div class="irow"><div class="it">فاصله به‌ روزرسانی خودکار (حداقل ۱۵ دقیقه)<span class="key">pref_auto_update_interval</span></div>
+        <div class="ctl"><input class="tin" style="max-width:80px" value="1440"></div></div></div>
+    </section>
+
+    <!-- ═══════════ ورود کانفیگ ═══════════ -->
+    <section class="scr" id="scr-import">
+      <div class="scrtitle">افزودن کانفیگ</div>
+      <div class="scrlbl">همان گزینه‌های واقعی منوی درِیور (MainDrawer) — برچسب‌ها عیناً از strings.xml</div>
+      <div id="importList"></div>
+    </section>
+
+    <!-- ═══════════ ادیتور Aether ═══════════ -->
+    <section class="scr" id="scr-edit-aether">
+      <div class="scrtitle">ویرایش کانفیگ Aether</div>
+      <div class="scrlbl">همان فیلدهای واقعی ServerAetherActivity — ذخیره با اعتبارسنجی AetherFmt.normalize</div>
+      <div id="aetherRoot"></div>
+      <div class="sechead"><div class="t">لاگ</div>
+        <div class="acts"><div class="mini" title="کپی" onclick="toast('لاگ کپی شد')"><svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/></svg></div></div>
+      </div>
+      <div class="log" id="aeEditLog" style="min-height:150px"><span class="w">کلید MASQUE: هنوز ثبت نشده؛ در اولین اسکن یا اتصال ثبت می‌شود</span></div>
+      <div class="btnrow">
+        <div class="btn pri" onclick="toast('ذخیره شد · MmkvManager.encodeServerConfig')">✓ ذخیره</div>
+        <div class="btn danger" onclick="toast('حذف مسدود است: کانفیگ در حال اجراست')">حذف</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ ادیتور AmneziaWG ═══════════ -->
+    <section class="scr" id="scr-edit-awg">
+      <div class="scrtitle">ویرایش کانفیگ AmneziaWG</div>
+      <div class="scrlbl">ادیتور .conf — با Config.parse اعتبارسنجی و با sanitizeConfigText پاک‌سازی می‌شود</div>
+      <div class="irow"><div class="it">ملاحظات<span class="key">remarks</span></div>
+        <div class="ctl"><input class="tin" style="max-width:180px;direction:rtl;text-align:right" value="آلمان — فرانکفورت"></div></div>
+      <textarea id="awgConf" class="log" style="min-height:290px;font-size:8.5px" spellcheck="false">[Interface]
+PrivateKey = uKv6Yt3wX8mQ2pR9nL5cA1bE7dF4gH0jK3sD6fG9hJ2k=
+Address = 10.8.1.2/32
+DNS = 1.1.1.1
+MTU = 1420
+Jc = 4
+Jmin = 40
+Jmax = 70
+H1 = 1234567
+H2 = 7654321
+H3 = 1122334
+H4 = 4433221
+
+[Peer]
+PublicKey = bX7QpR9nL5cA1bE7dF4gH0jK3sD6fG9hJ2kLuKv6Yt3w=
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = 116.203.42.17:51820
+PersistentKeepalive = 25</textarea>
+      <div class="note">فیلدهای آشوب (Jc/Jmin/Jmax/H1-H4) تفاوت AmneziaWG با WireGuard ساده‌اند؛ AngConfigManager هنگام ورود، این کانفیگ‌ها را از WireGuard تشخیص می‌دهد. تغییر دادن متن بالا، چیپ‌های صفحه‌ی امنزیا را به‌روز می‌کند.</div>
+      <div class="btnrow">
+        <div class="btn pri" onclick="awgSave()">✓ ذخیره</div>
+        <div class="btn danger" onclick="toast('حذف مسدود است: کانفیگ انتخاب‌شده/در حال اجراست')">حذف</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ ادیتور VLESS ═══════════ -->
+    <section class="scr" id="scr-edit-vless">
+      <div class="scrtitle">ویرایش کانفیگ VLESS</div>
+      <div class="scrlbl">نمونه‌ای از ادیتورهای پروتکل‌های V2Ray — برچسب‌ها عیناً از strings.xml فارسی</div>
+      <div id="vlessRoot"></div>
+      <div class="btnrow"><div class="btn pri" onclick="toast('ذخیره شد · MmkvManager.encodeServerConfig')">✓ ذخیره</div>
+        <div class="btn danger" onclick="toast('حذف شد')">حذف</div></div>
+    </section>
+
+  </div><!-- /stack -->
+
+  <!-- ═══════════ تب‌بار ═══════════ -->
+  <div id="tabbar">
+    <div class="tab" data-t="awg" onclick="switchTab('awg')">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8 6 4 7 4 7v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7s-4-1-8-5z"/></svg><span class="lb">امنزیا</span></div>
+    <div class="tab on" data-t="v2" onclick="switchTab('v2')">
+      <svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z"/></svg><span class="lb">وی‌تو‌ری</span></div>
+    <div class="tab" data-t="ae" onclick="switchTab('ae')">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.9 9h-3a15.6 15.6 0 00-1.2-5.5A8 8 0 0119.9 11zM12 4c.9 1.3 1.9 3.7 2 7h-4c.1-3.3 1.1-5.7 2-7zM8.3 5.5A15.6 15.6 0 007.1 11h-3a8 8 0 014.2-5.5zM4.1 13h3c.1 2 .5 3.9 1.2 5.5A8 8 0 014.1 13zm7.9 7c-.9-1.3-1.9-3.7-2-7h4c-.1 3.3-1.1 5.7-2 7zm3.7-1.5c.7-1.6 1.1-3.5 1.2-5.5h3a8 8 0 01-4.2 5.5z"/></svg><span class="lb">اتر</span></div>
+  </div>
+
+  <!-- ═══════════ شیت بیشتر ═══════════ -->
+  <div class="ov" id="sheetMore" onclick="if(event.target===this)ov('sheetMore',0)">
+    <div class="inner"><h3>بیشتر</h3><div id="moreList"></div></div>
+  </div>
+
+  <!-- ═══════════ دیالوگ افزودن V2Ray/Aether ═══════════ -->
+  <div class="ov" id="dlgAddV2" onclick="if(event.target===this)ov('dlgAddV2',0)">
+    <div class="inner"><h3>افزودن کانفیگ</h3>
+      <div class="mrow" onclick="go('import')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/></svg></span>افزودن از کلیپ‌بورد</div>
+      <div class="mrow" onclick="go('import')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4z"/></svg></span>اسکن بارکد QR</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ دیالوگ افزودن AWG ═══════════ -->
+  <div class="ov" id="dlgAddAwg" onclick="if(event.target===this)ov('dlgAddAwg',0)">
+    <div class="inner"><h3>افزودن کانفیگ</h3>
+      <div class="mrow" onclick="go('edit-awg')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></span>افزودن کانفیگ .conf</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ دیالوگ قواعد آماده ═══════════ -->
+  <div class="ov" id="dlgRules" onclick="if(event.target===this)ov('dlgRules',0)">
+    <div class="inner"><h3>وارد کردن قواعد آماده</h3><div id="rulesList"></div></div>
+  </div>
+
+  <!-- ═══════════ دیالوگ سابسکریپشن ═══════════ -->
+  <div class="ov" id="dlgSub" onclick="if(event.target===this)ov('dlgSub',0)">
+    <div class="inner"><h3>افزودن سابسکریپشن</h3>
+      <div style="margin-bottom:8px"><input class="tin" style="width:100%;direction:rtl;text-align:right" placeholder="نام"></div>
+      <div><input class="tin" style="width:100%" placeholder="https://sub.example.com/..."></div>
+      <div class="btnrow"><div class="btn pri" onclick="ov('dlgSub',0);toast('سابسکریپشن اضافه شد')">افزودن</div>
+        <div class="btn" onclick="ov('dlgSub',0)">انصراف</div></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ═══════════════ داده‌ها از سورس واقعی ═══════════════ */
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+
+const AWG_SERVERS=[
+ {n:'آلمان — فرانکفورت',chips:['Jc=4','H1=۱۲۳۴۵۶۷','MTU 1420'],ping:45},
+ {n:'فنلاند — هلسینکی',chips:['Jc=3','I1–I5 فعال'],ping:89},
+ {n:'ترکیه — استانبول',chips:['Jc=4','H2=۹۸۷۶۵۴۳'],ping:120},
+ {n:'کانادا — تورنتو',chips:['بدون آشوب'],ping:null},
+];
+const V2_SERVERS=[
+ {n:'سنگاپور — DigitalOcean',b:'VL',chips:['Reality','دیسینک: متعادل'],ping:38,sel:1},
+ {n:'آلمان — هتزنر',b:'VL',chips:['Reality','ML-DSA65'],ping:51},
+ {n:'فنلاند — Hysteria2',b:'HY2',chips:['Port-Hopping','obfs:salamander'],ping:74},
+ {n:'ترکیه — اوزیسوم',b:'VM',chips:['WS + TLS'],ping:98},
+ {n:'آمریکا — Trojan',b:'TR',chips:['gRPC'],ping:152},
+ {n:'گروه سیاست — اروپا',b:'PG',chips:['Balancer','۴ عضو'],ping:46},
+];
+const AE_SERVERS=[
+ {n:'WARP سریع',b:'AE',chips:['MASQUE · H3','ECH روشن','162.159.192.1:2408'],ping:62,sel:1},
+ {n:'WARP → تور',b:'AE',chips:['تور: زنجیره','پل: خودکار','Goول'],ping:140},
+ {n:'پسیفون تنها',b:'AE',chips:['Psiphon: Only','CDN','خروج: DE'],ping:null},
+];
+const HUB=[
+ {t:'تنظیمات',s:'تنظیمات فنی هسته، شبکه و اتصال',go:'settings',ic:'gear'},
+ {t:'تنظیم اتصال خودکار',s:'مشخص کنید گزینه‌ی «خودکار» چقدر تست بگیرد',go:'autoconnect',ic:'clock'},
+ {t:'نرسیس اسپوف',s:'جعل SNI و فرگمنتیشن TLS به‌صورت محلی',go:'spoof',ic:'shield'},
+ {sep:1},
+ {t:'پروکسی به تفکیک برنامه',s:'انتخاب اپ‌ها و حالت دور زدن',go:'perapp',ic:'phone'},
+ {t:'فایل های منبع جغرافیایی',s:'geoip و geosite و منابع دانلود',go:'asset',ic:'down'},
+ {t:'بروزرسانی',s:'بررسی نسخه‌ی جدید برنامه',go:'update',ic:'refresh'},
+ {t:'درباره',s:'Narcic NG v2.3.3 · GPLv3',go:'about',ic:'info'},
+ {sep:1},
+ {t:'تنظیمات مسیریابی',s:'↩ بازگردانی صفحه‌ی بی‌سر (RoutingSettingActivity)',go:'routing',ic:'route'},
+ {t:'پشتیبان‌گیری و بازیابی',s:'↩ بازگردانی صفحه‌ی بی‌سر (BackupActivity) · لوکال / WebDAV',go:'backup',ic:'db'},
+ {t:'گزارشات',s:'↩ بازگردانی صفحه‌ی بی‌سر (LogcatActivity)',go:'logcat',ic:'log'},
+];
+const MORE=[
+ {t:'سابسکریپشن‌ها',go:'subs',ic:'list'},
+ {t:'آمار ترافیک',go:'stats',ic:'chart'},
+ {t:'ورود کانفیگ (کلیپ‌بورد / QR / دستی)',go:'import',ic:'plus'},
+ {t:'گزارشات هسته',go:'logcat',ic:'log'},
+ {t:'پشتیبان‌گیری و بازیابی',go:'backup',ic:'db'},
+];
+const IMPORT=[
+ {t:'کانفیگ را از QRcode وارد کنید',ic:'qr'},{t:'کانفیگ را از کلیپ‌ ‌بورد وارد کنید',ic:'copy'},
+ {t:'کانفیگ را از محلی وارد کنید',ic:'file'},{sep:1},
+ {t:'افزودن [VMess]',go:'edit-vless'},{t:'افزودن [VLESS]',go:'edit-vless'},{t:'افزودن [Shadowsocks]',go:'edit-vless'},
+ {t:'افزودن [SOCKS]',go:'edit-vless'},{t:'افزودن [HTTP]',go:'edit-vless'},{t:'افزودن [Trojan]',go:'edit-vless'},
+ {t:'افزودن [Wireguard]',go:'edit-awg'},{t:'افزودن [Hysteria2]',go:'edit-vless'},{sep:1},
+ {t:'افزودن دستی کانفیگ Aether',go:'edit-aether'},
+ {t:'افزودن [Warp on Warp]',go:'edit-aether'},
+ {t:'افزودن [گروه خط‌‌ مشی]',go:'edit-vless'},{t:'افزودن [زنجیره پروکسی]',go:'edit-vless'},
+];
+const RULESETS=['لیست سفید چین ( دور زدن سرزمین اصلی )','لیست سیاه چین','جهانی(GLOBAL)','ایران','لیست سفید روسیه'];
+const SUBS=[
+ {n:'نارسیس ایرانسل',u:'https://sub.narcic.ir/irancell/xxxx',c:4,lock:1},
+ {n:'Narcic NG - JSON',u:'https://sub.narcic.ir/json/xxxx',c:7,lock:1},
+ {n:'Narcic NG - WireGuard',u:'https://sub.narcic.ir/wg/xxxx',c:4,lock:1},
+ {n:'سرورهای من',u:'https://my-sub.example.com/x',c:3},
+];
+const ABOUT=[
+ {t:'صفحه‌ی پروژه',s:'github.com/patterniha/Narcic_APK'},
+ {t:'هسته‌ی Aether',s:'github.com/CluvexStudio/aether'},
+ {t:'کانال تلگرام',s:'@Narcic_Support'},
+ {t:'سیاست حریم خصوصی',s:'CR.md'},
+ {t:'مجوز',s:'GPLv3'},
+];
+const APPS=[
+ {n:'تلگرام',p:'org.telegram.messenger',on:1},{n:'اینستاگرام',p:'com.instagram.android',on:1},
+ {n:'کروم',p:'com.android.chrome',on:0},{n:'یوتیوب',p:'com.google.android.youtube',on:0},
+ {n:'واتساپ',p:'com.whatsapp',on:0},{n:'مرورگر سیستم',p:'com.android.browser',on:0},
+];
+
+/* ── ۸ گروه تنظیمات — برچسب‌ها و مقادیر پیش‌فرض واقعی ── */
+const SETTINGS=[
+{g:'تنظیمات رابط کاربری',open:1,items:[
+ {k:'pref_speed_enabled',t:'فعال کردن نمایش سرعت',s:'نمایش سرعت فعلی در قسمت اعلان.\nآیکون اعلان بر اساس استفاده تغییر می‌کند.',ty:'sw',v:1},
+ {k:'pref_confirm_remove',t:'تایید حذف کانفیگ',s:'آیا برای حذف کانفیگ نیاز به تایید دوم توسط کاربر است',ty:'sw',v:1},
+ {k:'pref_double_column_display',t:'فعال کردن نمایش دو ستون',ty:'sw'},
+ {k:'pref_group_all_display',t:'نمایش همه گروه‌ها',ty:'sw',v:1},
+ {k:'pref_language',t:'زبان',ty:'sel',v:'fa',o:[['پیش‌فرض سیستم','auto'],['انگلیسی','en'],['چینی ساده','zh-rCN'],['چینی سنتی','zh-rTW'],['ویتنامی','vi'],['روسی','ru'],['فارسی','fa'],['عربی','ar'],['بنگالی','bn'],['بختیاری','bqi-rIR']]},
+ {k:'pref_ui_mode_night',t:'تنظیمات حالت رابط کاربری',ty:'sel',o:[['پیش فرض سیستم','0'],['روشن','1'],['تاریک','2']]},
+]},
+{g:'تنظیمات VPN',open:1,items:[
+ {k:'pref_ipv6_enabled',t:'فعال کردن IPv6',s:'آدرس و مسیرهای IPv6 را به رابط VPN اضافه کنید',ty:'sw'},
+ {k:'pref_prefer_ipv6',t:'ترجیح دادن IPV6',s:'هنگام بازیابی نام دامنه، آدرس‌های IPv6 را ترجیح دهید',ty:'sw'},
+ {k:'pref_local_dns_enabled',t:'فعال کردن DNS محلی',s:'درخواست های DNS به هسته وارد شده و توسط ماژول DNS پردازش می شوند (فقط حالت VPN)',ty:'sw'},
+ {k:'pref_fake_dns_enabled',t:'فعال کردن DNS جعلی',s:'دی ان اس محلی آدرس های آیپی جعلی را بر می گرداند (سریع تر می باشد و تاخیر را کاهش می دهد اما ممکن است برای برخی از برنامه ها کار نکند)',ty:'sw'},
+ {k:'pref_vpn_dns',t:'VPN DNS (فقط IPv4/v6)',ty:'txt',v:'1.1.1.1'},
+ {k:'pref_append_http_proxy',t:'پروکسی HTTP را به VPN اضافه کنید',ty:'sw'},
+ {k:'pref_vpn_bypass_lan',t:'آیا VPN از شبکه محلی عبور می کند؟',ty:'sel',o:['پیش فرض کانفیگ','دور زده شود','دور زده نشود']},
+ {k:'pref_vpn_interface_address_config_index',t:'آدرس واسط VPN',ty:'sel',o:['10.10.14.x','10.1.0.x','10.0.0.x','172.31.0.x','172.20.0.x','172.16.0.x','192.168.100.x']},
+ {k:'pref_vpn_mtu',t:'VPN MTU (default 1500)',ty:'txt',v:'1500',live:'mtu'},
+ {k:'pref_use_hev_tunnel',t:'استفاده از قابلیت Hev TUN',s:'اگر فعال باشد، تونل VPN از hev-socks5-tunnel استفاده می‌کند؛ در غیر این صورت از xray-core استفاده خواهد شد.',ty:'sw'},
+ {k:'pref_hev_tunnel_loglevel',t:'سطح گزارشات Hev Tun',ty:'sel',o:['error','warn','info','debug']},
+ {k:'pref_hev_tunnel_rw_timeout',t:'زمان انتظار خواندن/نوشتن Hev Tun (ثانیه) (پیش‌فرض tcp,udp 300،60)',ty:'txt',v:'300,60'},
+]},
+{g:'تنظیمات هسته',open:1,items:[
+ {k:'pref_sniffing_enabled',t:'فعال کردن تجزیه و تحلیل بسته ها (Sniffing)',s:'تلاش برای استخراج نام دامنه واقعی از بسته‌های ترافیک (به‌طور پیش‌فرض روشن است)',ty:'sw',v:1},
+ {k:'pref_route_only_enabled',t:'فعال‌سازی فقط مسیر یابی (RouteOnly)',s:'از نام دامنه (Sniffed) فقط برای مسیریابی استفاده کنید و آدرس مقصد را به عنوان IP ذخیره کنید.',ty:'sw'},
+ {k:'pref_enable_local_proxy',t:'فعال‌سازی پروکسی محلی',s:'اگر غیرفعال باشد، هیچ پروکسی SOCKS در دسترس نخواهد بود و کارهایی مثل آپدیت اشتراک‌ها نمی‌توانند از پروکسی استفاده کنند.',ty:'sw',v:1},
+ {k:'pref_proxy_sharing_enabled',t:'اشتراک‌گذاری پروکسی در شبکه محلی (LAN)',s:'دستگاه‌های دیگر می‌توانند با وارد کردن IP شما، از پروکسی‌تان استفاده کنند. برای جلوگیری از سوءاستفاده، فقط در شبکه‌های امن و قابل اعتماد این گزینه را روشن کنید.',ty:'sw'},
+ {k:'pref_dynamic_socks_port',t:'تولید پورت متغیر برای پروکسی محلی',s:'با هر بار ایجاد یک کانکشن ورودی، یک پورت تصادفی تولید می‌کند.',ty:'sw'},
+ {k:'pref_socks_port',t:'پورت پروکسی محلی',ty:'txt',v:'10808'},
+ {k:'pref_socks_username',t:'نام کاربری پروکسی محلی (اختیاری)',ty:'txt'},
+ {k:'pref_socks_password',t:'رمز عبور پروکسی محلی (اختیاری)',ty:'txt'},
+ {k:'pref_socks_enable_udp',t:'SOCKS5 UDP',s:'احراز هویت socks5 هنگام استفاده از UDP کاملاً ایمن نیست',ty:'sw'},
+ {k:'pref_remote_dns',t:'DNS از راه دور (اختیاری) (udp/tcp/https/quic)',ty:'txt',v:'https://cloudflare-dns.com/dns-query'},
+ {k:'pref_domestic_dns',t:'DNS داخلی (اختیاری)',ty:'txt',v:'223.5.5.5'},
+ {k:'pref_dns_hosts',t:'DNS مستقیم هاست (فرمت: دامنه:آدرس،…)',ty:'txt'},
+ {k:'pref_core_loglevel',t:'سطح گزارشات هسته',ty:'sel',o:['debug','info','warning','error','none'],v:'info'},
+ {k:'pref_outbound_domain_resolve_method',t:'روش حل نام دامنه خروجی',ty:'sel',o:['Do not resolve','Resolve and add to DNS Hosts','Resolve and replace domain']},
+]},
+{g:'تنظیمات MUX',items:[
+ {k:'pref_mux_enabled',t:'فعال کردن MUX',s:'سریعتر است، اما ممکن است باعث اتصال ناپایدار شود',ty:'sw'},
+ {k:'pref_mux_concurency',t:'اتصالات TCP (محدوده -1 تا 1024)',ty:'txt',v:'8'},
+ {k:'pref_mux_xudp_concurency',t:'اتصالات XUDP (محدوده -1 تا 1024)',ty:'txt',v:'-1'},
+ {k:'pref_mux_xudp_quic',t:'مدیریت QUIC در تونل MUX',ty:'sel',o:['رد کردن','مجاز','پریدن']},
+]},
+{g:'تنظیمات فرگمنت',items:[
+ {k:'pref_fragment_enabled',t:'فعال کردن فرگمنت',ty:'sw'},
+ {k:'pref_fragment_packets',t:'بسته های فرگمنت',ty:'sel',o:['tlshello','1-1','1-2','1-3','1-5']},
+ {k:'pref_fragment_length',t:'طول بسته های فرگمنت (حداقل-حداکثر)',ty:'txt',v:'100-200'},
+ {k:'pref_fragment_interval',t:'فاصله بین بسته های فرگمنت (حداقل-حداکثر)',ty:'txt',v:'10-20'},
+ {k:'pref_fragment_maxsplit',t:'حداکثر تقسیم فرگمنت',ty:'txt',v:'5'},
+]},
+{g:'تنظیمات پایش اتصال (Observatory)',items:[
+ {k:'pref_observatory_least_ping_interval',t:'فاصله leastPing',ty:'txt',v:'3m'},
+ {k:'pref_observatory_least_load_interval',t:'فاصله leastLoad',ty:'txt',v:'5m'},
+ {k:'pref_observatory_least_load_method',t:'روش HTTP برای leastLoad',ty:'sel',o:['HEAD','GET']},
+ {k:'pref_observatory_least_load_sampling',t:'نمونه‌برداری leastLoad',ty:'txt',v:'2'},
+ {k:'pref_observatory_least_load_timeout',t:'مهلت زمانی leastLoad',ty:'txt',v:'30s'},
+]},
+{g:'تنظیمات پیشرفته',items:[
+ {k:'pref_is_booted',t:'اتصال خودکار هنگام راه اندازی',s:'هنگام راه اندازی به طور خودکار به سرور انتخابی متصل می شود که ممکن است ناموفق باشد.',ty:'sw'},
+ {k:'pref_delay_test_url',t:'آدرس اینترنتی آزمایش تاخیر واقعی کانفیگ ها',ty:'txt',v:'https://www.gstatic.com/generate_204'},
+ {k:'pref_real_ping_concurrency',t:'تعداد همزمانی تست تأخیر واقعی',ty:'txt',v:'3'},
+ {k:'pref_ip_api_url',t:'تست اطلاعات اتصال فعلی url',ty:'txt',v:'https://api.ip.sb/geoip'},
+]},
+{g:'تنظیمات حالت',items:[
+ {k:'pref_mode',t:'حالت',ty:'sel',v:'VPN',o:['VPN','فقط پروکسی'],live:'mode'},
+ {k:'pref_root_mode_enable',t:'حالت روت (سیستم‌عامل)',s:'مسیریابی بدون VpnService با iptables — نیازمند دسترسی روت',ty:'sw'},
+ {k:'pref_root_lan_sharing',t:'اشتراک‌گذاری VPN از طریق هات‌اسپات (LAN)',ty:'sw'},
+]},
+];
+
+/* ── فیلدهای ادیتور Aether — همان ترتیب ServerAetherActivity ── */
+const AE_FIELDS=[
+ {sec:'WARP',id:'protocol',t:'پروتکل',ty:'sel',o:[['MASQUE','masque'],['WireGuard','wg'],['WARP-in-WARP','gool / mim']],v:'masque'},
+ {id:'transport',t:'حامل',ty:'sel',o:[['HTTP/3','h3'],['HTTP/2','h2']],v:'h3',if:f=>['masque'].includes(f.protocol)},
+ {id:'fragment',t:'تکه‌تکه کردن ClientHello',ty:'sw',if:f=>f.protocol==='masque'&&f.transport==='h2'},
+ {id:'frag_size',t:'اندازه تکه‌ها (بایت)',ty:'txt',ph:'16-32',if:f=>f.fragment},
+ {id:'frag_delay',t:'تأخیر بین تکه‌ها (میلی‌ثانیه)',ty:'txt',ph:'2-10',if:f=>f.fragment},
+ {id:'ech',t:'Encrypted Client Hello',ty:'sw',if:f=>f.protocol==='masque'},
+ {id:'scan',t:'حالت اسکن',ty:'sel',o:['توربو','متعادل','دقیق','پنهانی','تضمینی'],v:'متعادل'},
+ {id:'obf',t:'مبهم‌سازی',ty:'sel',o:['خودکار','خاموش','سبک','فایروال','متعادل','GFW','تهاجمی'],v:'خودکار'},
+ {id:'ip',t:'نسخه IP',ty:'sel',o:[['IPv4','v4'],['IPv6','v6'],['IPv4 + IPv6','both']]},
+];
+const AE_PSI=[
+ {id:'psiphon',t:'Psiphon',ty:'sel',o:[['خاموش','off'],['WARP → Psiphon','chain'],['Psiphon → WARP','reverse'],['فقط Psiphon','only']]},
+ {id:'psi_mode',t:'Psiphon connection',ty:'sel',o:[['خودکار','auto'],['فقط CDN','cdn'],['فقط مستقیم','direct']],if:f=>f.psiphon!=='off'},
+ {id:'cdn_ips',t:'CDN fronting IPs',ty:'txt',ph:'با کاما جدا کنید؛ خالی = لیست داخلی',if:f=>f.psiphon!=='off'&&f.psi_mode!=='direct'},
+ {id:'cdn_sni',t:'CDN fronting server names',ty:'txt',if:f=>f.cdn_ips},
+ {id:'psi_region',t:'Exit country',ty:'txt',ph:'مثل DE؛ خالی = هر کشوری',if:f=>f.psiphon!=='off'},
+ {id:'psi_bundled',t:'Start from the bundled server list',ty:'sw',if:f=>f.psiphon!=='off'},
+];
+const AE_TOR=[
+ {id:'tor',t:'Tor',ty:'sel',o:[['خاموش','off'],['WARP → تور','chain'],['تور → WARP','reverse'],['فقط تور','only']]},
+ {id:'tor_bridges',t:'Bridges',ty:'sel',o:[['وقتی تور فیلتر است','auto'],['از ابتدا','first'],['هرگز','never'],['پل‌های خودم','own']],if:f=>f.tor!=='off'},
+ {id:'tor_relays',t:'Bridge sources',ty:'sel',o:[['bridgedb و رله‌های عمومی','both'],['فقط رله‌های عمومی','public'],['فقط bridgedb','bridgedb']],if:f=>f.tor!=='off'&&['auto','first'].includes(f.tor_bridges)},
+ {id:'bridge_lines',t:'Bridge lines',ty:'area',ph:'حداکثر ۶ خط، فرمت torrc',if:f=>f.tor!=='off'&&f.tor_bridges==='own'},
+];
+const AE_ADV=[
+ {id:'ae_dns',t:'DNS داخل تونل',ty:'txt',ph:'خالی = 1.1.1.1 و 1.0.0.1'},
+ {id:'exit_loc',t:'Exit location',ty:'txt',ph:'DE,SE فقط این‌ها · !IR,RU این‌ها نه · خالی = همه'},
+ {id:'listen',t:'Listen port',ty:'txt',v:'10819'},
+];
+const VLESS_FIELDS=[
+ {id:'v-remarks',t:'ملاحظات',ty:'txt',v:'سنگاپور — DigitalOcean',rtl:1},
+ {id:'v-address',t:'نشانی',ty:'txt',v:'sg-do.example.net'},
+ {id:'v-port',t:'پورت',ty:'txt',v:'443',w:90},
+ {id:'v-id',t:'شناسه (UUID)',ty:'txt',v:'b831381d-6324-4d53-ad4f-8cda48b30811'},
+ {id:'v-flow',t:'جریان',ty:'sel',o:['','xtls-rprx-vision']},
+ {id:'v-network',t:'شبکه',ty:'sel',o:['tcp','ws','grpc','xhttp','httpupgrade','kcp','quic']},
+ {id:'v-security',t:'TLS',ty:'sel',o:['none','tls','reality'],v:'reality'},
+ {id:'v-sni',t:'SNI',ty:'txt',v:'www.sciencedirect.com'},
+ {id:'v-fp',t:'اثرانگشت',ty:'sel',o:['chrome','firefox','safari','ios','android','edge','360','qq','random']},
+ {id:'v-alpn',t:'Alpn',ty:'txt',ph:'h2,http/1.1'},
+ {id:'v-pub',t:'کلید عمومی (Reality)',ty:'txt',v:'SbVKOEMjK0sIlbwg4akyBg5mL5KZwwB-ed4eEE7YnRQ'},
+ {id:'v-sid',t:'شناسه کوتاه',ty:'txt',v:'0123abcd'},
+ {id:'v-path',t:'مسیر WS',ty:'txt',ph:'/path'},
+ {id:'v-host',t:'هاست WS',ty:'txt',ph:'host.example.com'},
+];
+
+/* ═══════════════ رندر ═══════════════ */
+const $=q=>document.querySelector(q);
+const ICONS={
+ gear:'<path d="M19.4 13a7.9 7.9 0 000-2l2.1-1.6a.5.5 0 00.1-.7l-2-3.4a.5.5 0 00-.6-.2l-2.5 1a7.7 7.7 0 00-1.7-1L14.4 2.4A.5.5 0 0014 2h-4a.5.5 0 00-.5.4L9.2 5.1a7.7 7.7 0 00-1.7 1L5 5.1a.5.5 0 00-.6.2l-2 3.4a.5.5 0 00.1.7L4.6 11a7.9 7.9 0 000 2l-2.1 1.6a.5.5 0 00-.1.7l2 3.4c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.3 2.7c0 .2.3.4.5.4h4c.2 0 .5-.2.5-.4l.3-2.7c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.4a.5.5 0 00-.1-.7L19.4 13zM12 15.5A3.5 3.5 0 1112 8.5a3.5 3.5 0 010 7z"/>',
+ clock:'<path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 15h-2v-6l5-3 1 1.7-4 2.3z"/>',
+ shield:'<path d="M12 2C8 6 4 7 4 7v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7s-4-1-8-5z"/>',
+ phone:'<path d="M17 1H7a2 2 0 00-2 2v18a2 2 0 002 2h10a2 2 0 002-2V3a2 2 0 00-2-2zm0 18H7V5h10v14z"/>',
+ down:'<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>',
+ refresh:'<path d="M17.65 6.35A8 8 0 106 18.36l1.4-1.44A6 6 0 1116 7.99l-2.5 2.51H20V4l-2.35 2.35z"/>',
+ info:'<path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>',
+ route:'<path d="M12 2a5 5 0 015 5c0 2-1.2 3.6-3 4.6V13h2a4 4 0 014 4v3h-2v-3a2 2 0 00-2-2h-8a2 2 0 00-2 2v3H4v-3a4 4 0 014-4h2v-1.4C8.2 10.6 7 9 7 7a5 5 0 015-5zm0 2a3 3 0 100 6 3 3 0 000-6z"/>',
+ db:'<path d="M12 2C7.6 2 4 3.8 4 6v12c0 2.2 3.6 4 8 4s8-1.8 8-4V6c0-2.2-3.6-4-8-4zm0 2c3.9 0 6 1.3 6 2s-2.1 2-6 2-6-1.3-6-2 2.1-2 6-2z"/>',
+ log:'<path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/>',
+ list:'<path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>',
+ chart:'<path d="M5 9.2h3V19H5zm5.6-4.2h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>',
+ plus:'<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/>',
+ qr:'<path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4z"/>',
+ copy:'<path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/>',
+ file:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>',
+};
+function ic(n){return `<svg viewBox="0 0 24 24">${ICONS[n]||ICONS.info}</svg>`}
+
+function bars(p){
+ if(p===null)return `<span class="bars"><i class="g1"></i><i class="g2"></i><i class="g3"></i><i class="g4"></i></span><span style="color:var(--sub)">—</span>`;
+ const g=p<=60?4:p<=100?3:p<=150?2:1,on=i=>i<=g?'on':'';
+ const col=g>=3?'var(--ok)':g===2?'var(--warn)':'var(--off)';
+ return `<span class="bars"><i class="${on(1)} g1"></i><i class="${on(2)} g2"></i><i class="${on(3)} g3"></i><i class="${on(4)} g4"></i></span><span style="color:${col}">${fa(p)}</span>`;
+}
+function srvCard(s,edit){
+ return `<div class="card${s.sel?' sel':''}" onclick="${edit}">
+  <div class="row">${s.b?`<div class="badge">${s.b}</div>`:`<div class="badge">AWG</div>`}
+   <div><div class="sname">${s.n}</div><div class="ssub">${s.chips.map(c=>`<span class="chip">${c}</span>`).join('')}</div></div>
+   <div class="ping">${bars(s.ping)}</div></div></div>`;
+}
+$('#awgList').innerHTML=AWG_SERVERS.map(s=>srvCard(s,"go('edit-awg')")).join('');
+$('#v2List').innerHTML=V2_SERVERS.map(s=>srvCard(s,"go('edit-vless')")).join('');
+$('#aeList').innerHTML=AE_SERVERS.map(s=>srvCard(s,"go('edit-aether')")).join('');
+
+$('#hubList').innerHTML=HUB.map(h=>h.sep?`<div style="height:1px;background:var(--stroke);margin:10px 4px"></div>`:
+ `<div class="card" onclick="go('${h.go}')"><div class="row">
+  <div class="mini" style="pointer-events:none">${ic(h.ic)}</div>
+  <div><div class="sname">${h.t}</div><div class="ssub">${h.s}</div></div>
+  <div style="margin-inline-start:auto;color:var(--sub);font-size:13px">‹</div></div></div>`).join('');
+
+$('#moreList').innerHTML=MORE.map(m=>`<div class="mrow" onclick="ov('sheetMore',0);go('${m.go}')">
+ <span class="ic">${ic(m.ic)}</span>${m.t}</div>`).join('');
+
+$('#importList').innerHTML=IMPORT.map(m=>m.sep?`<div style="height:1px;background:var(--stroke);margin:9px 4px"></div>`:
+ `<div class="card" ${m.go?`onclick="go('${m.go}')"`:''}><div class="row">
+  <div class="mini" style="pointer-events:none">${ic(m.ic||'plus')}</div>
+  <div class="sname">${m.t}</div></div></div>`).join('');
+
+$('#rulesList').innerHTML=RULESETS.map(r=>`<div class="mrow" onclick="ov('dlgRules',0);toast('قواعد «${r}» وارد شد')">
+ <span class="ic">${ic('route')}</span>${r}</div>`).join('');
+
+$('#subList').innerHTML=SUBS.map(s=>`<div class="card subcard">
+ <div class="row"><div class="mini" style="pointer-events:none">${ic('list')}</div>
+ <div><div class="sname">${s.n} ${s.lock?'<span class="chip">داخلی 🔒</span>':''}</div>
+  <div class="url">${s.u}</div><div class="ssub"><span class="chip">${fa(s.c)} کانفیگ</span></div></div>
+ <div class="tbtn" style="margin-inline-start:auto" onclick="event.stopPropagation();toast('به‌روزرسانی ${s.n}…')">به‌روزرسانی</div></div></div>`).join('');
+
+$('#aboutList').innerHTML=ABOUT.map(a=>`<div class="card"><div class="row">
+ <div><div class="sname">${a.t}</div><div class="ssub" style="direction:ltr;justify-content:flex-end">${a.s}</div></div></div></div>`).join('');
+
+function renderApps(f=''){
+ const list=APPS.filter(a=>a.n.includes(f)||a.p.includes(f));
+ $('#appList').innerHTML=list.map((a,i)=>`<div class="appcheck${a.on?' on':''}" onclick="appToggle(${APPS.indexOf(a)})">
+  <div><div class="nm">${a.n}</div><div class="pk">${a.p}</div></div>
+  <div class="bx"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></div></div>`).join('');
+ $('#appCount').textContent=fa(APPS.filter(a=>a.on).length)+' از '+fa(APPS.length);
+}
+function appToggle(i){APPS[i].on=!APPS[i].on;renderApps($('#appFilter')?.value||'')}
+function appSelAll(all){if(all){APPS.forEach(a=>a.on=true)}else{APPS.forEach(a=>a.on=!a.on)}renderApps();toast(all?'همه انتخاب شدند':'انتخاب‌ها معکوس شد')}
+function filterApps(v){renderApps(v)}
+renderApps();
+
+/* ── رندر تنظیمات (۸ گروه) ── */
+function ctlOf(it){
+ if(it.ty==='sw')return `<div class="sw${it.v?' on':''}" data-skey="${it.k}"></div>`;
+ if(it.ty==='sel')return `<select class="tsel" data-skey="${it.k}">${it.o.map(o=>`<option value="${Array.isArray(o)?o[1]:o}"${(Array.isArray(o)?o[1]:o)===it.v?' selected':''}>${Array.isArray(o)?o[0]:o}</option>`).join('')}</select>`;
+ if(it.ty==='txt')return `<input class="tin" style="max-width:${it.w||140}px" value="${it.v||''}" placeholder="${it.ph||''}" data-skey="${it.k}" ${it.live?`data-livekey="${it.live}"`:''}>`;
+ return '';
+}
+$('#settingsRoot').innerHTML=SETTINGS.map((g,gi)=>`<div class="acc${g.open?' open':''}">
+ <div class="ahead" onclick="this.parentElement.classList.toggle('open')">
+  <div class="at">${g.g}</div><div class="n" style="font-size:9px;color:var(--sub)">${fa(g.items.length)}</div><div class="arr">‹</div></div>
+ <div class="abody">${g.items.map(it=>`<div class="irow">
+   <div><div class="it">${it.t}</div>${it.s?`<div class="is" style="white-space:pre-line">${it.s}</div>`:''}<span class="key">${it.k}</span></div>
+   <div class="ctl">${ctlOf(it)}</div></div>`).join('')}</div></div>`).join('');
+
+/* ── رندر ادیتور Aether ── */
+const AEF={protocol:'masque',transport:'h3',psiphon:'off',tor:'off',tor_bridges:'auto',fragment:false,ech:false,psi_mode:'auto',cdn_ips:'',listen:'10819',scan:'متعادل',obf:'خودکار'};
+function fieldOf(f){
+ if(f.ty==='sw')return `<div class="sw${AEF[f.id]?' on':''}" data-fkey="${f.id}"></div>`;
+ if(f.ty==='sel')return `<select class="tsel" data-fkey="${f.id}" style="max-width:170px">${f.o.map(o=>{const[v,l]=Array.isArray(o)?[o[1],o[0]]:[o,o];return `<option value="${v}"${AEF[f.id]===v?' selected':''}>${l}</option>`}).join('')}</select>`;
+ if(f.ty==='area')return `<textarea class="log" style="min-height:80px" data-fkey="${f.id}" placeholder="${f.ph||''}"></textarea>`;
+ return `<input class="tin" style="max-width:${f.w||160}px" value="${AEF[f.id]??''}" placeholder="${f.ph||''}" data-fkey="${f.id}">`;
+}
+function renderAether(){
+ const sec=(title,arr)=>arr.length?`<div class="sechead"><div class="t">${title}</div></div>`+arr.map(f=>`<div class="irow">
+   <div><div class="it">${f.t}</div>${f.s?`<div class="is">${f.s}</div>`:''}</div><div class="ctl">${fieldOf(f)}</div></div>`).join(''):'';
+ const warpUsed=AEF.psiphon!=='only'&&AEF.tor!=='only';
+ const twoHop=AEF.protocol==='gool / mim';
+ const endpoint=warpUsed?`<div class="irow"><div class="it">${twoHop?'مسیر بیرونی':'نشانی'}<div class="is">خالی بگذارید تا اسکن شود</div></div><div class="ctl" style="display:flex;gap:6px;max-width:none"><input class="tin" style="max-width:110px" id="aeAddr"><input class="tin" style="max-width:80px" id="aePort" placeholder="${twoHop?'hop درونی':'پورت'}"></div></div>`:'';
+ $('#aetherRoot').innerHTML=
+  `<div class="irow"><div class="it">ملاحظات<span class="key">remarks</span></div><div class="ctl"><input class="tin" style="max-width:170px;direction:rtl;text-align:right" value="WARP سریع"></div></div>`
+  +(warpUsed?sec('WARP',AE_FIELDS.filter(f=>f.if?f.if(AEF):true)):'')
+  +sec('Psiphon',AE_PSI.filter(f=>f.if?f.if(AEF):true).map(f=>f.id==='psiphon'?f:f))
+  +sec('Tor',AE_TOR.filter(f=>f.if?f.if(AEF):true))
+  +(warpUsed?`<div class="sechead"><div class="t">اندپوینت</div></div>${endpoint||''}
+   <div class="btnrow"><div class="btn pri" id="scanBtn" onclick="aeScan(this)">🔍 اسکن برای یافتن سرور</div>
+   <div class="btn" onclick="renewKey(this)">🔑 دریافت کلید جدید WARP</div></div>`:'')
+  +`<div class="sechead"><div class="t">تنظیمات پیشرفته</div></div>`
+  +AE_ADV.map(f=>`<div class="irow"><div class="it">${f.t}</div><div class="ctl">${fieldOf(f)}</div></div>`).join('')
+  +`<div class="sechead"><div class="t">فرمان Aether</div></div>
+   <textarea class="log" style="min-height:70px">aether --protocol masque --transport h3 --scan balanced --noize auto --ip v4 --bind 127.0.0.1:10819</textarea>
+   <div class="note">اگر این فرمان را دستی ویرایش کنید، «همان‌طور که هست» اجرا می‌شود و تنظیمات بالا اعمال نمی‌شود. دکمه‌ی «استفاده از تنظیمات» آن را به فرمان خودکار برمی‌گرداند.</div>`;
+}
+renderAether();
+
+/* ── رندر ادیتور VLESS ── */
+$('#vlessRoot').innerHTML=VLESS_FIELDS.map(f=>`<div class="irow"><div class="it">${f.t}</div>
+ <div class="ctl">${f.ty==='sel'
+   ?`<select class="tsel" style="max-width:${f.w||160}px">${f.o.map(o=>`<option${o===(f.v||'')?' selected':''}>${o}</option>`).join('')}</select>`
+   :`<input class="tin" style="max-width:${f.w||160}px;${f.rtl?'direction:rtl;text-align:right':''}" value="${f.v||''}" placeholder="${f.ph||''}">`}</div></div>`).join('');
+
+/* ═══════════════ ناوبری ═══════════════ */
+const TITLES={'settings-hub':['تنظیمات','هاب'],'settings':['تنظیمات فنی','۸ گروه · ۷۴ کلید'],'autoconnect':['تنظیم اتصال خودکار',''],'spoof':['نرسیس اسپوف',''],'perapp':['پروکسی به تفکیک برنامه',''],'asset':['فایل های منبع جغرافیایی',''],'update':['بروزرسانی',''],'about':['درباره',''],'routing':['تنظیمات مسیریابی',''],'backup':['پشتیبان‌گیری و بازیابی',''],'logcat':['گزارشات',''],'stats':['آمار ترافیک',''],'subs':['سابسکریپشن‌ها',''],'import':['افزودن کانفیگ',''],'edit-aether':['ویرایش Aether','ServerAetherActivity'],'edit-awg':['ویرایش AmneziaWG','ServerAmneziaWgActivity'],'edit-vless':['ویرایش VLESS','ServerVlessActivity']};
+let navStack=[];
+function go(id){
+ if(id.startsWith('home')){showHome(id);return}
+ navStack.push(id);
+ const scr=document.getElementById('scr-'+id);
+ document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+ scr.classList.add('on');scr.scrollTop=0;
+ document.body.dataset.sub='1';document.body.dataset.home='0';
+ const[t,s]=TITLES[id]||[id,''];
+ $('#barT').textContent=t;$('#barS').textContent=s||'';
+ $('#btnSet').style.display='none';$('#btnMore').style.display='none';
+ document.body.dataset.engine='set';
+}
+function showHome(id){
+ const eng=id.split('-')[1];
+ document.body.dataset.sub='0';document.body.dataset.home='1';
+ document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+ document.getElementById('scr-'+id).classList.add('on');
+ switchTab(eng);
+}
+function back(){
+ if(navStack.length===0)return;
+ navStack.pop();
+ if(navStack.length===0){showHome('home-'+curEng);return}
+ const id=navStack.pop();go(id);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const o=document.querySelector('.ov.open');if(o){o.classList.remove('open')}else back()}});
+
+let curEng='v2';
+function switchTab(eng){
+ curEng=eng;
+ document.body.dataset.engine=eng;document.body.dataset.home='1';document.body.dataset.sub='0';
+ navStack=[];
+ document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+ document.getElementById('scr-home-'+eng).classList.add('on');
+ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===eng));
+ $('#barT').textContent='Narcic NG';
+ $('#barS').textContent={awg:'امنزیا',v2:'وی‌تو‌ری',ae:'اتر'}[eng];
+ $('#btnSet').style.display='';$('#btnMore').style.display='';
+}
+
+/* ═══════════════ تعامل‌ها ═══════════════ */
+let toastTimer;
+function toast(msg){
+ const t=$('#toast');t.textContent=msg;t.classList.add('on');
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),2200);
+}
+function ov(id,open){document.getElementById(id).classList.toggle('open',!!open)}
+
+/* اتصال سراسری — ماشین‌حالت: idle → connecting → connected */
+const ENGINE_STEPS={
+ awg:[['درخواست مجوز VPN',700],['آماده‌سازی GoBackend (org.amnezia.awg)',900],['اعمال کانفیگ تونل narcic-awg',1100],['انتظار برای دست‌دهی WireGuard',1500],['تأیید handshake با بررسی افزایش Rx',900],['تست تأخیر واقعی',800]],
+ v2:[['درخواست مجوز VPN',700],['شروع سرویس هسته (:RunSoLibV2RayDaemon)',1000],['ساخت کانفیگ Xray و outbound ها',900],['راه‌اندازی اینترفیس TUN',1200],['تست تأخیر واقعی (generate_204)',900],['دریافت اطلاعات IP (api.ip.sb)',800]],
+ ae:[['اجرای هسته Aether (libaether.so)',1200],['اسکن و انتخاب اندپوینت Cloudflare',1700],['بارگذاری کلید WARP',1000],['انتظار برای پاسخ SOCKS روی 127.0.0.1:10819',1500],['تست تأخیر از داخل تونل',900],['دریافت اطلاعات IP خروجی',800]],
+};
+const BASE_PING={awg:45,v2:62,ae:62};
+const PROTO={awg:'AmneziaWG · UDP',v2:'Reality · VLESS',ae:'MASQUE · HTTP/3'};
+const LOCS={awg:['فرانکفورت','5.20.31.8'],v2:['آمستردام — هتزنر','185.2.90.4'],ae:['خروجی WARP — آلمان','104.28.214.73']};
+let phase='idle',gen=0,secs=0,secTick=null,liveTick=null,rafTick=null;
+const CN=36;
+const tgt={awg:Array(CN).fill(1.2),v2:Array(CN).fill(1.8),ae:Array(CN).fill(1.5)};
+const dsp={awg:Array(CN).fill(1.2),v2:Array(CN).fill(1.8),ae:Array(CN).fill(1.5)};
+const tot={awg:{d:0,u:0},v2:{d:0,u:0},ae:{d:0,u:0}};
+const RING_C=459;
+function setRing(p){document.querySelectorAll('.prg .pfg').forEach(c=>c.style.strokeDashoffset=RING_C*(1-p))}
+function setPhase(txt){document.querySelectorAll('.stEng').forEach(e=>e.textContent=txt)}
+function setHint(txt){document.querySelectorAll('.hintEng').forEach(e=>e.textContent=txt)}
+function fmtSpeed(v){return v>=1?[v.toFixed(2),'MB/s']:[Math.round(Math.max(0,v*1024)),'KB/s']}
+function fmtKB(kb){return kb<1?['0','KB']:kb<1024?[Math.round(kb)+'','KB']:kb<1048576?[(kb/1024).toFixed(1),'MB']:[(kb/1048576).toFixed(2),'GB']}
+function smoothPath(pts){
+ if(pts.length<2)return'';
+ let d=`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+ for(let i=0;i<pts.length-1;i++){
+  const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(pts.length-1,i+2)];
+  d+=` C ${(p1.x+(p2.x-p0.x)/6).toFixed(2)} ${(p1.y+(p2.y-p0.y)/6).toFixed(2)}, ${(p2.x-(p3.x-p1.x)/6).toFixed(2)} ${(p2.y-(p3.y-p1.y)/6).toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+ }
+ return d;
+}
+function drawChart(e){
+ const W=300,H=64;
+ const pts=dsp[e].map((v,i)=>({x:i*(W/(CN-1)),y:Math.max(3,H-4-(Math.min(v,4.5)/4.5)*(H-10))}));
+ const d=smoothPath(pts);
+ const cl=$('#cl-'+e),cf=$('#cf-'+e);
+ if(cl)cl.setAttribute('d',d);
+ if(cf)cf.setAttribute('d',d+` L ${W} ${H} L 0 ${H} Z`);
+}
+function chartLoop(){
+ if(phase!=='connected')return;
+ ['awg','v2','ae'].forEach(e=>{dsp[e]=dsp[e].map((v,i)=>v+(tgt[e][i]-v)*.14);drawChart(e)});
+ rafTick=requestAnimationFrame(chartLoop);
+}
+function connectTap(){
+ if(phase==='connecting'){cancelConnect();return}
+ if(phase==='connected'){disconnect();return}
+ startConnect();
+}
+function startConnect(){
+ const g=++gen;phase='connecting';
+ document.body.classList.add('connecting');document.body.classList.remove('connected');
+ setPhase('در حال اتصال…');setHint('برای لغو لمس کنید');setRing(0);
+ document.querySelectorAll('.dash').forEach(s=>s.classList.remove('on'));
+ document.querySelectorAll('.steps').forEach(s=>s.classList.remove('on'));
+ $('#stTxt').textContent='در حال اتصال';
+ const eng=curEng,steps=ENGINE_STEPS[eng];
+ const box=$('#steps-'+eng);box.classList.add('on');
+ box.innerHTML=steps.map((s,i)=>`<div class="step" id="stp-${eng}-${i}">
+   <span class="sic"><span class="sp"></span><svg class="ck" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+   ${s[0]}<span class="ms"></span></div>`).join('');
+ let t=0;const total=steps.reduce((a,s)=>a+s[1],0);
+ steps.forEach((s,i)=>{
+  const st=t,fn=t+s[1];t=fn;
+  setTimeout(()=>{if(g!==gen||phase!=='connecting')return;
+   const el=$('#stp-'+eng+'-'+i);if(el){el.classList.add('run');el.querySelector('.ms').textContent='…'}},st);
+  setTimeout(()=>{if(g!==gen||phase!=='connecting')return;
+   const el=$('#stp-'+eng+'-'+i);
+   if(el){el.classList.remove('run');el.classList.add('done');el.querySelector('.ms').textContent=fa(Math.max(20,Math.round(s[1]*.8+Math.random()*300)))+'ms'}
+   setRing((i+1)/steps.length)},fn);
+ });
+ setTimeout(()=>{if(g!==gen||phase!=='connecting')return;finishConnect(eng)},total+450);
+}
+function finishConnect(eng){
+ phase='connected';
+ document.body.classList.remove('connecting');document.body.classList.add('connected');
+ setPhase('متصل');setHint('برای قطع لمس کنید');
+ $('#stTxt').textContent='متصل';
+ setTimeout(()=>{if(phase==='connected')document.querySelectorAll('.steps').forEach(s=>s.classList.remove('on'))},700);
+ secs=0;clearInterval(secTick);
+ secTick=setInterval(()=>{
+  secs++;const h=String(Math.floor(secs/3600)).padStart(2,'0'),m=String(Math.floor(secs%3600/60)).padStart(2,'0'),x=String(secs%60).padStart(2,'0');
+  const t=`${h}:${m}:${x}`;
+  document.querySelectorAll('.tmEng').forEach(e=>e.textContent=t);
+  ['awg','v2','ae'].forEach(e=>{const el=$('#dur-'+e);if(el)el.textContent=t});
+ },1000);
+ ['awg','v2','ae'].forEach(e=>{
+  const st=$('#dash-'+e);if(st)st.classList.add('on');
+  const pr=$('#pr-'+e);if(pr)pr.textContent=PROTO[e];
+  tot[e]={d:0,u:0};
+  tgt[e]=Array.from({length:CN},()=>.7+Math.random()*1.7);
+  dsp[e]=[...tgt[e]];drawChart(e);
+  const el1=$('#du-'+e);if(el1)el1.textContent='MB/s';
+  const tdd=$('#td-'+e),tuu=$('#tu-'+e);
+  if(tdd)tdd.textContent='0 KB';if(tuu)tuu.textContent='0 KB';
+ });
+ chartLoop();
+ startLive();
+ toast('اتصال برقرار شد · '+({awg:'AwgManager.connect()',v2:'CoreServiceManager.startCoreLoop()',ae:'AetherCoreManager.start() → SOCKS 10819'})[eng]);
+}
+function cancelConnect(){
+ gen++;phase='idle';
+ document.body.classList.remove('connecting');
+ setPhase('قطع');setHint('برای اتصال لمس کنید');setRing(0);
+ $('#stTxt').textContent='قطع';
+ document.querySelectorAll('.steps').forEach(s=>s.classList.remove('on'));
+ toast('اتصال لغو شد');
+}
+function disconnect(){
+ gen++;phase='idle';
+ document.body.classList.remove('connected');
+ setPhase('قطع');setHint('برای اتصال لمس کنید');setRing(0);
+ $('#stTxt').textContent='قطع';
+ clearInterval(secTick);stopLive();
+ document.querySelectorAll('.tmEng').forEach(e=>e.textContent='00:00:00');
+ document.querySelectorAll('.dash').forEach(s=>s.classList.remove('on'));
+ document.querySelectorAll('.steps').forEach(s=>s.classList.remove('on'));
+ toast('اتصال قطع شد');
+}
+function startLive(){
+ stopLive();
+ liveTick=setInterval(()=>{
+  ['awg','v2','ae'].forEach(e=>{
+   const last=tgt[e][CN-1]??1.8;
+   let d=Math.max(.25,Math.min(4.4,last+(Math.random()-.48)*.8));
+   if(Math.random()<.06)d=Math.min(4.4,d+1.5);
+   const u=Math.max(40,Math.min(980,d*190+(Math.random()-.5)*260));
+   tot[e].d+=d*600;tot[e].u+=u*.6;
+   tgt[e].push(d);tgt[e].shift();
+   const ed=$('#down-'+e),eu=$('#up-'+e),ep=$('#ping-'+e),td=$('#td-'+e),tu=$('#tu-'+e);
+   const[dv,du]=fmtSpeed(d),[uv,uu]=fmtSpeed(u/1024);
+   if(ed){ed.textContent=dv;const el=$('#du-'+e);if(el)el.textContent=du}
+   if(eu){eu.textContent=uv;const el=$('#uu-'+e);if(el)el.textContent=uu}
+   if(ep)ep.textContent=String(BASE_PING[e]+Math.floor(Math.random()*11)-5);
+   if(td){const[v1,u1]=fmtKB(tot[e].d);td.textContent=v1+' '+u1}
+   if(tu){const[v2,u2]=fmtKB(tot[e].u);tu.textContent=v2+' '+u2}
+  });
+ },600);
+}
+function stopLive(){clearInterval(liveTick);cancelAnimationFrame(rafTick)}
+
+/* سوییچ‌ها */
+document.addEventListener('click',e=>{
+ const sw=e.target.closest('.sw');
+ if(!sw)return;
+ if(sw.dataset.fkey!==undefined){sw.classList.toggle('on');AEF[sw.dataset.fkey]=sw.classList.contains('on');renderAether();return}
+ if(sw.dataset.skey!==undefined){sw.classList.toggle('on');toast(sw.dataset.skey+' = '+(sw.classList.contains('on')?'true':'false'))}
+});
+document.addEventListener('change',e=>{
+ const el=e.target;
+ if(el.dataset?.skey){toast(el.dataset.skey+' = '+el.value);
+  if(el.dataset.livekey){document.querySelectorAll(`[data-live="${el.dataset.livekey}"]`).forEach(x=>x.textContent=(el.dataset.livekey==='mtu'?'MTU ':'حالت ')+el.value)}}
+ if(el.dataset?.fkey){AEF[el.dataset.fkey]=el.type==='checkbox'?el.checked:el.value;renderAether()}
+});
+
+/* پینگ همه */
+function pingAll(btn){
+ toast('در حال تست تأخیر همه…');
+ document.querySelectorAll('#awgList .card,#v2List .card,#aeList .card').forEach((c,i)=>{
+  setTimeout(()=>{const p=c.querySelector('.ping');if(p)p.innerHTML=bars(30+Math.floor(Math.random()*140))},400+i*350);
+ });
+}
+
+/* اسکن Aether */
+function aeScan(btn){
+ if(phase==='connected'&&curEng==='ae'){toast('aether_scan_blocked: پیش از اسکن، اتصال Aether را قطع کنید');return}
+ btn.disabled=true;btn.textContent='⏳ در حال اسکن…';
+ const log=$('#aeEditLog');
+ const lines=[
+  ['g','INFO --scan balanced: probing cloudflare edge…'],
+  ['w','WARN کلید MASQUE: در حال حذف کلید قبلی WARP و ثبت کلید جدید…'],
+  ['g','INFO selected MASQUE gateway 162.159.192.1:2408'],
+  ['g','INFO پیدا شد: 162.159.192.1:2408'],
+ ];
+ lines.forEach((l,i)=>setTimeout(()=>{
+  log.innerHTML+=`\n<span class="${l[0]}">${l[1]}</span>`;log.scrollTop=log.scrollHeight;
+ },500+i*900));
+ setTimeout(()=>{
+  btn.disabled=false;btn.textContent='🔍 اسکن برای یافتن سرور';
+  const a=$('#aeAddr'),p=$('#aePort');
+  if(a){a.value='162.159.192.1'}if(p){p.value='2408'}
+  toast('سرور پیدا شد');renderAether();
+ },4300);
+}
+function renewKey(btn){
+ if(phase==='connected'){toast('aether_renew_blocked: پیش از دریافت کلید جدید WARP، اتصال Aether را قطع کنید');return}
+ btn.disabled=true;btn.textContent='⏳ در حال دریافت کلید جدید…';
+ const log=$('#aeEditLog');
+ setTimeout(()=>{log.innerHTML+=`\n<span class="w">WARN در حال حذف کلید قبلی WARP و ثبت کلید جدید…</span>`;log.scrollTop=log.scrollHeight},300);
+ setTimeout(()=>{log.innerHTML+=`\n<span class="g">INFO کلید MASQUE: دستگاه a1b2c3d4…، IPv4 172.16.0.2، IPv6 2606:4700:110:…</span>\n<span class="g">INFO کلید جدید WARP آماده است و از اتصال بعدی استفاده می‌شود</span>`;log.scrollTop=log.scrollHeight;btn.disabled=false;btn.textContent='🔑 کلید جدید WARP';toast('کلید جدید WARP ثبت شد')},2400);
+}
+function spoofToggle(btn){
+ const st=$('#spoofState');const on=st.textContent.includes('متوقف');
+ st.textContent=on?'● فعال — روی 127.0.0.1:40443':'● متوقف';
+ st.style.color=on?'var(--ok)':'var(--off)';
+ btn.textContent=on?'توقف موتور':'شروع موتور';
+ toast(on?'NarcisSpoofService شروع شد (پروسه‌ی جدا)':'NarcisSpoofService متوقف شد');
+}
+function dlAsset(btn,name){
+ btn.disabled=true;btn.textContent='…';
+ let p=0;const t=setInterval(()=>{p+=Math.floor(Math.random()*18)+6;
+  if(p>=100){clearInterval(t);btn.disabled=false;btn.textContent='دانلود';toast(name+' به‌روز شد (Loyalsoldier)')}
+  else btn.textContent=fa(Math.min(p,99))+'٪';
+ },380);
+}
+function awgSave(){
+ const c=$('#awgConf').value;
+ if(!c.includes('[Interface]')||!c.includes('[Peer]')){toast('کانفیگ نامعتبر: Config.parse ناموفق');return}
+ toast('ذخیره شد · awgConfigText ثبت شد');
+}
+switchTab('v2');
+</script>
+</body>
+</html>

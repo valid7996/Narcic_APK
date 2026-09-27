@@ -25,6 +25,9 @@ import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.handler.SettingsChangeManager
 import com.narcic.ng.handler.SettingsManager
 import com.narcic.ng.ui.base.HelperBaseComponentActivity
+import com.narcic.ng.ui.backup.BackupActivity
+import com.narcic.ng.ui.logcat.LogcatActivity
+import com.narcic.ng.ui.routing.RoutingSettingActivity
 import com.narcic.ng.ui.server.ProfileEditorResult
 import com.narcic.ng.ui.server.ServerAetherActivity
 import com.narcic.ng.ui.server.ServerAmneziaWgActivity
@@ -173,6 +176,11 @@ class MainActivity : HelperBaseComponentActivity() {
         when (destination) {
             "settings" -> settingsActivityLauncher.launch(Intent(this, SettingsHubActivity::class.java))
             "statistics" -> startActivity(Intent(this, StatisticsActivity::class.java))
+            // Previously-orphaned screens (declared in the manifest but with
+            // no launch point); the 3-page redesign's ⋯ sheet exposes them.
+            "logcat" -> startActivity(Intent(this, LogcatActivity::class.java))
+            "backup" -> startActivity(Intent(this, BackupActivity::class.java))
+            "routing" -> startActivity(Intent(this, RoutingSettingActivity::class.java))
         }
     }
 

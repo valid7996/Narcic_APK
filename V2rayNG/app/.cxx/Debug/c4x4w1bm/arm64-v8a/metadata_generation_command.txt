@@ -1,0 +1,18 @@
+                        -HC:\Users\NG\Documents\GitHub\Narcic_APK\V2rayNG\app\src\main\cpp
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=24
+-DANDROID_PLATFORM=android-24
+-DANDROID_ABI=arm64-v8a
+-DCMAKE_ANDROID_ARCH_ABI=arm64-v8a
+-DANDROID_NDK=C:\Users\NG\devtools\android-sdk\ndk\26.1.10909125
+-DCMAKE_ANDROID_NDK=C:\Users\NG\devtools\android-sdk\ndk\26.1.10909125
+-DCMAKE_TOOLCHAIN_FILE=C:\Users\NG\devtools\android-sdk\ndk\26.1.10909125\build\cmake\android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=C:\Users\NG\devtools\android-sdk\cmake\3.22.1\bin\ninja.exe
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=C:\Users\NG\Documents\GitHub\Narcic_APK\V2rayNG\app\build\intermediates\cxx\Debug\c4x4w1bm\obj\arm64-v8a
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=C:\Users\NG\Documents\GitHub\Narcic_APK\V2rayNG\app\build\intermediates\cxx\Debug\c4x4w1bm\obj\arm64-v8a
+-DCMAKE_BUILD_TYPE=Debug
+-BC:\Users\NG\Documents\GitHub\Narcic_APK\V2rayNG\app\.cxx\Debug\c4x4w1bm\arm64-v8a
+-GNinja
+                        Build command args: []
+                        Version: 2

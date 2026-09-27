@@ -1,0 +1,1 @@
+C:\Users\NG\Documents\GitHub\Narcic_APK\V2rayNG\app\src\main\cpp\CMakeLists.txt

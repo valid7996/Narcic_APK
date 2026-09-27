@@ -1,0 +1,3 @@
+C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/x86/CMakeFiles/narcicdesync.dir
+C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/x86/CMakeFiles/edit_cache.dir
+C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/.cxx/Debug/c4x4w1bm/x86/CMakeFiles/rebuild_cache.dir

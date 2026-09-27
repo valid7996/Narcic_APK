@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,6 +111,85 @@ fun MainVpnBottomNav(
                             .background(
                                 if (item.selected) Brush.horizontalGradient(listOf(accent, accent.copy(alpha = .5f)))
                                 else Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color.Transparent))
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ───────────────── 3-engine tab bar (امنزیا / وی‌تو‌ری / اتر) ─────────────────
+
+/**
+ * Bottom tab bar of the 3-page redesign: one tab per engine page. Each tab
+ * tints with its own engine accent (cyan/violet/orange) — replacing the old
+ * 4-item nav whose سابسکریپشن/آمار/تنظیمات entries moved to the top bar
+ * (gear + ⋯ sheet). Pure navigation; selection only drives list filtering,
+ * never the ViewModel's real selected server.
+ */
+private data class EngineTabSpec(
+    val id: String,
+    val label: String,
+    val accent: Color,
+    val icon: @Composable (Color) -> Unit,
+)
+
+@Composable
+fun MainEngineTabBar(
+    selectedTab: String,
+    onSelect: (String) -> Unit,
+) {
+    val isDark = LocalDarkTheme.current
+    val tabs = listOf(
+        EngineTabSpec("awg", "امنزیا", Nc.AwgAccent) { tint ->
+            Icon(Icons.Rounded.Shield, null, tint = tint, modifier = Modifier.size(19.dp))
+        },
+        EngineTabSpec("v2", "وی‌تو‌ری", Nc.V2Accent) { tint ->
+            Icon(Icons.Rounded.Bolt, null, tint = tint, modifier = Modifier.size(19.dp))
+        },
+        EngineTabSpec("ae", "اتر", Nc.BadgeAether) { tint ->
+            Icon(painterResource(R.drawable.ic_public_24dp), null, tint = tint, modifier = Modifier.size(19.dp))
+        },
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 14.dp)
+            .height(62.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(if (isDark) Nc.Bg.copy(alpha = .85f) else Color.White.copy(alpha = .94f))
+            .border(1.dp, if (isDark) Color.White.copy(alpha = .10f) else Color(0x141B2230), RoundedCornerShape(24.dp))
+    ) {
+        Row(Modifier.fillMaxWidth().height(62.dp)) {
+            tabs.forEach { tab ->
+                val selected = tab.id == selectedTab
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clickable(onClick = { onSelect(tab.id) }),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    tab.icon(if (selected) tab.accent else Nc.Sub)
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        tab.label,
+                        color = if (selected) tab.accent else Nc.Sub,
+                        fontSize = 10.sp,
+                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Box(
+                        Modifier
+                            .width(if (selected) 26.dp else 0.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (selected) Brush.horizontalGradient(listOf(tab.accent, tab.accent.copy(alpha = .45f)))
+                                else Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
                             )
                     )
                 }

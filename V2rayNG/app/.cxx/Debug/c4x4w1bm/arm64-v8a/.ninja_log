@@ -1,0 +1,11 @@
+# ninja log v5
+91	907	8121941902110095	CMakeFiles/narcicdesync.dir/native-lib.c.o	2359a082505230cb
+8	925	8121941901950530	CMakeFiles/narcicdesync.dir/desync_engine/conev.c.o	b8f33cc5512e1540
+76	949	8121941902718475	CMakeFiles/narcicdesync.dir/utils.c.o	1edf572ada4e41c1
+47	962	8121941902658649	CMakeFiles/narcicdesync.dir/desync_engine/mpool.c.o	e662fc1f55622d70
+36	981	8121941902997743	CMakeFiles/narcicdesync.dir/desync_engine/packets.c.o	bd84fb55f2411c46
+1	1026	8121941903586878	CMakeFiles/narcicdesync.dir/desync_engine/main.c.o	327e1f9a7a46210d
+25	1052	8121941903829222	CMakeFiles/narcicdesync.dir/desync_engine/extend.c.o	5baa75a541c64037
+57	1090	8121941904193353	CMakeFiles/narcicdesync.dir/desync_engine/proxy.c.o	ea9c6bd9a15a52c2
+18	1098	8121941904254388	CMakeFiles/narcicdesync.dir/desync_engine/desync.c.o	b57da343c53b2706
+1098	1306	8121941906396047	C:/Users/NG/Documents/GitHub/Narcic_APK/V2rayNG/app/build/intermediates/cxx/Debug/c4x4w1bm/obj/arm64-v8a/libnarcicdesync.so	7a7f3667a243ced2
