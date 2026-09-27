@@ -22,6 +22,18 @@ jobs:
           submodules: 'recursive'
           fetch-depth: '0'
 
+      - name: Free disk space
+        run: |
+          # Stock GitHub-hosted runners ship with a lot of preinstalled toolchains this workflow
+          # never uses (.NET, Haskell/GHC, extra Android SDK images, etc). Building 4 ABIs worth
+          # of native libs (hevtun, aether/tor-rust, psiphon, wireguard) plus their debug symbols
+          # can otherwise exhaust the remaining space ("No space left on device").
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            "$AGENT_TOOLSDIRECTORY" /usr/local/lib/android/sdk/ndk \
+            /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          df -h /
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:

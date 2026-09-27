@@ -64,6 +64,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                // "full" (the default when unset) runs objcopy over every .so for every ABI to pull
+                // out debug metadata; on a stock GitHub-hosted runner this can exhaust disk space
+                // ("No space left on device") once native libs for 4 ABIs are already staged.
+                // "symbol_table" keeps just what's needed to symbolicate native crashes, at a
+                // fraction of the disk/time cost.
+                debugSymbolLevel = "symbol_table"
+            }
         }
     }
 
