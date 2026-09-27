@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # The Go line the Psiphon client's go.mod asks for, which also covers lyrebird's older one;
+      # aether/psiphon-build.sh and aether/pt-build.sh pin the programs themselves. Bump it when a
+      # bumped aether submodule pins a program that asks for a newer line.
+      GO_VERSION: "1.26"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,7 +32,9 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: ${{ env.GO_VERSION }}
+          # The client is built from a checkout of its own; there is no go.sum here to cache by.
+          cache: false
 
       - name: Install NDK
         run: |
@@ -63,6 +70,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
+          # The stable release aether's own release workflow built with; pinned so a new stable
+          # release cannot change or break the release build on its own. Bump it together with
+          # the aether submodule.
           toolchain: "1.98.1"
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
 
@@ -85,10 +95,60 @@ jobs:
           path: ${{ github.workspace }}/libs-aether
           key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-1.98.1-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
-      - name: Copy libaether
+      # The Aether core runs Psiphon as a program of its own, the psiphon-tunnel-core console client,
+      # which the app ships beside the core as libpsiphon-tunnel-core.so; see compile-psiphon.sh.
+      - name: Restore cached Psiphon client
+        id: cache-psiphon-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/libs-psiphon
+          key: psiphon-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-psiphon.sh') }}
+
+      - name: Build the Psiphon client
+        if: steps.cache-psiphon-restore.outputs.cache-hit != 'true'
+        run: |
+          bash compile-psiphon.sh
+
+      - name: Save the Psiphon client
+        if: steps.cache-psiphon-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/libs-psiphon
+          key: psiphon-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-psiphon.sh') }}
+
+      # Tor's bridges run through a pluggable transport, a program of its own: lyrebird, which aether
+      # builds and the app ships beside the core as liblyrebird.so; see compile-pt.sh.
+      - name: Restore cached pluggable transport
+        id: cache-pt-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/libs-pt
+          key: pt-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-pt.sh') }}
+
+      - name: Build the pluggable transport
+        if: steps.cache-pt-restore.outputs.cache-hit != 'true'
+        run: |
+          bash compile-pt.sh
+
+      - name: Save the pluggable transport
+        uses: actions/cache/save@v4
+        if: steps.cache-pt-restore.outputs.cache-hit != 'true'
+        with:
+          path: ${{ github.workspace }}/libs-pt
+          key: pt-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-pt.sh') }}
+
+      - name: Stage the native libraries
         run: |
           mkdir -p ${{ github.workspace }}/V2rayNG/app/libs
           cp -r ${{ github.workspace }}/libs-aether/. ${{ github.workspace }}/V2rayNG/app/libs/
+          cp -r ${{ github.workspace }}/libs-psiphon/. ${{ github.workspace }}/V2rayNG/app/libs/
+          cp -r ${{ github.workspace }}/libs-pt/. ${{ github.workspace }}/V2rayNG/app/libs/
+
+      # Psiphon's client starts with the newest server list the build could fetch, so a fresh install has
+      # servers before it can reach the list on its own; see fetch-psiphon-servers.sh.
+      - name: Fetch the Psiphon server list
+        run: |
+          bash fetch-psiphon-servers.sh
 
       - name: Download libv2ray
         uses: robinraju/release-downloader@v1.13
