@@ -71,4 +71,64 @@ object DefaultConfigSource {
 
         return needsFetch
     }
+
+    // ───────── per-engine manual-default groups (3-page redesign) ─────────
+    // The old single default bucket (subscriptionId == "") mixed every
+    // engine, so a page could show another engine's configs. Each engine now
+    // owns its own default group; imports and manual saves are routed to it
+    // by config type, and the legacy bucket is migrated once, in place.
+
+    const val DEFAULT_GROUP_AWG_NAME = "پیش‌فرض امنزیا"
+    const val DEFAULT_GROUP_V2_NAME = "پیش‌فرض وی‌تو‌ری"
+    const val DEFAULT_GROUP_AETHER_NAME = "پیش‌فرض اتر"
+
+    private const val KEY_DEFAULT_GROUP_AWG = "cache_default_group_awg"
+    private const val KEY_DEFAULT_GROUP_V2 = "cache_default_group_v2"
+    private const val KEY_DEFAULT_GROUP_AETHER = "cache_default_group_ae"
+    private const val KEY_MIGRATED_ENGINE_DEFAULTS = "cache_migrated_engine_defaults_v1"
+
+    /**
+     * Returns (creating on first use) the guid of the default group that
+     * owns configs of [type]'s engine. Subscription updates that pass a real
+     * subscription id never reach this — only blank-subid imports do.
+     */
+    fun perEngineDefaultGroupIdFor(type: com.narcic.ng.enums.EConfigType): String {
+        val (key, label) = when (type) {
+            com.narcic.ng.enums.EConfigType.WIREGUARD,
+            com.narcic.ng.enums.EConfigType.AMNEZIAWG -> KEY_DEFAULT_GROUP_AWG to DEFAULT_GROUP_AWG_NAME
+            com.narcic.ng.enums.EConfigType.AETHER -> KEY_DEFAULT_GROUP_AETHER to DEFAULT_GROUP_AETHER_NAME
+            else -> KEY_DEFAULT_GROUP_V2 to DEFAULT_GROUP_V2_NAME
+        }
+        val existing = MmkvManager.decodeSettingsString(key)
+        if (!existing.isNullOrEmpty() && MmkvManager.decodeSubscriptions().any { it.guid == existing }) {
+            return existing
+        }
+        MmkvManager.encodeSubscription("", SubscriptionItem().apply {
+            remarks = label
+            url = ""
+            enabled = true
+            autoUpdate = false
+        })
+        val guid = MmkvManager.decodeSubscriptions()
+            .lastOrNull { it.subscription.remarks == label }?.guid.orEmpty()
+        if (guid.isNotEmpty()) MmkvManager.encodeSettings(key, guid)
+        return guid
+    }
+
+    /**
+     * One-shot migration: configs sitting in the legacy shared default
+     * bucket (subscriptionId == "") are re-tagged into the default group of
+     * their own engine. Nothing is deleted — profiles move in place, so
+     * each page shows only its own configs after the first launch.
+     */
+    fun migrateLegacyDefaultGroup() {
+        if (MmkvManager.decodeSettingsBool(KEY_MIGRATED_ENGINE_DEFAULTS, false)) return
+        MmkvManager.decodeServerList("").toList().forEach { guid ->
+            MmkvManager.decodeServerConfig(guid)?.let { config ->
+                config.subscriptionId = perEngineDefaultGroupIdFor(config.configType)
+                MmkvManager.encodeServerConfig(guid, config)
+            }
+        }
+        MmkvManager.encodeSettings(KEY_MIGRATED_ENGINE_DEFAULTS, true)
+    }
 }

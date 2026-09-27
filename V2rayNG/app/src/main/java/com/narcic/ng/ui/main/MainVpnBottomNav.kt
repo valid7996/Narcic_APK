@@ -216,9 +216,10 @@ fun MainEngineSwitch(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    // Vertical stack (top → bottom), per the redesign spec.
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier,
     ) {
         EngineSwitchCircle(

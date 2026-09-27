@@ -97,6 +97,9 @@ class MainActivity : HelperBaseComponentActivity() {
         // (invoked below via MainAction.Initialize), which only activates
         // once the customer has added a subscription of their own.
         DefaultConfigSource.ensureSubscriptionExists()
+        // One-shot: move legacy shared-default configs into their engine's
+        // own default group so the three pages stay strictly separated.
+        DefaultConfigSource.migrateLegacyDefaultGroup()
         mainViewModel.onAction(MainAction.Initialize)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
@@ -185,6 +188,26 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun handleFabAction() {
+        // Cut whatever is actually running FIRST: the AmneziaWG engine and
+        // the Xray/Aether service never run together, and the connect button
+        // must always kill the live tunnel even if the UI selection moved to
+        // another page — the old selected-profile branch could route the
+        // stop to the wrong engine, leaving the tunnel up until the user
+        // disconnected from the notification. A connecting AWG retry loop is
+        // cancelled here too, so a second tap always stops the attempt.
+        if (com.narcic.ng.awg.AwgManager.isRunning() || com.narcic.ng.awg.AwgManager.isConnecting()) {
+            mainViewModel.setAwgConnectingState(false)
+            mainViewModel.setExternalRunningState(false)
+            lifecycleScope.launch(Dispatchers.IO) {
+                com.narcic.ng.awg.AwgManager.requestCancel()
+                val error = com.narcic.ng.awg.AwgManager.disconnect()
+                withContext(Dispatchers.Main) {
+                    if (error != null) toast(error)
+                }
+            }
+            return
+        }
+
         val selectedGuid = mainViewModel.uiState.value.selectedGuid
         val selectedProfile = selectedGuid?.let { MmkvManager.decodeServerConfig(it) }
 

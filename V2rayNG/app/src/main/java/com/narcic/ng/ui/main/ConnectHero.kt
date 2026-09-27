@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -156,6 +157,66 @@ fun ConnectHero(
                         )
                     }
             )
+
+            // ── animated sweep arcs: a fast comet while connecting, two slow
+            // counter-orbiting arcs once connected — the "live" premium feel ──
+            if (isConnecting) {
+                val sweep by rememberInfiniteTransition(label = "sweep").animateFloat(
+                    0f, 360f,
+                    infiniteRepeatable(tween(1100, easing = LinearEasing)),
+                    label = "sweepA"
+                )
+                Box(
+                    Modifier
+                        .size(216.dp)
+                        .graphicsLayer { rotationZ = sweep }
+                        .drawBehind {
+                            drawArc(
+                                brush = Brush.sweepGradient(
+                                    listOf(Color.Transparent, accent2, Color.White, Color.Transparent)
+                                ),
+                                startAngle = 0f, sweepAngle = 130f, useCenter = false,
+                                style = Stroke(4.dp.toPx(), cap = StrokeCap.Round),
+                            )
+                        }
+                )
+            }
+            if (isRunning) {
+                val orbitA by rememberInfiniteTransition(label = "orbA").animateFloat(
+                    0f, 360f, infiniteRepeatable(tween(3200, easing = LinearEasing)), label = "orbAA"
+                )
+                val orbitB by rememberInfiniteTransition(label = "orbB").animateFloat(
+                    360f, 0f, infiniteRepeatable(tween(4300, easing = LinearEasing)), label = "orbBA"
+                )
+                Box(
+                    Modifier
+                        .size(216.dp)
+                        .graphicsLayer { rotationZ = orbitA }
+                        .drawBehind {
+                            drawArc(
+                                brush = Brush.sweepGradient(
+                                    listOf(Color.Transparent, accent.copy(alpha = .9f), Color.Transparent)
+                                ),
+                                startAngle = 0f, sweepAngle = 100f, useCenter = false,
+                                style = Stroke(3.dp.toPx(), cap = StrokeCap.Round),
+                            )
+                        }
+                )
+                Box(
+                    Modifier
+                        .size(228.dp)
+                        .graphicsLayer { rotationZ = orbitB }
+                        .drawBehind {
+                            drawArc(
+                                brush = Brush.sweepGradient(
+                                    listOf(Color.Transparent, accent2.copy(alpha = .7f), Color.Transparent)
+                                ),
+                                startAngle = 180f, sweepAngle = 70f, useCenter = false,
+                                style = Stroke(2.dp.toPx(), cap = StrokeCap.Round),
+                            )
+                        }
+                )
+            }
 
             // ── main button ──
             val interaction = remember { MutableInteractionSource() }

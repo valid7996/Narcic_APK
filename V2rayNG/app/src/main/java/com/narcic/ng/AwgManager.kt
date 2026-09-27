@@ -22,6 +22,22 @@ object AwgManager {
     private var currentTunnel: SimpleTunnel? = null
     private val isTransitioning = AtomicBoolean(false)
 
+    /** True while the auto-retry connect loop is in flight; the UI treats a
+     *  second tap on the connect button as a cancel, not a duplicate connect. */
+    @Volatile
+    var connecting: Boolean = false
+        private set
+
+    @Volatile
+    private var cancelRequested = false
+
+    fun isConnecting(): Boolean = connecting
+
+    /** Ask the in-flight auto-retry connect loop to give up and tear the tunnel down. */
+    fun requestCancel() {
+        cancelRequested = true
+    }
+
     fun isAmneziaWgConfig(rawText: String): Boolean {
         if (!rawText.contains("[Interface]")) return false
         return Regex("""(?m)^\s*(Jc|Jmin|Jmax|H1|H2|H3|H4|I1|I2|I3|I4|I5)\s*=""").containsMatchIn(rawText)
@@ -131,59 +147,77 @@ object AwgManager {
         onProgress: ((Int, Int) -> Unit)? = null
     ): String? {
         var lastError: String? = null
-
-        for (attempt in 1..maxRetries) {
-            onProgress?.invoke(attempt, maxRetries)
-            Log.i(TAG, "AmneziaWG auto-retry connect: cycle $attempt of $maxRetries")
-
-            // 1. Establish tunnel
-            val err = connect(context, rawConfigText)
-            if (err != null) {
-                lastError = err
-                Log.w(TAG, "AmneziaWG connect error on cycle $attempt: $err")
-                try { Thread.sleep(600L) } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return "اتصال متوقف شد"
+        // The retry loop is now cancellable: a second tap on the connect
+        // button (or the notification) sets cancelRequested, and the loop
+        // gives up at the next poll instead of ploughing through all five
+        // cycles — the "must disconnect from the notification" bug.
+        cancelRequested = false
+        connecting = true
+        try {
+            for (attempt in 1..maxRetries) {
+                if (cancelRequested) {
+                    disconnect()
+                    return "اتصال لغو شد"
                 }
-                continue
+                onProgress?.invoke(attempt, maxRetries)
+                Log.i(TAG, "AmneziaWG auto-retry connect: cycle $attempt of $maxRetries")
+
+                // 1. Establish tunnel
+                val err = connect(context, rawConfigText)
+                if (err != null) {
+                    lastError = err
+                    Log.w(TAG, "AmneziaWG connect error on cycle $attempt: $err")
+                    try { Thread.sleep(600L) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return "اتصال متوقف شد"
+                    }
+                    continue
+                }
+
+                // 2. Wait up to handshakeTimeoutMs and monitor rx bytes to confirm handshake
+                val startRx = getStatistics()?.totalRx() ?: 0L
+                val deadline = System.currentTimeMillis() + handshakeTimeoutMs
+                var handshakeConfirmed = false
+
+                while (System.currentTimeMillis() < deadline) {
+                    if (cancelRequested) {
+                        disconnect()
+                        return "اتصال لغو شد"
+                    }
+                    try { Thread.sleep(500L) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return "اتصال متوقف شد"
+                    }
+                    val currentRx = getStatistics()?.totalRx() ?: 0L
+                    if (currentRx > startRx) {
+                        Log.i(TAG, "AmneziaWG handshake confirmed with RX bytes: $currentRx (cycle $attempt)")
+                        handshakeConfirmed = true
+                        break
+                    }
+                }
+
+                if (handshakeConfirmed) {
+                    return null // Success with verified handshake!
+                }
+
+                // Handshake did not receive packets in 5 seconds
+                Log.w(TAG, "AmneziaWG handshake timeout after ${handshakeTimeoutMs}ms on cycle $attempt. Restarting tunnel...")
+                if (attempt < maxRetries) {
+                    disconnect()
+                    try { Thread.sleep(400L) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return "اتصال متوقف شد"
+                    }
+                } else {
+                    lastError = "سرور پاسخ نداد (تعداد ۵ تلاش ناموفق)"
+                }
             }
 
-            // 2. Wait up to handshakeTimeoutMs and monitor rx bytes to confirm handshake
-            val startRx = getStatistics()?.totalRx() ?: 0L
-            val deadline = System.currentTimeMillis() + handshakeTimeoutMs
-            var handshakeConfirmed = false
-
-            while (System.currentTimeMillis() < deadline) {
-                try { Thread.sleep(500L) } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return "اتصال متوقف شد"
-                }
-                val currentRx = getStatistics()?.totalRx() ?: 0L
-                if (currentRx > startRx) {
-                    Log.i(TAG, "AmneziaWG handshake confirmed with RX bytes: $currentRx (cycle $attempt)")
-                    handshakeConfirmed = true
-                    break
-                }
-            }
-
-            if (handshakeConfirmed) {
-                return null // Success with verified handshake!
-            }
-
-            // Handshake did not receive packets in 5 seconds
-            Log.w(TAG, "AmneziaWG handshake timeout after ${handshakeTimeoutMs}ms on cycle $attempt. Restarting tunnel...")
-            if (attempt < maxRetries) {
-                disconnect()
-                try { Thread.sleep(400L) } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return "اتصال متوقف شد"
-                }
-            } else {
-                lastError = "سرور پاسخ نداد (تعداد ۵ تلاش ناموفق)"
-            }
+            return lastError ?: "عدم برقراری ارتباط با سرور AmneziaWG"
+        } finally {
+            connecting = false
+            cancelRequested = false
         }
-
-        return lastError ?: "عدم برقراری ارتباط با سرور AmneziaWG"
     }
 
     private fun waitForTunnelDown(tunnel: SimpleTunnel) {

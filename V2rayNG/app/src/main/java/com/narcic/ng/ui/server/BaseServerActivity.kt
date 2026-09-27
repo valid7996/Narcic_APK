@@ -40,6 +40,7 @@ import com.narcic.ng.extension.toast
 import com.narcic.ng.extension.toastSuccess
 import com.narcic.ng.handler.AngConfigManager
 import com.narcic.ng.handler.CertificateFingerprintManager
+import com.narcic.ng.handler.DefaultConfigSource
 import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.ui.base.BaseComponentActivity
 import com.narcic.ng.ui.compose.AppTopBar
@@ -519,6 +520,13 @@ abstract class BaseServerActivity : BaseComponentActivity() {
         config.description = AngConfigManager.generateDescription(config)
         if (config.subscriptionId.isEmpty() && !subscriptionId.isNullOrEmpty()) {
             config.subscriptionId = subscriptionId.orEmpty()
+        }
+        // A fresh manual add (no subscription context) lands in the default
+        // group of the config's own engine, so each page keeps only its own
+        // profiles — same routing the clipboard/QR import path uses.
+        if (config.subscriptionId.isEmpty()) {
+            config.subscriptionId =
+                DefaultConfigSource.perEngineDefaultGroupIdFor(config.configType)
         }
         val savedGuid = MmkvManager.encodeServerConfig(editGuid, config)
         toastSuccess(R.string.toast_success)

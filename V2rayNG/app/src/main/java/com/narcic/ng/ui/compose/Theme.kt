@@ -39,10 +39,10 @@ fun auroraGradient(alpha: Float = 1f) = Brush.linearGradient(
 )
 
 private val LightColor = lightColorScheme(
-    primary = Color(0xFF6D4FD0), // Narcic Violet (deepened for contrast on white)
+    primary = Color(0xFF059669), // Narcic Emerald (deepened for contrast on white)
     onPrimary = Color(0xFFFFFFFF), // White
-    primaryContainer = Color(0xFFE7DFFF), // Pale Violet
-    onPrimaryContainer = Color(0xFF22093F), // Deep Indigo
+    primaryContainer = Color(0xFFCFF5E8), // Pale Mint
+    onPrimaryContainer = Color(0xFF03301F), // Deep Forest
     secondary = Color(0xFF0E7490), // Aurora Cyan (deepened)
     onSecondary = Color(0xFFFFFFFF), // White
     secondaryContainer = Color(0xFFD3F4FB), // Pale Cyan
@@ -65,9 +65,9 @@ private val LightColor = lightColorScheme(
     outlineVariant = Color(0xFFC7CFDC), // Light Slate
     inverseSurface = Color(0xFF1B2130), // Deep Navy
     inverseOnSurface = Color(0xFFEFF2F8), // Very Light Blue-Gray
-    inversePrimary = Color(0xFFC7B6FF), // Bright Violet
+    inversePrimary = Color(0xFF34D399), // Bright Emerald
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFF6D4FD0), // Narcic Violet
+    surfaceTint = Color(0xFF059669), // Narcic Emerald
     surfaceContainerLowest = Color(0xFFFFFFFF), // White
     surfaceContainerLow = Color(0xFFF0F3F9), // Very Pale Blue
     surfaceContainer = Color(0xFFEAEEF6), // Pale Blue-Gray
@@ -80,10 +80,10 @@ private val LightColor = lightColorScheme(
 // violet primary, cyan secondary and the orange Aether accent as tertiary —
 // so every screen (settings, editors, dialogs) shares the main page's look.
 private val DarkColor = darkColorScheme(
-    primary = Color(0xFF8B5CF6), // Narcic Violet
-    onPrimary = Color(0xFF0B1220), // Near-Black Navy
-    primaryContainer = Color(0xFF2A1D52), // Deep Indigo
-    onPrimaryContainer = Color(0xFFE9DEFF), // Pale Violet
+    primary = Color(0xFF10B981), // Narcic Emerald
+    onPrimary = Color(0xFF05261C), // Deep Forest
+    primaryContainer = Color(0xFF064E3B), // Emerald Container
+    onPrimaryContainer = Color(0xFFC8F7E5), // Pale Mint
     secondary = Color(0xFF22D3EE), // Engine Cyan
     onSecondary = Color(0xFF062028), // Deep Teal
     secondaryContainer = Color(0xFF0E3A47), // Teal Container
@@ -106,9 +106,9 @@ private val DarkColor = darkColorScheme(
     outlineVariant = Color(0xFF131A2A), // Subtle border
     inverseSurface = Color(0xFFF1F5F9), // Near-white
     inverseOnSurface = Color(0xFF0D1321), // Card navy
-    inversePrimary = Color(0xFF6D4FD0), // Deep violet
+    inversePrimary = Color(0xFF059669), // Deep Emerald
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFF8B5CF6), // Violet
+    surfaceTint = Color(0xFF10B981), // Emerald
     surfaceContainerLowest = Color(0xFF05080F), // Almost black navy
     surfaceContainerLow = Color(0xFF0B1120), // Deep navy
     surfaceContainer = Color(0xFF10182A), // Glass card navy

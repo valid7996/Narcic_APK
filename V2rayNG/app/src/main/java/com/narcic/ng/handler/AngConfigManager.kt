@@ -359,6 +359,16 @@ object AngConfigManager {
     }
 
     /**
+     * Blank subid means "the default/manual bucket"; the 3-page redesign
+     * splits that bucket per engine, so every imported config lands in the
+     * default group of its own protocol family. Real subscription ids pass
+     * through untouched (subscription updates keep their own group).
+     */
+    private fun resolveSubscriptionId(subid: String, config: ProfileItem): String =
+        if (subid.isNotBlank()) subid
+        else DefaultConfigSource.perEngineDefaultGroupIdFor(config.configType)
+
+    /**
      * Returns the currently selected profile if it belongs to the target subscription and will be replaced.
      */
     private fun getRemovedSelectedProfile(subid: String, append: Boolean): ProfileItem? {
@@ -411,7 +421,7 @@ object AngConfigManager {
                     val keyToProfile = mutableMapOf<String, ProfileItem>()
                     for (srv in serverList.reversed()) {
                         val config = CustomFmt.parse(JsonUtil.toJson(srv)) ?: continue
-                        config.subscriptionId = subid
+                        config.subscriptionId = resolveSubscriptionId(subid, config)
                         config.description = generateDescription(config)
                         val key = MmkvManager.encodeServerConfig("", config)
                         MmkvManager.encodeServerRaw(key, JsonUtil.toJsonPretty(srv) ?: "")
@@ -431,7 +441,7 @@ object AngConfigManager {
             try {
                 // For compatibility
                 val config = CustomFmt.parse(server) ?: return 0
-                config.subscriptionId = subid
+                config.subscriptionId = resolveSubscriptionId(subid, config)
                 config.description = generateDescription(config)
                 if (!append) {
                     MmkvManager.removeServerViaSubid(subid)
@@ -449,7 +459,7 @@ object AngConfigManager {
                 val profile = ProfileItem.create(EConfigType.AMNEZIAWG).apply {
                     remarks = "AmneziaWG"
                     awgConfigText = com.narcic.ng.awg.AwgManager.sanitizeConfigText(server)
-                    subscriptionId = subid
+                    subscriptionId = resolveSubscriptionId(subid, this)
                 }
                 profile.description = generateDescription(profile)
                 if (!append) {
@@ -511,7 +521,7 @@ object AngConfigManager {
                 if (!matched) return null
             }
 
-            config.subscriptionId = subid
+            config.subscriptionId = resolveSubscriptionId(subid, config)
             config.description = generateDescription(config)
 
             if (str.startsWith(AppConfig.V2RAYNFMTS, ignoreCase = true)

@@ -1,6 +1,7 @@
 package com.narcic.ng.ui.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.R
 import com.narcic.ng.enums.EConfigType
+import com.narcic.ng.handler.DefaultConfigSource
+import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.ui.compose.AccentPair
 import com.narcic.ng.ui.compose.AuroraCyan
 import com.narcic.ng.ui.compose.AuroraDeep
@@ -55,7 +58,6 @@ import com.narcic.ng.ui.compose.GroupTabs
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.compose.QRCodeDialog
-import com.narcic.ng.ui.compose.SpiderWebCorners
 import com.narcic.ng.ui.compose.StatusPill
 import com.narcic.ng.ui.compose.accentFor
 import kotlinx.coroutines.delay
@@ -123,15 +125,14 @@ fun MainScreen(
     }
 
     // ---- Active page (امنزیا / وی‌تو‌ری / اتر) --------------------------
-    // UI-local: which engine page is currently shown. It starts in sync with
-    // whatever server is actually selected in the ViewModel, but the user can
-    // freely browse the other pages without that changing the real selection
-    // until they tap a server card (SelectServer) -- the ViewModel's notion
-    // of "selected server" is untouched by this switch. The Aether page is
-    // list-filtering only: Aether profiles connect through the normal
-    // CoreServiceManager path, so engineIsAwg (the old AWG/V2Ray filter that
-    // the rest of this screen keys off) is simply false there.
-    var selectedTab by rememberSaveable { mutableStateOf("v2") } // "awg" | "v2" | "ae"
+    // Persisted in MMKV so leaving the app from one page and coming back
+    // lands on the same page instead of always resetting to وی‌تو‌ری.
+    var selectedTab by rememberSaveable {
+        mutableStateOf(MmkvManager.decodeSettingsString(PREF_MAIN_SELECTED_TAB) ?: "v2") // "awg" | "v2" | "ae"
+    }
+    LaunchedEffect(selectedTab) {
+        MmkvManager.encodeSettings(PREF_MAIN_SELECTED_TAB, selectedTab)
+    }
     val engineIsAwg = selectedTab == "awg"
     val aetherTab = selectedTab == "ae"
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
@@ -159,21 +160,37 @@ fun MainScreen(
     // A subscription group shows only on the page whose engine it actually
     // carries, decided by the configs inside it (not by hard-coded names):
     // AmneziaWG/WireGuard groups on the امنزیا page, V2Ray-family groups on
-    // the وی‌تو‌ری page, Aether-bearing groups on the اتر page. Custom
-    // user subscriptions split naturally by their contents, and a group
-    // with no configs of the active page's engine simply disappears there.
+    // the وی‌تو‌ری page, Aether-bearing groups on the اتر page. Three rules
+    // sharpen it further:
+    //   - the three per-engine default groups are pinned to their own page
+    //     (so each page always has its manual bucket, even when empty),
+    //   - the fixed, pre-seeded Narcic subscriptions stay visible on their
+    //     page even before their first fetch,
+    //   - any other (user-added) subscription stays hidden until a fetch
+    //     actually brought configs for this page's engine.
     val serversByGroup = groups.associate { g ->
         g.id to mainViewModel.serversForGroup(g.id).collectAsStateWithLifecycle().value
     }
     val visibleGroups = remember(groups, serversByGroup, selectedTab) {
         groups.filter { g ->
             val servers = serversByGroup[g.id].orEmpty()
-            when (selectedTab) {
-                "ae" -> servers.any { it.profile.configType == EConfigType.AETHER }
-                "awg" -> servers.any { isAwgType(it.profile.configType) }
-                else -> servers.any {
-                    !isAwgType(it.profile.configType) && it.profile.configType != EConfigType.AETHER
-                }
+            val hasAwg = servers.any { isAwgType(it.profile.configType) }
+            val hasAe = servers.any { it.profile.configType == EConfigType.AETHER }
+            val hasV2 = servers.any {
+                !isAwgType(it.profile.configType) && it.profile.configType != EConfigType.AETHER
+            }
+            val matches = when (selectedTab) {
+                "ae" -> hasAe
+                "awg" -> hasAwg
+                else -> hasV2
+            }
+            when {
+                g.remarks == DefaultConfigSource.DEFAULT_GROUP_AWG_NAME -> selectedTab == "awg"
+                g.remarks == DefaultConfigSource.DEFAULT_GROUP_AETHER_NAME -> selectedTab == "ae"
+                g.remarks == DefaultConfigSource.DEFAULT_GROUP_V2_NAME -> selectedTab == "v2"
+                g.remarks == "Narcic NG - WireGuard" -> selectedTab == "awg"
+                g.remarks == "Narcic Irancell" || g.remarks == "Narcic NG - JSON" -> selectedTab == "v2"
+                else -> matches
             }
         }
     }
@@ -352,11 +369,6 @@ fun MainScreen(
         },
     ) {
     Box(modifier = Modifier.fillMaxSize().background(backdrop)) {
-        if (isDark) {
-            // Decorative animated spiderweb in the four corners, echoing the
-            // launcher icon. Sits behind all real UI and never intercepts touch.
-            SpiderWebCorners(modifier = Modifier.fillMaxSize())
-        }
         Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             containerColor = Color.Transparent,
@@ -369,12 +381,13 @@ fun MainScreen(
                         onSettingsClick = { onNavigate("settings") },
                         onMoreClick = { showMoreSheet = true },
                     )
-                    // Camera-style corner switch: the three engine circles pin
-                    // to the top-right (RTL start) right under the app bar.
+                    // Camera-style corner switch: vertical (top→bottom) and
+                    // pinned to the left edge, per the redesign spec.
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                            .padding(horizontal = 16.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.End,
                     ) {
                         MainEngineSwitch(
                             selectedTab = selectedTab,
@@ -605,3 +618,6 @@ private fun MoreSheetRow(
 /** AmneziaWG engine == WireGuard-family config types (WIREGUARD + AMNEZIAWG). */
 private fun isAwgType(type: EConfigType): Boolean =
     type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
+
+/** MMKV key keeping the active engine page across app restarts. */
+private const val PREF_MAIN_SELECTED_TAB = "cache_main_selected_tab"
