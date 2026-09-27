@@ -30,7 +30,7 @@ jobs:
           packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools cmake;3.22.1'
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           # The client is built from a checkout of its own; there is no go.sum here to cache by.
