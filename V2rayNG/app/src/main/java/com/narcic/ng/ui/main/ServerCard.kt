@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,6 +46,7 @@ fun ServerCard(
     pingMs: Int?,
     protoLabel: String,
     protoColor: Color,
+    chips: List<String> = emptyList(),
     selected: Boolean,
     enabled: Boolean,
     accent: Color,
@@ -72,7 +74,7 @@ fun ServerCard(
                 RoundedCornerShape(18.dp)
             )
             .clickable(enabled = enabled, onClick = onSelect)
-            .padding(horizontal = 15.dp, vertical = 14.dp)
+            .padding(horizontal = 15.dp, vertical = 13.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
             // Radio / rank badge.
@@ -116,21 +118,50 @@ fun ServerCard(
                     .border(1.dp, protoColor.copy(alpha = .35f), RoundedCornerShape(50))
                     .padding(horizontal = 9.dp, vertical = 3.5.dp)
             )
+        }
 
-            if (showEditShare) {
+        // Engine-specific detail chips (Jc/MTU for AWG, transport/carriers
+        // for Aether, Reality/Vision/desync for V2Ray) — mockup row 2.
+        if (chips.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier.padding(start = 31.dp, top = 7.dp)
+            ) {
+                chips.take(3).forEach { chip ->
+                    Text(
+                        chip, color = Nc.Sub, fontSize = 8.5.sp, fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .background(Color.White.copy(alpha = .05f), RoundedCornerShape(50))
+                            .border(1.dp, Nc.Stroke, RoundedCornerShape(50))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        // Action row: share/edit/delete kept on their own line so the top
+        // row stays readable (name + ping + badge) like the mockup card.
+        if (showEditShare) {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth().padding(top = 7.dp)
+            ) {
                 Icon(
                     Icons.Rounded.Share, "اشتراک‌گذاری", tint = Nc.Sub,
                     modifier = Modifier.size(15.dp).clickable(onClick = onShare)
                 )
+                Spacer(Modifier.padding(start = 13.dp))
                 Icon(
                     Icons.Rounded.Edit, "ویرایش", tint = Nc.Sub,
                     modifier = Modifier.size(15.dp).clickable(onClick = onEdit)
                 )
+                Spacer(Modifier.padding(start = 13.dp))
+                Icon(
+                    Icons.Rounded.Delete, "حذف", tint = Nc.Red,
+                    modifier = Modifier.size(15.dp).clickable(onClick = onDelete)
+                )
             }
-            Icon(
-                Icons.Rounded.Delete, "حذف", tint = Nc.Red,
-                modifier = Modifier.size(15.dp).clickable(onClick = onDelete)
-            )
         }
     }
 }

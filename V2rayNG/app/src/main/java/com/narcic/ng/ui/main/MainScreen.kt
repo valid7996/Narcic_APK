@@ -155,36 +155,33 @@ fun MainScreen(
         else -> "V2Ray"
     }
 
-    // If switching engines hides the currently-selected tab (e.g. the
-    // WireGuard sub was selected and the user flips to V2Ray), jump to the
-    // first tab that's still visible instead of leaving an empty list up
-    // against a tab that no longer shows as selected.
-    LaunchedEffect(engineIsAwg, groups) {
-        val stillVisible = groups.filter { g ->
-            when (g.remarks) {
-                "Narcic Irancell", "Narcic NG - JSON" -> !engineIsAwg
-                "Narcic NG - WireGuard" -> engineIsAwg
-                else -> true
+    // ---- Strict per-page subscription separation ------------------------
+    // A subscription group shows only on the page whose engine it actually
+    // carries, decided by the configs inside it (not by hard-coded names):
+    // AmneziaWG/WireGuard groups on the امنزیا page, V2Ray-family groups on
+    // the وی‌تو‌ری page, Aether-bearing groups on the اتر page. Custom
+    // user subscriptions split naturally by their contents, and a group
+    // with no configs of the active page's engine simply disappears there.
+    val serversByGroup = groups.associate { g ->
+        g.id to mainViewModel.serversForGroup(g.id).collectAsStateWithLifecycle().value
+    }
+    val visibleGroups = remember(groups, serversByGroup, selectedTab) {
+        groups.filter { g ->
+            val servers = serversByGroup[g.id].orEmpty()
+            when (selectedTab) {
+                "ae" -> servers.any { it.profile.configType == EConfigType.AETHER }
+                "awg" -> servers.any { isAwgType(it.profile.configType) }
+                else -> servers.any {
+                    !isAwgType(it.profile.configType) && it.profile.configType != EConfigType.AETHER
+                }
             }
-        }
-        if (stillVisible.isNotEmpty() && stillVisible.none { it.id == uiState.selectedGroupId }) {
-            onAction(MainAction.SelectGroup(stillVisible.first().id))
         }
     }
-
-    // ---- Per-engine subscription tabs --------------------------------
-    // "Narcic Irancell" / "Narcic NG - JSON" only ever carry V2Ray-type
-    // configs, and "Narcic NG - WireGuard" only ever carries AmneziaWG
-    // configs -- so their tabs are hidden entirely on the engine they
-    // don't belong to instead of showing up empty. Any other (custom,
-    // user-added) subscription is unaffected and stays visible on both.
-    val visibleGroups = remember(groups, engineIsAwg) {
-        groups.filter { g ->
-            when (g.remarks) {
-                "Narcic Irancell", "Narcic NG - JSON" -> !engineIsAwg
-                "Narcic NG - WireGuard" -> engineIsAwg
-                else -> true
-            }
+    // If switching pages hides the currently-selected group, jump to the
+    // first group that's still visible instead of showing a stale list.
+    LaunchedEffect(visibleGroups) {
+        if (visibleGroups.isNotEmpty() && visibleGroups.none { it.id == uiState.selectedGroupId }) {
+            onAction(MainAction.SelectGroup(visibleGroups.first().id))
         }
     }
 
@@ -364,19 +361,27 @@ fun MainScreen(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             containerColor = Color.Transparent,
             topBar = {
-                MainTopBar(
-                    isLoading = isLoading,
-                    onFetchConfig = { onAction(MainAction.UpdateSubscriptions) },
-                    onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                    onSettingsClick = { onNavigate("settings") },
-                    onMoreClick = { showMoreSheet = true },
-                )
-            },
-            bottomBar = {
-                MainEngineTabBar(
-                    selectedTab = selectedTab,
-                    onSelect = { selectedTab = it },
-                )
+                Column {
+                    MainTopBar(
+                        isLoading = isLoading,
+                        onFetchConfig = { onAction(MainAction.UpdateSubscriptions) },
+                        onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                        onSettingsClick = { onNavigate("settings") },
+                        onMoreClick = { showMoreSheet = true },
+                    )
+                    // Camera-style corner switch: the three engine circles pin
+                    // to the top-right (RTL start) right under the app bar.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                    ) {
+                        MainEngineSwitch(
+                            selectedTab = selectedTab,
+                            onSelect = { selectedTab = it },
+                        )
+                    }
+                }
             },
         ) { innerPadding ->
             Column(
@@ -465,6 +470,7 @@ fun MainScreen(
                     selectedGroupId = uiState.selectedGroupId,
                     accent = accentPair.main,
                     engineIsAwg = engineIsAwg,
+                    aetherOnly = aetherTab,
                     serverFlowFor = { id -> mainViewModel.serversForGroup(id) },
                     enabled = !isRunning,
                     onSelect = { id -> onAction(MainAction.SelectGroup(id)) },
@@ -595,3 +601,7 @@ private fun MoreSheetRow(
         Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }
+
+/** AmneziaWG engine == WireGuard-family config types (WIREGUARD + AMNEZIAWG). */
+private fun isAwgType(type: EConfigType): Boolean =
+    type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG

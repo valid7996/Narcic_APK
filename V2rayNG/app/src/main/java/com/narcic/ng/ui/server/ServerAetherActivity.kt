@@ -269,12 +269,51 @@ class ServerAetherActivity : BaseServerActivity() {
                         )
                     }
                 }
-                FormTextField(
-                    stringResource(R.string.aether_lab_psiphon_region),
-                    uiState.aetherPsiphonRegion,
-                    { uiState.aetherPsiphonRegion = it },
-                    placeholder = stringResource(R.string.aether_hint_psiphon_region)
+                // Exit country: a picker over the known Psiphon exit countries
+                // instead of hand-typing a code. "خودکار" stores the blank
+                // (any-country) value; "سفارشی…" reveals the raw field for the
+                // advanced shapes the core accepts (multi "DE,SE" or "!IR,RU").
+                var showCustomExitCountry by rememberSaveable { mutableStateOf(false) }
+                val exitAutoLabel = "خودکار (Auto)"
+                val exitCustomLabel = "سفارشی… (Custom)"
+                val exitIsKnownSingle = AETHER_EXIT_COUNTRIES.any {
+                    it.second.equals(uiState.aetherPsiphonRegion.trim(), ignoreCase = true)
+                }
+                val exitSelectedLabel = when {
+                    uiState.aetherPsiphonRegion.isBlank() -> exitAutoLabel
+                    exitIsKnownSingle -> AETHER_EXIT_COUNTRIES.first {
+                        it.second.equals(uiState.aetherPsiphonRegion.trim(), ignoreCase = true)
+                    }.first
+                    else -> exitCustomLabel
+                }
+                FormDropdownField(
+                    label = stringResource(R.string.aether_lab_psiphon_region),
+                    value = exitSelectedLabel,
+                    options = listOf(exitAutoLabel) + AETHER_EXIT_COUNTRIES.map { it.first } + listOf(exitCustomLabel),
+                    onValueChange = { picked ->
+                        when (picked) {
+                            exitAutoLabel -> {
+                                uiState.aetherPsiphonRegion = ""
+                                showCustomExitCountry = false
+                            }
+                            exitCustomLabel -> showCustomExitCountry = true
+                            else -> {
+                                uiState.aetherPsiphonRegion =
+                                    AETHER_EXIT_COUNTRIES.firstOrNull { it.first == picked }?.second
+                                        ?: uiState.aetherPsiphonRegion
+                                showCustomExitCountry = false
+                            }
+                        }
+                    }
                 )
+                if (showCustomExitCountry || (uiState.aetherPsiphonRegion.isNotBlank() && !exitIsKnownSingle)) {
+                    FormTextField(
+                        stringResource(R.string.aether_lab_psiphon_region),
+                        uiState.aetherPsiphonRegion,
+                        { uiState.aetherPsiphonRegion = it },
+                        placeholder = stringResource(R.string.aether_hint_psiphon_region)
+                    )
+                }
                 SettingsSwitchItem(
                     title = stringResource(R.string.aether_lab_psiphon_bundled_list),
                     summary = stringResource(R.string.aether_hint_psiphon_bundled_list),
@@ -649,3 +688,38 @@ private fun logColor(entry: AetherLogEntry): Color = when {
     entry.text is AetherLogText.Resource -> MaterialTheme.colorScheme.onSurface
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }
+
+/**
+ * The exit countries the bundled Psiphon fleet actually serves (flag + label
+ * فارسی + ISO code), shown as a picker on the Aether editor's "Exit country"
+ * field so the code never has to be typed by hand. Blank/خودکار = any country.
+ */
+private val AETHER_EXIT_COUNTRIES: List<Pair<String, String>> = listOf(
+    "🇦🇹 اتریش (Austria)" to "AT",
+    "🇦🇺 استرالیا (Australia)" to "AU",
+    "🇧🇪 بلژیک (Belgium)" to "BE",
+    "🇧🇷 برزیل (Brazil)" to "BR",
+    "🇨🇦 کانادا (Canada)" to "CA",
+    "🇨🇭 سوئیس (Switzerland)" to "CH",
+    "🇨🇿 جمهوری چک (Czechia)" to "CZ",
+    "🇩🇪 آلمان (Germany)" to "DE",
+    "🇩🇰 دانمارک (Denmark)" to "DK",
+    "🇪🇸 اسپانیا (Spain)" to "ES",
+    "🇫🇮 فنلاند (Finland)" to "FI",
+    "🇫🇷 فرانسه (France)" to "FR",
+    "🇬🇧 انگلستان (United Kingdom)" to "GB",
+    "🇮🇩 اندونزی (Indonesia)" to "ID",
+    "🇮🇪 ایرلند (Ireland)" to "IE",
+    "🇮🇳 هند (India)" to "IN",
+    "🇮🇹 ایتالیا (Italy)" to "IT",
+    "🇯🇵 ژاپن (Japan)" to "JP",
+    "🇱🇹 لیتوانی (Lithuania)" to "LT",
+    "🇳🇱 هلند (Netherlands)" to "NL",
+    "🇳🇴 نروژ (Norway)" to "NO",
+    "🇵🇱 لهستان (Poland)" to "PL",
+    "🇷🇴 رومانی (Romania)" to "RO",
+    "🇷🇸 صربستان (Serbia)" to "RS",
+    "🇸🇪 سوئد (Sweden)" to "SE",
+    "🇸🇬 سنگاپور (Singapore)" to "SG",
+    "🇺🇸 ایالات متحده آمریکا (United States)" to "US",
+)

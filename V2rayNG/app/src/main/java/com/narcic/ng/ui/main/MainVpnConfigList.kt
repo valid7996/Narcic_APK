@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -76,13 +78,16 @@ fun MainServerListSection(
             onDismissRequest = { showAddOptionsDialog = false },
             title = {
                 Text(
-                    "افزودن کانفیگ",
+                    "افزودن کانفیگ " + if (engineIsAwg) "AmneziaWG" else "V2Ray",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
                     Button(
                         onClick = {
                             showAddOptionsDialog = false
@@ -108,10 +113,38 @@ fun MainServerListSection(
                         Spacer(Modifier.size(8.dp))
                         Text("اسکن بارکد QR")
                     }
-                    // The "افزودن دستی کانفیگ Aether" / "افزودن دستی WARP to
-                    // WARP" shortcut that used to live here was removed per
-                    // the 3-page redesign: manual Aether entry now lives only
-                    // on the Aether page's + button (aetherOnly below).
+                    // Manual add is engine-scoped: the امنزیا page offers only
+                    // the WireGuard-family editors and the وی‌تو‌ری page only
+                    // the V2Ray-family ones. (Aether's manual add lives solely
+                    // on the اتر page, where + opens it directly.)
+                    val manualTypes = if (engineIsAwg) {
+                        listOf(
+                            "افزودن دستی [AmneziaWG]" to EConfigType.AMNEZIAWG.value,
+                            "افزودن دستی [Wireguard]" to EConfigType.WIREGUARD.value,
+                        )
+                    } else {
+                        listOf(
+                            "افزودن دستی [VMess]" to EConfigType.VMESS.value,
+                            "افزودن دستی [VLESS]" to EConfigType.VLESS.value,
+                            "افزودن دستی [Shadowsocks]" to EConfigType.SHADOWSOCKS.value,
+                            "افزودن دستی [Trojan]" to EConfigType.TROJAN.value,
+                            "افزودن دستی [Hysteria2]" to EConfigType.HYSTERIA2.value,
+                        )
+                    }
+                    manualTypes.forEach { (label, type) ->
+                        OutlinedButton(
+                            onClick = {
+                                showAddOptionsDialog = false
+                                onAddManualConfig(type)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(painterResource(R.drawable.ic_edit_24dp), contentDescription = null, Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                            Text(label)
+                        }
+                    }
                 }
             },
             confirmButton = {},
@@ -318,6 +351,68 @@ private fun protocolBadge(type: EConfigType): ProtocolBadge = when (type) {
 private fun isAwgConfig(type: EConfigType): Boolean =
     type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG
 
+/** ISO-2 country code → flag emoji; "" for non-code values ("DE,SE", "!IR"). */
+private fun flagOf(code: String): String {
+    val c = code.trim().uppercase()
+    if (c.length != 2 || c.any { it !in 'A'..'Z' }) return ""
+    return c.map { Character.toChars(0x1F1E6 + (it - 'A')) }.joinToString("") { String(it) }
+}
+
+/**
+ * Small engine-specific detail chips drawn under a server card's name, per
+ * the 3-page redesign mockup: junk-packet summary for AmneziaWG .conf
+ * profiles, WARP transport + carrier chain for Aether, and security/desync
+ * hints for the V2Ray family. Pure presentation — read-only over the
+ * profile fields, never mutates anything.
+ */
+private fun profileChips(profile: ProfileItem): List<String> = when (profile.configType) {
+    EConfigType.AMNEZIAWG, EConfigType.WIREGUARD -> {
+        val conf = profile.awgConfigText.orEmpty()
+        buildList {
+            Regex("Jc\\s*=\\s*(\\d+)").find(conf)?.let { add("Jc=${it.groupValues[1]}") }
+            Regex("MTU\\s*=\\s*(\\d+)").find(conf)?.let { add("MTU ${it.groupValues[1]}") }
+            if (Regex("\\bH1\\s*=").containsMatchIn(conf)) add("H1-H4")
+        }
+    }
+    EConfigType.AETHER -> buildList {
+        profile.aetherProtocol?.let {
+            add(
+                when (it) {
+                    "wg" -> "WireGuard"
+                    "gool" -> "WARP-in-WARP"
+                    "mim" -> "MASQUE²"
+                    else -> "MASQUE"
+                }
+            )
+        }
+        profile.aetherTransport?.takeIf { it == "h2" }?.let { add("HTTP/2") }
+        profile.aetherEch?.takeIf { it }?.let { add("ECH") }
+        profile.aetherPsiphon?.takeIf { it.isNotBlank() && it != "off" }?.let {
+            add("Psiphon: " + when (it) {
+                "chain" -> "زنجیره"
+                "reverse" -> "معکوس"
+                else -> "فقط"
+            })
+        }
+        profile.aetherTor?.takeIf { it.isNotBlank() && it != "off" }?.let {
+            add("Tor: " + when (it) {
+                "chain" -> "زنجیره"
+                "reverse" -> "معکوس"
+                else -> "فقط"
+            })
+        }
+        profile.aetherExitLoc?.takeIf { it.isNotBlank() }?.let {
+            val flag = flagOf(it)
+            add(if (flag.isNotEmpty()) "خروج: $flag ${it.uppercase()}" else "خروج: $it")
+        }
+    }
+    else -> buildList {
+        profile.security?.takeIf { it.equals("reality", true) }?.let { add("Reality") }
+        profile.flow?.takeIf { it.isNotBlank() }?.let { add("Vision") }
+        profile.desyncProfile?.takeIf { it.isNotBlank() && !it.equals("off", true) }?.let { add("دیسینک") }
+    }
+}
+
 @Composable
 private fun VpnConfigRow(
     serverCache: ServersCache,
@@ -341,6 +436,7 @@ private fun VpnConfigRow(
         pingMs = if (serverCache.testDelayMillis > 0L) serverCache.testDelayMillis.toInt() else null,
         protoLabel = proto.label,
         protoColor = proto.color,
+        chips = profileChips(profile),
         selected = isSelected,
         enabled = true,
         accent = accent,

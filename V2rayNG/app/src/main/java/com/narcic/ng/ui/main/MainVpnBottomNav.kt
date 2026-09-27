@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -195,5 +198,99 @@ fun MainEngineTabBar(
                 }
             }
         }
+    }
+}
+
+// ───────────── camera-style corner switch (امنزیا / وی‌تو‌ری / اتر) ─────────────
+
+/**
+ * The 3-page switch, camera-app style: three circles pinned to the top
+ * corner instead of a bottom bar — وی‌تو‌ری with its signature V mark,
+ * امنزیا with the Amnezia cloud, اتر with the at (@) sign. The selected
+ * circle rings with its engine's accent; browsing pages stays UI-local
+ * list filtering, exactly like the bottom bar it replaces.
+ */
+@Composable
+fun MainEngineSwitch(
+    selectedTab: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        EngineSwitchCircle(
+            id = "v2", label = "وی‌تو‌ری", accent = Nc.V2Accent,
+            selected = selectedTab == "v2", onClick = { onSelect("v2") },
+        ) { tint -> V2RayMark(tint = tint, size = 19.dp) }
+        EngineSwitchCircle(
+            id = "awg", label = "امنزیا", accent = Nc.AwgAccent,
+            selected = selectedTab == "awg", onClick = { onSelect("awg") },
+        ) { tint -> Icon(Icons.Rounded.Cloud, null, tint = tint, modifier = Modifier.size(20.dp)) }
+        EngineSwitchCircle(
+            id = "ae", label = "اتر", accent = Nc.BadgeAether,
+            selected = selectedTab == "ae", onClick = { onSelect("ae") },
+        ) { tint -> Icon(Icons.Rounded.AlternateEmail, null, tint = tint, modifier = Modifier.size(19.dp)) }
+    }
+}
+
+@Composable
+private fun EngineSwitchCircle(
+    id: String,
+    label: String,
+    accent: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable (Color) -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(if (selected) accent.copy(alpha = .16f) else Color.White.copy(alpha = .05f))
+                .border(
+                    if (selected) 1.6.dp else 1.dp,
+                    if (selected) accent else Color.White.copy(alpha = .10f),
+                    CircleShape
+                )
+                .clickable(onClick = onClick)
+        ) {
+            icon(if (selected) accent else Nc.Sub)
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            label,
+            color = if (selected) accent else Nc.Sub,
+            fontSize = 8.5.sp,
+            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+        )
+    }
+}
+
+/** وی‌تو‌ری's signature V mark, drawn as a bold rounded stroke. */
+@Composable
+private fun V2RayMark(tint: Color, size: androidx.compose.ui.unit.Dp) {
+    androidx.compose.foundation.Canvas(
+        Modifier.size(size)
+    ) {
+        val w = this.size.width
+        val h = this.size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * .12f, h * .18f)
+            lineTo(w * .5f, h * .85f)
+            lineTo(w * .88f, h * .18f)
+        }
+        drawPath(
+            path,
+            color = tint,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = w * .17f,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        )
     }
 }

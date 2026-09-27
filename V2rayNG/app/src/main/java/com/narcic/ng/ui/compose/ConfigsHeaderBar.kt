@@ -46,6 +46,35 @@ fun ConfigsHeaderBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        // Right side (RTL first): count badge + section title.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(accent.copy(alpha = 0.18f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = faDigits(count.toString()),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = accent,
+                    fontSize = 12.sp
+                )
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Nc.Txt,
+                fontSize = 15.sp
+            )
+        }
+
         // Left side: Actions (Delete All, Add, Sort/Best, Ping Test)
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -101,35 +130,6 @@ fun ConfigsHeaderBar(
                     )
                 },
                 onClick = onTestClick
-            )
-        }
-
-        // Right side: Badge with count + Title ("کلاینت‌های AmneziaWG" یا "کلاینت‌های V2Ray")
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(accent.copy(alpha = 0.18f))
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = faDigits(count.toString()),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = accent,
-                    fontSize = 12.sp
-                )
-            }
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Nc.Txt,
-                fontSize = 15.sp
             )
         }
     }

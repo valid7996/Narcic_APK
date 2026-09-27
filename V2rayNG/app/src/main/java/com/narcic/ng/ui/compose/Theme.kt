@@ -39,18 +39,18 @@ fun auroraGradient(alpha: Float = 1f) = Brush.linearGradient(
 )
 
 private val LightColor = lightColorScheme(
-    primary = Color(0xFF0B79C4), // Aurora Blue (deepened for contrast on white)
+    primary = Color(0xFF6D4FD0), // Narcic Violet (deepened for contrast on white)
     onPrimary = Color(0xFFFFFFFF), // White
-    primaryContainer = Color(0xFFD3EBFC), // Pale Sky Blue
-    onPrimaryContainer = Color(0xFF00344E), // Deep Navy
-    secondary = Color(0xFF6552D6), // Aurora Violet
+    primaryContainer = Color(0xFFE7DFFF), // Pale Violet
+    onPrimaryContainer = Color(0xFF22093F), // Deep Indigo
+    secondary = Color(0xFF0E7490), // Aurora Cyan (deepened)
     onSecondary = Color(0xFFFFFFFF), // White
-    secondaryContainer = Color(0xFFE6E0FF), // Pale Violet
-    onSecondaryContainer = Color(0xFF1D1149), // Deep Indigo
-    tertiary = Color(0xFFB4790A), // Refined Gold (used sparingly, e.g. Pro badges)
+    secondaryContainer = Color(0xFFD3F4FB), // Pale Cyan
+    onSecondaryContainer = Color(0xFF04252D), // Deep Teal
+    tertiary = Color(0xFFB4540A), // Narcic Orange (deepened)
     onTertiary = Color(0xFFFFFFFF), // White
-    tertiaryContainer = Color(0xFFFFE4AD), // Pale Gold
-    onTertiaryContainer = Color(0xFF3A2600), // Deep Brown
+    tertiaryContainer = Color(0xFFFFDFC7), // Pale Orange
+    onTertiaryContainer = Color(0xFF3B1400), // Deep Brown
     error = Color(0xFFD5273F), // Rose Red
     errorContainer = Color(0xFFFFDADD), // Pale Rose
     onError = Color(0xFFFFFFFF), // White
@@ -65,9 +65,9 @@ private val LightColor = lightColorScheme(
     outlineVariant = Color(0xFFC7CFDC), // Light Slate
     inverseSurface = Color(0xFF1B2130), // Deep Navy
     inverseOnSurface = Color(0xFFEFF2F8), // Very Light Blue-Gray
-    inversePrimary = Color(0xFF7FD4FF), // Bright Sky Blue
+    inversePrimary = Color(0xFFC7B6FF), // Bright Violet
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFF0B79C4), // Aurora Blue
+    surfaceTint = Color(0xFF6D4FD0), // Narcic Violet
     surfaceContainerLowest = Color(0xFFFFFFFF), // White
     surfaceContainerLow = Color(0xFFF0F3F9), // Very Pale Blue
     surfaceContainer = Color(0xFFEAEEF6), // Pale Blue-Gray
@@ -75,41 +75,45 @@ private val LightColor = lightColorScheme(
     surfaceContainerHighest = Color(0xFFDEE4EF), // Blue-Gray
 )
 
+// Dark scheme tuned to the 3-page redesign's "Nc" tokens (Theme.kt here and
+// DesignTokens.Nc describe the same identity): near-black navy backdrop,
+// violet primary, cyan secondary and the orange Aether accent as tertiary —
+// so every screen (settings, editors, dialogs) shares the main page's look.
 private val DarkColor = darkColorScheme(
-    primary = Color(0xFF38BDF8), // Aurora Cyan (matches the app's own launcher icon)
-    onPrimary = Color(0xFF04121F), // Near-Black Navy
-    primaryContainer = Color(0xFF13314A), // Deep Ocean Blue
-    onPrimaryContainer = Color(0xFFBFE4FB), // Pale Sky Blue
-    secondary = Color(0xFF8B7CF6), // Aurora Violet
-    onSecondary = Color(0xFF1A1330), // Deep Indigo
-    secondaryContainer = Color(0xFF2A2150), // Indigo
-    onSecondaryContainer = Color(0xFFE3DBFF), // Pale Violet
-    tertiary = Color(0xFFF4B740), // Refined Gold (kept as a small nod to "Narcis" — used only for Pro/rating accents)
-    onTertiary = Color(0xFF2B1C00), // Deep Brown
-    tertiaryContainer = Color(0xFF4A3300), // Brown
-    onTertiaryContainer = Color(0xFFFFE1A6), // Pale Gold
+    primary = Color(0xFF8B5CF6), // Narcic Violet
+    onPrimary = Color(0xFF0B1220), // Near-Black Navy
+    primaryContainer = Color(0xFF2A1D52), // Deep Indigo
+    onPrimaryContainer = Color(0xFFE9DEFF), // Pale Violet
+    secondary = Color(0xFF22D3EE), // Engine Cyan
+    onSecondary = Color(0xFF062028), // Deep Teal
+    secondaryContainer = Color(0xFF0E3A47), // Teal Container
+    onSecondaryContainer = Color(0xFFC9F6FF), // Pale Cyan
+    tertiary = Color(0xFFF97316), // Aether Orange
+    onTertiary = Color(0xFF2A1206), // Deep Brown
+    tertiaryContainer = Color(0xFF4A2408), // Brown
+    onTertiaryContainer = Color(0xFFFFDCC2), // Pale Orange
     error = Color(0xFFFB7185), // Rose
     errorContainer = Color(0xFF4A1123), // Deep Rose
     onError = Color(0xFF2B000A), // Near-Black Red
     onErrorContainer = Color(0xFFFFD9E1), // Pale Rose
-    background = Color(0xFF0A0E1A), // Deep Navy — exact match to the launcher icon
-    onBackground = Color(0xFFEAF0FA), // Cool Near-White
-    surface = Color(0xFF0A0E1A), // Deep Navy
-    onSurface = Color(0xFFEAF0FA), // Cool Near-White
-    surfaceVariant = Color(0xFF1B2436), // Elevated Blue-Gray
-    onSurfaceVariant = Color(0xFF9AA8C2), // Muted Slate Blue
-    outline = Color(0xFF2E3A52), // Slate Border
-    outlineVariant = Color(0xFF1E2739), // Subtle Slate Border
-    inverseSurface = Color(0xFFEAF0FA), // Cool Near-White
-    inverseOnSurface = Color(0xFF11182A), // Deep Navy
-    inversePrimary = Color(0xFF0B5E86), // Deep Azure
+    background = Color(0xFF070B14), // Nc.Bg — near-black navy
+    onBackground = Color(0xFFF1F5F9), // Nc.Txt
+    surface = Color(0xFF0D1321), // Card navy (mockup sheet color)
+    onSurface = Color(0xFFF1F5F9), // Nc.Txt
+    surfaceVariant = Color(0xFF151D2E), // Elevated blue-gray
+    onSurfaceVariant = Color(0xFF8B95A9), // Nc.Sub
+    outline = Color(0xFF232D40), // Slate border
+    outlineVariant = Color(0xFF131A2A), // Subtle border
+    inverseSurface = Color(0xFFF1F5F9), // Near-white
+    inverseOnSurface = Color(0xFF0D1321), // Card navy
+    inversePrimary = Color(0xFF6D4FD0), // Deep violet
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFF38BDF8), // Aurora Cyan
-    surfaceContainerLowest = Color(0xFF060911), // Almost Black Navy
-    surfaceContainerLow = Color(0xFF0D1220), // Deep Navy
-    surfaceContainer = Color(0xFF111827), // Card Navy
-    surfaceContainerHigh = Color(0xFF161F32), // Elevated Card Navy
-    surfaceContainerHighest = Color(0xFF1C273C), // Most Elevated Card Navy
+    surfaceTint = Color(0xFF8B5CF6), // Violet
+    surfaceContainerLowest = Color(0xFF05080F), // Almost black navy
+    surfaceContainerLow = Color(0xFF0B1120), // Deep navy
+    surfaceContainer = Color(0xFF10182A), // Glass card navy
+    surfaceContainerHigh = Color(0xFF141D33), // Elevated card navy
+    surfaceContainerHighest = Color(0xFF18233C), // Most elevated card navy
 )
 
 // Semantic Colors

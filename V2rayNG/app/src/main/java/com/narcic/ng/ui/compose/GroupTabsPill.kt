@@ -49,6 +49,7 @@ fun GroupTabs(
     selectedGroupId: String?,
     accent: Color,
     engineIsAwg: Boolean,
+    aetherOnly: Boolean = false,
     serverFlowFor: (String) -> StateFlow<List<ServersCache>>,
     enabled: Boolean = true,
     onSelect: (String) -> Unit,
@@ -71,6 +72,7 @@ fun GroupTabs(
                 selected = g.id == selectedGroupId,
                 accent = accent,
                 engineIsAwg = engineIsAwg,
+                aetherOnly = aetherOnly,
                 serverFlow = remember(g.id) { serverFlowFor(g.id) },
                 enabled = enabled,
                 onClick = { onSelect(g.id) },
@@ -85,15 +87,18 @@ private fun GroupTabChip(
     selected: Boolean,
     accent: Color,
     engineIsAwg: Boolean,
+    aetherOnly: Boolean = false,
     serverFlow: StateFlow<List<ServersCache>>,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
     val servers by serverFlow.collectAsStateWithLifecycle()
-    val count = remember(servers, engineIsAwg) {
+    val count = remember(servers, engineIsAwg, aetherOnly) {
         servers.count { s ->
-            val t = s.profile.configType
-            (t == EConfigType.WIREGUARD || t == EConfigType.AMNEZIAWG) == engineIsAwg
+            when {
+                aetherOnly -> s.profile.configType == EConfigType.AETHER
+                else -> (s.profile.configType == EConfigType.WIREGUARD || s.profile.configType == EConfigType.AMNEZIAWG) == engineIsAwg
+            }
         }
     }
     val isManual = group.id == AppConfig.DEFAULT_SUBSCRIPTION_ID || group.id.isEmpty()
