@@ -87,7 +87,7 @@ fun ConnectHero(
 
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
 
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(230.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(186.dp)) {
 
             // ── outward double ripple, only while actually connected ──
             if (isRunning) repeat(2) { idx ->
@@ -100,7 +100,7 @@ fun ConnectHero(
                 )
                 Box(
                     Modifier
-                        .size(202.dp)
+                        .size(172.dp)
                         .graphicsLayer {
                             val s = 0.62f + p * 0.83f
                             scaleX = s; scaleY = s
@@ -125,7 +125,7 @@ fun ConnectHero(
                 )
                 Box(
                     Modifier
-                        .size(210.dp)
+                        .size(180.dp)
                         .graphicsLayer { scaleX = glow; scaleY = glow; alpha = glowAlpha }
                         .drawBehind {
                             drawCircle(
@@ -145,14 +145,14 @@ fun ConnectHero(
             )
             Box(
                 Modifier
-                    .size(198.dp)
+                    .size(166.dp)
                     .graphicsLayer { rotationZ = ringAngle }
                     .drawBehind {
                         drawCircle(
                             brush = Brush.sweepGradient(
                                 listOf(Color.Transparent, accent2.copy(alpha = .9f), accent, Color.Transparent)
                             ),
-                            style = Stroke(3.5.dp.toPx()),
+                            style = Stroke(3.dp.toPx()),
                             alpha = if (isConnecting || isRunning) 1f else 0.3f,
                         )
                     }
@@ -168,7 +168,7 @@ fun ConnectHero(
                 )
                 Box(
                     Modifier
-                        .size(216.dp)
+                        .size(184.dp)
                         .graphicsLayer { rotationZ = sweep }
                         .drawBehind {
                             drawArc(
@@ -176,7 +176,7 @@ fun ConnectHero(
                                     listOf(Color.Transparent, accent2, Color.White, Color.Transparent)
                                 ),
                                 startAngle = 0f, sweepAngle = 130f, useCenter = false,
-                                style = Stroke(4.dp.toPx(), cap = StrokeCap.Round),
+                                style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round),
                             )
                         }
                 )
@@ -190,7 +190,7 @@ fun ConnectHero(
                 )
                 Box(
                     Modifier
-                        .size(216.dp)
+                        .size(184.dp)
                         .graphicsLayer { rotationZ = orbitA }
                         .drawBehind {
                             drawArc(
@@ -204,7 +204,7 @@ fun ConnectHero(
                 )
                 Box(
                     Modifier
-                        .size(228.dp)
+                        .size(194.dp)
                         .graphicsLayer { rotationZ = orbitB }
                         .drawBehind {
                             drawArc(
@@ -235,7 +235,7 @@ fun ConnectHero(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(158.dp)
+                    .size(122.dp)
                     .graphicsLayer { scaleX = btnScale; scaleY = btnScale }
                     .clip(CircleShape)
                     .background(Brush.verticalGradient(btnColors))
@@ -252,21 +252,21 @@ fun ConnectHero(
                     .clickable(interactionSource = interaction, indication = null, onClick = onToggle)
             ) {
                 if (isConnecting) {
-                    GooLoader(size = 96.dp, color = Color.White)
+                    GooLoader(size = 72.dp, color = Color.White)
                 } else {
                     Icon(
                         Icons.Filled.PowerSettingsNew, null, tint = Color.White,
-                        modifier = Modifier.size(58.dp)
+                        modifier = Modifier.size(44.dp)
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             timeText,
             color = if (isRunning) txtMain else txtSub,
-            fontSize = if (isRunning) 16.sp else 15.sp,
+            fontSize = if (isRunning) 15.sp else 14.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
@@ -274,11 +274,11 @@ fun ConnectHero(
             color = statusColor,
             fontSize = 12.5.sp,
             fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 2.dp)
         )
 
         if (isRunning) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
@@ -287,7 +287,7 @@ fun ConnectHero(
                     .background(Color.White.copy(alpha = if (isDark) .06f else .9f))
                     .border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(50))
                     .clickable(onClick = onCheckConnection)
-                    .padding(horizontal = 18.dp, vertical = 9.dp)
+                    .padding(horizontal = 15.dp, vertical = 7.dp)
             ) {
                 Icon(Icons.Outlined.NetworkCheck, null, tint = accent, modifier = Modifier.size(14.dp))
                 Text(

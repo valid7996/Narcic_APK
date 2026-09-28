@@ -27,6 +27,7 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -39,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.narcic.ng.R
@@ -58,7 +61,6 @@ import com.narcic.ng.ui.compose.GroupTabs
 import com.narcic.ng.ui.compose.LocalDarkTheme
 import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.compose.QRCodeDialog
-import com.narcic.ng.ui.compose.StatusPill
 import com.narcic.ng.ui.compose.accentFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -382,17 +384,20 @@ fun MainScreen(
                         onMoreClick = { showMoreSheet = true },
                     )
                     // Camera-style corner switch: vertical (top→bottom) and
-                    // pinned to the left edge, per the redesign spec.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        MainEngineSwitch(
-                            selectedTab = selectedTab,
-                            onSelect = { selectedTab = it },
-                        )
+                    // pinned to the physical LEFT edge regardless of the
+                    // device's layout direction.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 2.dp, bottom = 2.dp)
+                        ) {
+                            MainEngineSwitch(
+                                selectedTab = selectedTab,
+                                onSelect = { selectedTab = it },
+                                modifier = Modifier.align(Alignment.CenterStart),
+                            )
+                        }
                     }
                 }
             },
@@ -403,15 +408,7 @@ fun MainScreen(
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
             ) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    StatusPill(
-                        isRunning = isRunning,
-                        isConnecting = isConnectingLocal,
-                        engineLabel = engineLabel,
-                    )
-                }
-
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(2.dp))
 
                 ConnectHero(
                     isRunning = isRunning,
