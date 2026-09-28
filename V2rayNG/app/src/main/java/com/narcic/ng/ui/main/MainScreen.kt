@@ -383,14 +383,13 @@ fun MainScreen(
                         onSettingsClick = { onNavigate("settings") },
                         onMoreClick = { showMoreSheet = true },
                     )
-                    // Camera-style corner switch: vertical (top→bottom) and
-                    // pinned to the physical LEFT edge regardless of the
-                    // device's layout direction.
+                    // Compact camera-style mode selector: a 34dp horizontal
+                    // strip pinned to the physical LEFT edge.
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         Box(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, top = 2.dp, bottom = 2.dp)
+                                .padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
                         ) {
                             MainEngineSwitch(
                                 selectedTab = selectedTab,

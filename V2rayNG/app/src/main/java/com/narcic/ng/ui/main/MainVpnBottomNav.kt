@@ -216,59 +216,58 @@ fun MainEngineSwitch(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Vertical stack (top → bottom), per the redesign spec.
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    // Compact horizontal strip (camera mode-selector style): three 34dp
+    // icon-only circles — V (وی‌تو‌ری), cloud (امنزیا), @ (اتر). The selected
+    // circle rings with its engine accent; the active engine's name is
+    // already shown by the hero status and the dashboard, so no labels here.
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
     ) {
         EngineSwitchCircle(
-            id = "v2", label = "وی‌تو‌ری", accent = Nc.V2Accent,
-            selected = selectedTab == "v2", onClick = { onSelect("v2") },
-        ) { tint -> V2RayMark(tint = tint, size = 19.dp) }
+            accent = Nc.V2Accent,
+            selected = selectedTab == "v2",
+            contentDescription = "وی‌تو‌ری",
+            onClick = { onSelect("v2") },
+        ) { tint -> V2RayMark(tint = tint, size = 16.dp) }
         EngineSwitchCircle(
-            id = "awg", label = "امنزیا", accent = Nc.AwgAccent,
-            selected = selectedTab == "awg", onClick = { onSelect("awg") },
-        ) { tint -> Icon(Icons.Rounded.Cloud, null, tint = tint, modifier = Modifier.size(20.dp)) }
+            accent = Nc.AwgAccent,
+            selected = selectedTab == "awg",
+            contentDescription = "امنزیا",
+            onClick = { onSelect("awg") },
+        ) { tint -> Icon(Icons.Rounded.Cloud, null, tint = tint, modifier = Modifier.size(17.dp)) }
         EngineSwitchCircle(
-            id = "ae", label = "اتر", accent = Nc.BadgeAether,
-            selected = selectedTab == "ae", onClick = { onSelect("ae") },
-        ) { tint -> Icon(Icons.Rounded.AlternateEmail, null, tint = tint, modifier = Modifier.size(19.dp)) }
+            accent = Nc.BadgeAether,
+            selected = selectedTab == "ae",
+            contentDescription = "اتر",
+            onClick = { onSelect("ae") },
+        ) { tint -> Icon(Icons.Rounded.AlternateEmail, null, tint = tint, modifier = Modifier.size(16.dp)) }
     }
 }
 
 @Composable
 private fun EngineSwitchCircle(
-    id: String,
-    label: String,
     accent: Color,
     selected: Boolean,
+    contentDescription: String,
     onClick: () -> Unit,
     icon: @Composable (Color) -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(if (selected) accent.copy(alpha = .16f) else Color.White.copy(alpha = .05f))
-                .border(
-                    if (selected) 1.6.dp else 1.dp,
-                    if (selected) accent else Color.White.copy(alpha = .10f),
-                    CircleShape
-                )
-                .clickable(onClick = onClick)
-        ) {
-            icon(if (selected) accent else Nc.Sub)
-        }
-        Spacer(Modifier.height(3.dp))
-        Text(
-            label,
-            color = if (selected) accent else Nc.Sub,
-            fontSize = 8.5.sp,
-            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
-        )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (selected) accent.copy(alpha = .18f) else Color.White.copy(alpha = .05f))
+            .border(
+                if (selected) 1.5.dp else 1.dp,
+                if (selected) accent else Color.White.copy(alpha = .10f),
+                CircleShape
+            )
+            .clickable(onClick = onClick)
+    ) {
+        icon(if (selected) accent else Nc.Sub)
     }
 }
 
