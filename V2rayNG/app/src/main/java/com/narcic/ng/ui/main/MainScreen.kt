@@ -158,6 +158,13 @@ fun MainScreen(
         else -> "V2Ray"
     }
 
+    // اتر: the page owns ONE implicit profile that the quick-setup dashboard
+    // edits; the connect button targets it directly — the user never has to
+    // select a config from a list (the list is hidden on this page).
+    var aeGuidState by remember(aetherTab) {
+        mutableStateOf(if (aetherTab) DefaultConfigSource.ensureImplicitAetherProfile() else null)
+    }
+
     // ---- Strict per-page subscription separation ------------------------
     // A subscription group shows only on the page whose engine it actually
     // carries, decided by the configs inside it (not by hard-coded names):
@@ -440,8 +447,22 @@ fun MainScreen(
                             }
                             else -> {
                                 isConnectingLocal = true
-                                if (uiState.autoConnection) onAction(MainAction.AutoConnect)
-                                else onAction(MainAction.ToggleService)
+                                if (aetherTab) {
+                                    // Connect the page's own Aether profile:
+                                    // provision it if needed and select it so
+                                    // ToggleService starts the right tunnel.
+                                    val guid = aeGuidState
+                                        ?: DefaultConfigSource.ensureImplicitAetherProfile()
+                                            ?.also { aeGuidState = it }
+                                    if (guid != null && selectedGuid != guid) {
+                                        onAction(MainAction.SelectServer(guid))
+                                    }
+                                    onAction(MainAction.ToggleService)
+                                } else if (uiState.autoConnection) {
+                                    onAction(MainAction.AutoConnect)
+                                } else {
+                                    onAction(MainAction.ToggleService)
+                                }
                             }
                         }
                     },
@@ -497,10 +518,7 @@ fun MainScreen(
                 // provisions one Aether profile (idempotent — never a
                 // duplicate), so the user never has to "add a file" first.
                 if (aetherTab && !isRunning) {
-                    var aeGuid by remember { mutableStateOf(DefaultConfigSource.ensureImplicitAetherProfile()) }
-                    LaunchedEffect(aetherTab) {
-                        aeGuid = DefaultConfigSource.ensureImplicitAetherProfile()
-                    }
+                    val aeGuid = aeGuidState
                     if (aeGuid == null) {
                         Text(
                             "در حال آماده‌سازی کانفیگ Aether…",
@@ -509,13 +527,12 @@ fun MainScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                         )
                     } else {
-                        val resolvedGuid = aeGuid ?: ""
                         AetherQuickSetupCard(
-                            guid = resolvedGuid,
+                            guid = aeGuid,
                             isBlocked = isConnectingLocal,
                             onOpenEditor = {
-                                MmkvManager.decodeServerConfig(resolvedGuid)?.let {
-                                    onAction(MainAction.EditServer(resolvedGuid, it))
+                                MmkvManager.decodeServerConfig(aeGuid)?.let {
+                                    onAction(MainAction.EditServer(aeGuid, it))
                                 }
                             },
                             modifier = Modifier.padding(top = 6.dp),

@@ -331,18 +331,29 @@ fun AetherQuickSetupCard(
 
         // ════ کادر ۳: اتصال ════
         SectionLabel("۳ · اتصال", txtSub)
-        val autoMode = if (twoHops) outer.isBlank() else (address.isBlank() || port.isBlank())
+        // Connection mode is an explicit, persisted choice (per profile) —
+        // NOT derived from "is the endpoint blank": that deadlocked the
+        // دستی chip, since its fields only exist in manual mode.
+        val manualKey = "cache_aether_manual_$guid"
+        var manualMode by remember(guid) {
+            mutableStateOf(MmkvManager.decodeSettingsString(manualKey) == "1")
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-            ChoiceChip("اتصال خودکار", autoMode, Nc.BadgeAether, Modifier.weight(1f)) {
+            ChoiceChip("اتصال خودکار", !manualMode, Nc.BadgeAether, Modifier.weight(1f)) {
+                manualMode = false
+                MmkvManager.encodeSettings(manualKey, "0")
                 mutate { p ->
                     p.server = ""; p.serverPort = ""
                     p.aetherWiwOuter = ""; p.aetherWiwInner = ""
                 }
                 log("حالت خودکار: اندپوینت هنگام اتصال اسکن می‌شود")
             }
-            ChoiceChip("اتصال دستی", !autoMode, Nc.BadgeAether, Modifier.weight(1f)) { /* fields appear below */ }
+            ChoiceChip("اتصال دستی", manualMode, Nc.BadgeAether, Modifier.weight(1f)) {
+                manualMode = true
+                MmkvManager.encodeSettings(manualKey, "1")
+            }
         }
-        if (autoMode) {
+        if (!manualMode) {
             Text(
                 "اندپوینت به‌صورت خودکار اسکن و اتصال برقرار می‌شود (تا ۱۲۰ ثانیه) — پیشرفت واقعی هسته در کادر ۴ گزارش می‌شود:",
                 color = txtSub, fontSize = 9.5.sp, lineHeight = 15.sp,
