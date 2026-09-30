@@ -494,6 +494,7 @@ object AetherCoreManager {
     @Synchronized
     fun start(context: Context, core: AetherCore, afterProbes: Boolean = false, onExit: () -> Unit) {
         stop()
+        clearSessionLog()
         val appContext = context.applicationContext
         var logLevel = coreLogLevel(MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL))
         // The ready word is an info line; a quieter setting must not leave a Psiphon session waiting for it.
@@ -585,10 +586,26 @@ object AetherCoreManager {
         false
     }
 
+    // ── session log ring: real output lines of the live core, relayed by
+    // [relay] so dashboards can show the actual connection progress (finding
+    // an endpoint, carriers coming up, listening on the SOCKS port). ──
+    private const val SESSION_LOG_CAPACITY = 120
+    private val sessionLog = ArrayDeque<String>()
+    private val sessionLogLock = Any()
+
+    fun sessionLogSnapshot(): List<String> =
+        synchronized(sessionLogLock) { sessionLog.toList() }
+
+    fun clearSessionLog() = synchronized(sessionLogLock) { sessionLog.clear() }
+
     internal fun relay(line: String, source: String) {
         val text = line.trim()
         if (text.isEmpty()) return
         val message = "[$source] $text"
+        synchronized(sessionLogLock) {
+            sessionLog.addLast(outputMessage(text))
+            while (sessionLog.size > SESSION_LOG_CAPACITY) sessionLog.removeFirst()
+        }
         when (outputPriority(text)) {
             Log.ERROR -> LogUtil.e(AppConfig.TAG, message)
             Log.WARN -> LogUtil.w(AppConfig.TAG, message)

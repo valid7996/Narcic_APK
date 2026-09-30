@@ -17,15 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,11 +36,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.AetherProtocol
 import com.narcic.ng.handler.MmkvManager
@@ -49,40 +52,38 @@ import com.narcic.ng.ui.compose.Nc
 import com.narcic.ng.ui.server.AETHER_EXIT_COUNTRIES
 import com.narcic.ng.ui.server.AetherEditorRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The 4-box quick-setup dashboard of the اتر page (3-page redesign):
+ * The 4-box quick-setup dashboard of the اتر page — and it IS the config.
  *
- *   ┌ کادر ۱: انتخاب مسیر ────────────────────────────┐
+ *   ┌ کادر ۱: انتخاب مسیر ──────────────────────────────┐
  *   │ وایرگارد · WARP-in-WARP · MASQUE · فقط سایفون · فقط تور │
- *   └─────────────────────────────────────────────────┘
- *   ┌ کادر ۲: حمل‌ونقل (زنجیره) ──────────────────────┐
- *   │ wg/wiw/masque  → سایفون ✓ تور ✓ (+ تنظیمات هرکدام) │
- *   │ فقط سایفون      → فقط تنظیمات سایفون              │
- *   │ فقط تور         → فقط تنظیمات تور                 │
- *   └─────────────────────────────────────────────────┘
- *   ┌ کادر ۳: اتصال ──────────────────────────────────┐
- *   │ خودکار (اسکن خودکار اندپوینت هنگام اتصال)         │
- *   │ دستی  → آدرس/پورت + اسکن اندپوینت + کلید جدید WARP │
- *   │         + scan mode · obfuscation · ip version     │
- *   └─────────────────────────────────────────────────┘
- *   ┌ کادر ۴: لاگ ────────────────────────────────────┐
+ *   └───────────────────────────────────────────────────┘
+ *   ┌ کادر ۲: زنجیره ──────────────────────────────────┐
+ *   │ مسیر warp     → سایفون ✓ تور ✓ (+ تنظیمات هرکدام)   │
+ *   │ فقط سایفون    → فقط تنظیمات سایفون                  │
+ *   │ فقط تور       → فقط تنظیمات تور                     │
+ *   └───────────────────────────────────────────────────┘
+ *   ┌ کادر ۳: اتصال ───────────────────────────────────┐
+ *   │ خودکار (اسکن واقعی هنگام اتصال — لاگ زنده)          │
+ *   │ دستی  → آدرس/پورت + اسکن + کلید جدید + scan/obf/ip  │
+ *   └───────────────────────────────────────────────────┘
+ *   ┌ کادر ۴: لاگ ─────────────────────────────────────┘
  *
- * Every change is written straight through to the selected Aether profile
- * in MMKV (decode → mutate → encode) — the same storage the connect flow
- * reads, so no extra "save" step is needed. Scanning / key renewal reuse
- * the exact same AetherEditorRepository paths the full editor uses, and are
- * disabled while a tunnel is up. When the user connects, MainScreen hides
- * this whole dashboard and the download/upload dashboard takes over.
+ * Single source of truth: the backing profile in MMKV. Every value shown
+ * here is decoded straight from storage and every change is written straight
+ * back (decode → mutate → encode → re-decode), so the dashboard, the full
+ * editor and the connect flow always agree. Returning to the page (or the
+ * app) re-decodes, which is why settings survive; edits made in the full
+ * editor appear here on resume.
  */
 @Composable
 fun AetherQuickSetupCard(
-    guid: String?,
-    profile: ProfileItem?,
+    guid: String,
     isBlocked: Boolean,
-    onAddNew: () -> Unit,
     onOpenEditor: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -95,6 +96,19 @@ fun AetherQuickSetupCard(
     val scope = rememberCoroutineScope()
     val repo = remember { AetherEditorRepository(context) }
 
+    // Revision counter: bumped after every write and on lifecycle resume so
+    // the profile below re-decodes from MMKV (single source of truth).
+    var rev by remember { mutableIntStateOf(0) }
+    val profile = remember(guid, rev) { MmkvManager.decodeServerConfig(guid) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, guid) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) rev++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val logLines = remember { mutableStateListOf<String>() }
     var busy by remember { mutableStateOf(false) }
     fun log(line: String) {
@@ -102,62 +116,40 @@ fun AetherQuickSetupCard(
         if (logLines.size > 60) logLines.removeRange(0, logLines.size - 60)
     }
 
-    if (profile == null || guid == null) {
-        // No Aether profile yet — the page only offers creating one.
-        Column(
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(cardBg)
-                .border(1.dp, stroke, RoundedCornerShape(20.dp))
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text("هنوز کانفیگ Aether ندارید", color = txtMain, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "یک کانفیگ بسازید تا داشبورد راه‌اندازی سریع همین‌جا ظاهر شود",
-                color = txtSub, fontSize = 10.5.sp,
-            )
-            Spacer(Modifier.height(12.dp))
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Nc.BadgeAether)
-                    .clickable(onClick = onAddNew)
-                    .padding(horizontal = 18.dp, vertical = 9.dp)
-            ) {
-                Text("+ افزودن کانفیگ Aether", color = Color(0xFF0B1220), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold)
-            }
-        }
+    if (profile == null) {
+        Text(
+            "در حال آماده‌سازی کانفیگ Aether…",
+            color = txtSub, fontSize = 10.5.sp,
+            modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        )
         return
     }
-
-    // ── local mirrors of the profile fields, seeded once per profile ──
-    var protocol by remember(guid) { mutableStateOf(profile.aetherProtocol ?: "masque") }
-    var psiphon by remember(guid) { mutableStateOf(profile.aetherPsiphon ?: "off") }
-    var tor by remember(guid) { mutableStateOf(profile.aetherTor ?: "off") }
-    var psiphonMode by remember(guid) { mutableStateOf(profile.aetherPsiphonMode ?: "auto") }
-    var region by remember(guid) { mutableStateOf(profile.aetherPsiphonRegion ?: "") }
-    var cdnIps by remember(guid) { mutableStateOf(profile.aetherPsiphonCdnIps ?: "") }
-    var torBridges by remember(guid) { mutableStateOf(profile.aetherTorBridges ?: "auto") }
-    var torRelays by remember(guid) { mutableStateOf(profile.aetherTorRelays ?: "auto") }
-    var bridgeLines by remember(guid) { mutableStateOf(profile.aetherTorBridgeLines ?: "") }
-    var scanMode by remember(guid) { mutableStateOf(profile.aetherScanMode ?: "balanced") }
-    var obfuscation by remember(guid) { mutableStateOf(profile.aetherObfuscation ?: "auto") }
-    var ipVersion by remember(guid) { mutableStateOf(profile.aetherIpVersion ?: "v4") }
-    var address by remember(guid) { mutableStateOf(profile.server ?: "") }
-    var port by remember(guid) { mutableStateOf(profile.serverPort ?: "") }
-    var outer by remember(guid) { mutableStateOf(profile.aetherWiwOuter ?: "") }
-    var inner by remember(guid) { mutableStateOf(profile.aetherWiwInner ?: "") }
 
     fun mutate(block: (ProfileItem) -> Unit) {
         MmkvManager.decodeServerConfig(guid)?.let { p ->
             block(p)
             MmkvManager.encodeServerConfig(guid, p)
         }
+        rev++
     }
+
+    // All values read straight from the freshly decoded profile.
+    val protocol = profile.aetherProtocol ?: "masque"
+    val psiphon = profile.aetherPsiphon ?: "off"
+    val tor = profile.aetherTor ?: "off"
+    val psiphonMode = profile.aetherPsiphonMode ?: "auto"
+    val region = profile.aetherPsiphonRegion ?: ""
+    val cdnIps = profile.aetherPsiphonCdnIps ?: ""
+    val torBridges = profile.aetherTorBridges ?: "auto"
+    val torRelays = profile.aetherTorRelays ?: "auto"
+    val bridgeLines = profile.aetherTorBridgeLines ?: ""
+    val scanMode = profile.aetherScanMode ?: "balanced"
+    val obfuscation = profile.aetherObfuscation ?: "auto"
+    val ipVersion = profile.aetherIpVersion ?: "v4"
+    val address = profile.server ?: ""
+    val port = profile.serverPort ?: ""
+    val outer = profile.aetherWiwOuter ?: ""
+    val inner = profile.aetherWiwInner ?: ""
 
     val twoHops = protocol == "gool" || protocol == "mim"
     val onlyPsiphon = psiphon == "only"
@@ -170,22 +162,6 @@ fun AetherQuickSetupCard(
         else -> "masque"
     }
 
-    fun pickBox1(id: String) {
-        val (proto, psi, tr) = when (id) {
-            "wg" -> Triple("wg", if (psiphon == "only") "off" else psiphon, if (tor == "only") "off" else tor)
-            "wiw" -> Triple("gool", if (psiphon == "only") "off" else psiphon, if (tor == "only") "off" else tor)
-            "p_only" -> Triple("masque", "only", "off")
-            "t_only" -> Triple("masque", "off", "only")
-            else -> Triple("masque", if (psiphon == "only") "off" else psiphon, if (tor == "only") "off" else tor)
-        }
-        protocol = proto; psiphon = psi; tor = tr
-        mutate {
-            it.aetherProtocol = proto
-            it.aetherPsiphon = psi
-            it.aetherTor = tr
-        }
-    }
-
     Column(
         modifier
             .fillMaxWidth()
@@ -195,7 +171,6 @@ fun AetherQuickSetupCard(
             .border(1.dp, stroke, RoundedCornerShape(20.dp))
             .padding(13.dp)
     ) {
-        // ── header ──
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("راه‌اندازی سریع Aether", color = txtMain, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.weight(1f))
@@ -217,47 +192,67 @@ fun AetherQuickSetupCard(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             options.take(3).forEach { (id, label) ->
-                ChoiceChip(label, box1 == id, Nc.BadgeAether, Modifier.weight(1f)) { pickBox1(id) }
+                ChoiceChip(label, box1 == id, Nc.BadgeAether, Modifier.weight(1f)) {
+                    mutate {
+                        it.aetherProtocol = when (id) {
+                            "wg" -> "wg"
+                            "wiw" -> "gool"
+                            else -> "masque"
+                        }
+                        // Leaving a solo mode must not leave it stuck on.
+                        if (it.aetherPsiphon == "only") it.aetherPsiphon = "off"
+                        if (it.aetherTor == "only") it.aetherTor = "off"
+                    }
+                }
             }
         }
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             options.drop(3).forEach { (id, label) ->
-                ChoiceChip(label, box1 == id, Nc.BadgeAether, Modifier.weight(1f)) { pickBox1(id) }
+                ChoiceChip(label, box1 == id, Nc.BadgeAether, Modifier.weight(1f)) {
+                    mutate {
+                        when (id) {
+                            "p_only" -> {
+                                it.aetherProtocol = "masque"
+                                it.aetherPsiphon = "only"
+                                it.aetherTor = "off"
+                            }
+                            else -> {
+                                it.aetherProtocol = "masque"
+                                it.aetherTor = "only"
+                                it.aetherPsiphon = "off"
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        // ════ کادر ۲: حمل‌ونقل ════
+        // ════ کادر ۲: زنجیره / تنظیمات حمل‌ونقل ════
         if (!onlyPsiphon && !onlyTor) {
             SectionLabel("۲ · زنجیره‌ی حمل‌ونقل", txtSub)
             ToggleRow("سایفون (زنجیره)", psiphon == "chain", Nc.BadgeAether, txtMain) { on ->
-                psiphon = if (on) "chain" else "off"
-                mutate { it.aetherPsiphon = psiphon }
+                mutate { it.aetherPsiphon = if (on) "chain" else "off" }
             }
             if (psiphon == "chain") {
                 SubField("Psiphon connection") {
                     MiniDropdown(
                         value = psiphonMode,
                         options = listOf("خودکار" to "auto", "فقط CDN" to "cdn", "فقط مستقیم" to "direct"),
-                    ) { psiphonMode = it; mutate { p -> p.aetherPsiphonMode = it } }
+                    ) { picked -> mutate { it.aetherPsiphonMode = picked } }
                 }
                 SubField("کشور خروجی") {
                     MiniDropdown(
-                        value = if (region.isBlank()) "خودکار (Auto)"
-                        else AETHER_EXIT_COUNTRIES.firstOrNull { it.second.equals(region.trim(), true) }?.first ?: "سفارشی…",
+                        value = region,
                         options = listOf("خودکار (Auto)" to "") + AETHER_EXIT_COUNTRIES.map { it.first to it.second },
-                    ) { picked ->
-                        region = AETHER_EXIT_COUNTRIES.firstOrNull { it.first == picked }?.second ?: ""
-                        mutate { p -> p.aetherPsiphonRegion = region }
-                    }
+                    ) { picked -> mutate { it.aetherPsiphonRegion = picked } }
                 }
                 SubField("CDN fronting (اختیاری)") {
-                    MiniTextField(cdnIps, "با کاما جدا کنید") { cdnIps = it; mutate { p -> p.aetherPsiphonCdnIps = it } }
+                    MiniTextField(cdnIps, "با کاما جدا کنید") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
                 }
             }
             ToggleRow("تور (زنجیره)", tor == "chain", Nc.BadgeAether, txtMain) { on ->
-                tor = if (on) "chain" else "off"
-                mutate { it.aetherTor = tor }
+                mutate { it.aetherTor = if (on) "chain" else "off" }
             }
             if (tor == "chain") {
                 SubField("Bridges") {
@@ -269,7 +264,7 @@ fun AetherQuickSetupCard(
                             "هرگز" to "never",
                             "پل‌های خودم" to "own",
                         ),
-                    ) { torBridges = it; mutate { p -> p.aetherTorBridges = it } }
+                    ) { picked -> mutate { it.aetherTorBridges = picked } }
                 }
                 SubField("Bridge sources") {
                     MiniDropdown(
@@ -279,11 +274,11 @@ fun AetherQuickSetupCard(
                             "فقط رله‌های عمومی" to "only",
                             "خاموش" to "off",
                         ),
-                    ) { torRelays = it; mutate { p -> p.aetherTorRelays = it } }
+                    ) { picked -> mutate { it.aetherTorRelays = picked } }
                 }
                 if (torBridges == "own") {
                     SubField("Bridge lines") {
-                        MiniTextField(bridgeLines, "یک پل در هر خط (torrc)") { bridgeLines = it; mutate { p -> p.aetherTorBridgeLines = it } }
+                        MiniTextField(bridgeLines, "یک پل در هر خط (torrc)") { picked -> mutate { it.aetherTorBridgeLines = picked } }
                     }
                 }
             }
@@ -293,20 +288,16 @@ fun AetherQuickSetupCard(
                 MiniDropdown(
                     value = psiphonMode,
                     options = listOf("خودکار" to "auto", "فقط CDN" to "cdn", "فقط مستقیم" to "direct"),
-                ) { psiphonMode = it; mutate { p -> p.aetherPsiphonMode = it } }
+                ) { picked -> mutate { it.aetherPsiphonMode = picked } }
             }
             SubField("کشور خروجی") {
                 MiniDropdown(
-                    value = if (region.isBlank()) "خودکار (Auto)"
-                    else AETHER_EXIT_COUNTRIES.firstOrNull { it.second.equals(region.trim(), true) }?.first ?: "سفارشی…",
+                    value = region,
                     options = listOf("خودکار (Auto)" to "") + AETHER_EXIT_COUNTRIES.map { it.first to it.second },
-                ) { picked ->
-                    region = AETHER_EXIT_COUNTRIES.firstOrNull { it.first == picked }?.second ?: ""
-                    mutate { p -> p.aetherPsiphonRegion = region }
-                }
+                ) { picked -> mutate { it.aetherPsiphonRegion = picked } }
             }
             SubField("CDN fronting (اختیاری)") {
-                MiniTextField(cdnIps, "با کاما جدا کنید") { cdnIps = it; mutate { p -> p.aetherPsiphonCdnIps = it } }
+                MiniTextField(cdnIps, "با کاما جدا کنید") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
             }
         } else {
             SectionLabel("۲ · تنظیمات تور (فقط تور)", txtSub)
@@ -319,7 +310,7 @@ fun AetherQuickSetupCard(
                         "هرگز" to "never",
                         "پل‌های خودم" to "own",
                     ),
-                ) { torBridges = it; mutate { p -> p.aetherTorBridges = it } }
+                ) { picked -> mutate { it.aetherTorBridges = picked } }
             }
             SubField("Bridge sources") {
                 MiniDropdown(
@@ -329,11 +320,11 @@ fun AetherQuickSetupCard(
                         "فقط رله‌های عمومی" to "only",
                         "خاموش" to "off",
                     ),
-                ) { torRelays = it; mutate { p -> p.aetherTorRelays = it } }
+                ) { picked -> mutate { it.aetherTorRelays = picked } }
             }
             if (torBridges == "own") {
                 SubField("Bridge lines") {
-                    MiniTextField(bridgeLines, "یک پل در هر خط (torrc)") { bridgeLines = it; mutate { p -> p.aetherTorBridgeLines = it } }
+                    MiniTextField(bridgeLines, "یک پل در هر خط (torrc)") { picked -> mutate { it.aetherTorBridgeLines = picked } }
                 }
             }
         }
@@ -343,30 +334,58 @@ fun AetherQuickSetupCard(
         val autoMode = if (twoHops) outer.isBlank() else (address.isBlank() || port.isBlank())
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             ChoiceChip("اتصال خودکار", autoMode, Nc.BadgeAether, Modifier.weight(1f)) {
-                address = ""; port = ""; outer = ""; inner = ""
                 mutate { p ->
                     p.server = ""; p.serverPort = ""
                     p.aetherWiwOuter = ""; p.aetherWiwInner = ""
                 }
                 log("حالت خودکار: اندپوینت هنگام اتصال اسکن می‌شود")
             }
-            ChoiceChip("اتصال دستی", !autoMode, Nc.BadgeAether, Modifier.weight(1f)) { /* fields appear */ }
+            ChoiceChip("اتصال دستی", !autoMode, Nc.BadgeAether, Modifier.weight(1f)) { /* fields appear below */ }
         }
         if (autoMode) {
             Text(
-                "اندپوینت به‌صورت خودکار اسکن و اتصال برقرار می‌شود (ممکن است تا ۱۲۰ ثانیه طول بکشد).",
+                "اندپوینت به‌صورت خودکار اسکن و اتصال برقرار می‌شود (تا ۱۲۰ ثانیه) — پیشرفت واقعی هسته در کادر ۴ گزارش می‌شود:",
                 color = txtSub, fontSize = 9.5.sp, lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 5.dp),
             )
+            if (isBlocked) {
+                // LIVE real core output while it hunts for an endpoint and
+                // brings the carriers up (from AetherCoreManager's session log).
+                var liveLines by remember { mutableStateOf(listOf<String>()) }
+                LaunchedEffect(isBlocked) {
+                    while (isBlocked) {
+                        liveLines = com.narcic.ng.core.AetherCoreManager.sessionLogSnapshot()
+                        delay(650)
+                    }
+                }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp)
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Color.Black.copy(alpha = .35f))
+                        .border(1.dp, stroke, RoundedCornerShape(11.dp))
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = if (liveLines.isEmpty()) "…" else liveLines.takeLast(10).joinToString("\n"),
+                        color = Color(0xFF9FB0C8),
+                        fontSize = 8.5.sp,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
         } else {
             if (twoHops) {
                 SubField("مسیر بیرونی / درونی") {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.weight(1f)) {
-                            MiniTextField(outer, "hop بیرونی") { outer = it; mutate { p -> p.aetherWiwOuter = it } }
+                            MiniTextField(outer, "hop بیرونی") { picked -> mutate { it.aetherWiwOuter = picked } }
                         }
                         Box(Modifier.weight(1f)) {
-                            MiniTextField(inner, "hop درونی") { inner = it; mutate { p -> p.aetherWiwInner = it } }
+                            MiniTextField(inner, "hop درونی") { picked -> mutate { it.aetherWiwInner = picked } }
                         }
                     }
                 }
@@ -374,10 +393,10 @@ fun AetherQuickSetupCard(
                 SubField("آدرس و پورت") {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.weight(2f)) {
-                            MiniTextField(address, "162.159.192.1") { address = it; mutate { p -> p.server = it } }
+                            MiniTextField(address, "162.159.192.1") { picked -> mutate { it.server = picked } }
                         }
                         Box(Modifier.weight(1f)) {
-                            MiniTextField(port, "2408") { port = it; mutate { p -> p.serverPort = it } }
+                            MiniTextField(port, "2408") { picked -> mutate { it.serverPort = picked } }
                         }
                     }
                 }
@@ -392,23 +411,25 @@ fun AetherQuickSetupCard(
                     busy = true
                     log("در حال اسکن برای یافتن سرور…")
                     scope.launch(Dispatchers.IO) {
-                        val result = repo.scan(profile) { line -> log(line) }
+                        val fresh = MmkvManager.decodeServerConfig(guid)
+                        val result = if (fresh != null) repo.scan(fresh) { line -> log(line) } else null
                         withContext(Dispatchers.Main) {
                             busy = false
                             if (result != null) {
-                                if (AetherProtocol.fromString(protocol).twoHops) {
-                                    outer = result.endpoint.toString()
-                                    inner = result.innerHop?.toString().orEmpty()
+                                val proto = fresh?.aetherProtocol ?: protocol
+                                if (AetherProtocol.fromString(proto).twoHops) {
+                                    val outerV = result.endpoint.toString()
+                                    val innerV = result.innerHop?.toString().orEmpty()
                                     mutate { p ->
-                                        p.aetherWiwOuter = outer
-                                        p.aetherWiwInner = inner
+                                        p.aetherWiwOuter = outerV
+                                        p.aetherWiwInner = innerV
                                     }
                                 } else {
-                                    address = result.endpoint.host
-                                    port = result.endpoint.port.toString()
+                                    val hostV = result.endpoint.host
+                                    val portV = result.endpoint.port.toString()
                                     mutate { p ->
-                                        p.server = address
-                                        p.serverPort = port
+                                        p.server = hostV
+                                        p.serverPort = portV
                                     }
                                 }
                                 log("پیدا شد: ${result.endpoint}")
@@ -427,7 +448,8 @@ fun AetherQuickSetupCard(
                     busy = true
                     log("در حال دریافت کلید جدید WARP…")
                     scope.launch(Dispatchers.IO) {
-                        val status = repo.renewIdentity(profile) { line -> log(line) }
+                        val fresh = MmkvManager.decodeServerConfig(guid)
+                        val status = if (fresh != null) repo.renewIdentity(fresh) { line -> log(line) } else null
                         withContext(Dispatchers.Main) {
                             busy = false
                             log(if (status != null) "کلید جدید WARP آماده است" else "ثبت کلید جدید ناموفق بود")
@@ -446,7 +468,7 @@ fun AetherQuickSetupCard(
                         "پنهانی" to "verified", "تضمینی" to "ironclad",
                     ),
                     label = "Scan mode",
-                ) { scanMode = it; mutate { p -> p.aetherScanMode = it } }
+                ) { picked -> mutate { it.aetherScanMode = picked } }
             }
             Box(Modifier.weight(1f)) {
                 MiniDropdown(
@@ -456,14 +478,14 @@ fun AetherQuickSetupCard(
                         "فایروال" to "firewall", "متعادل" to "balanced", "GFW" to "gfw", "تهاجمی" to "aggressive",
                     ),
                     label = "Obfuscation",
-                ) { obfuscation = it; mutate { p -> p.aetherObfuscation = it } }
+                ) { picked -> mutate { it.aetherObfuscation = picked } }
             }
             Box(Modifier.weight(1f)) {
                 MiniDropdown(
                     value = ipVersion,
                     options = listOf("IPv4" to "v4", "IPv6" to "v6", "هر دو" to "both"),
                     label = "IP",
-                ) { ipVersion = it; mutate { p -> p.aetherIpVersion = it } }
+                ) { picked -> mutate { it.aetherIpVersion = picked } }
             }
         }
 
@@ -480,7 +502,7 @@ fun AetherQuickSetupCard(
                 .padding(8.dp)
         ) {
             Text(
-                text = if (logLines.isEmpty()) "خالی — دکمه‌های اسکن/کلید اینجا گزارش می‌دهند" else logLines.joinToString("\n"),
+                text = if (logLines.isEmpty()) "خالی — دکمه‌های اسکن/کلید و اتصال خودکار اینجا گزارش می‌دهند" else logLines.joinToString("\n"),
                 color = Color(0xFF9FB0C8),
                 fontSize = 8.5.sp,
                 fontFamily = FontFamily.Monospace,
@@ -488,7 +510,7 @@ fun AetherQuickSetupCard(
         }
         if (isBlocked) {
             Text(
-                "⚠ تا زمان اتصال، اسکن و کلید جدید قفل هستند",
+                "⚠ اتصال در جریان است — تغییر مسیر و اسکن تا پایان قفل هستند",
                 color = txtSub, fontSize = 8.5.sp,
                 modifier = Modifier.padding(top = 5.dp),
             )
@@ -549,7 +571,10 @@ private fun ToggleRow(label: String, checked: Boolean, accent: Color, txtMain: C
     ) {
         Text(label, color = txtMain, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onToggle, colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = accent))
+        Switch(
+            checked = checked, onCheckedChange = onToggle,
+            colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = accent),
+        )
     }
 }
 
@@ -562,7 +587,6 @@ private fun SubField(label: String, content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MiniDropdown(
     value: String,
@@ -570,36 +594,48 @@ private fun MiniDropdown(
     label: String? = null,
     onPicked: (String) -> Unit,
 ) {
+    // Plain Box + DropdownMenu — deliberately NOT ExposedDropdownMenuBox:
+    // inside a verticalScroll parent the menu-box anchor swallows the first
+    // tap (felt as a "frozen" picker), while a plain popup always opens.
     var expanded by remember { mutableStateOf(false) }
-    val display = options.firstOrNull { it.second == value }?.first ?: value
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-    ) {
-        OutlinedTextField(
-            value = display,
-            onValueChange = {},
-            readOnly = true,
-            label = { if (label != null) Text(label, fontSize = 8.5.sp) },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Nc.Txt),
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            shape = RoundedCornerShape(10.dp),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            options.forEach { (labelOpt, valueOpt) ->
-                DropdownMenuItem(
-                    text = { Text(labelOpt, fontSize = 11.sp) },
-                    onClick = {
-                        onPicked(valueOpt)
-                        expanded = false
-                    },
+    val display = options.firstOrNull { it.second == value }?.first
+        ?: value.ifBlank { options.firstOrNull()?.first ?: "—" }
+    Column(Modifier.fillMaxWidth()) {
+        if (label != null) {
+            Text(label, color = Nc.Sub, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(2.dp))
+        }
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = .05f))
+                    .border(1.dp, Nc.Stroke, RoundedCornerShape(10.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    display, color = Nc.Txt, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
+                Text(if (expanded) "▴" else "▾", color = Nc.Sub, fontSize = 10.sp)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                options.forEach { (labelOpt, valueOpt) ->
+                    DropdownMenuItem(
+                        text = { Text(labelOpt, fontSize = 11.sp) },
+                        onClick = {
+                            onPicked(valueOpt)
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
     }
@@ -611,9 +647,15 @@ private fun MiniTextField(
     placeholder: String,
     onValue: (String) -> Unit,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValue,
+    // Local text mirror: keeps the cursor stable while every keystroke is
+    // written straight through to the profile.
+    var local by remember(value) { mutableStateOf(value) }
+    androidx.compose.material3.OutlinedTextField(
+        value = local,
+        onValueChange = {
+            local = it
+            onValue(it)
+        },
         placeholder = { Text(placeholder, fontSize = 9.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = Nc.Txt),
         modifier = Modifier.fillMaxWidth(),
@@ -635,9 +677,7 @@ private fun ActionButton(
         horizontalArrangement = Arrangement.Center,
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (enabled) accent.copy(alpha = .16f) else Color.White.copy(alpha = .04f)
-            )
+            .background(if (enabled) accent.copy(alpha = .16f) else Color.White.copy(alpha = .04f))
             .border(
                 1.dp,
                 if (enabled) accent.copy(alpha = .55f) else Color.White.copy(alpha = .08f),

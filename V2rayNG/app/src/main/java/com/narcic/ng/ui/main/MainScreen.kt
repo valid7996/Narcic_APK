@@ -474,41 +474,34 @@ fun MainScreen(
 
                 Spacer(Modifier.height(10.dp))
 
-                GroupTabs(
-                    groups = visibleGroups,
-                    selectedGroupId = uiState.selectedGroupId,
-                    accent = accentPair.main,
-                    engineIsAwg = engineIsAwg,
-                    aetherOnly = aetherTab,
-                    serverFlowFor = { id -> mainViewModel.serversForGroup(id) },
-                    enabled = !isRunning,
-                    onSelect = { id -> onAction(MainAction.SelectGroup(id)) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                )
+                // Group pills are meaningless on the اتر page (the quick-setup
+                // dashboard is the whole interface there).
+                if (!aetherTab) {
+                    GroupTabs(
+                        groups = visibleGroups,
+                        selectedGroupId = uiState.selectedGroupId,
+                        accent = accentPair.main,
+                        engineIsAwg = engineIsAwg,
+                        aetherOnly = aetherTab,
+                        serverFlowFor = { id -> mainViewModel.serversForGroup(id) },
+                        enabled = !isRunning,
+                        onSelect = { id -> onAction(MainAction.SelectGroup(id)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    )
+                }
 
                 // ── اتر: 4-box quick-setup dashboard ── shown only while
                 // DISCONNECTED; the moment the tunnel is up it hides and the
                 // download/upload dashboard above takes over (clutter-free).
                 // The dashboard IS the config: entering the page auto-
-                // provisions one Aether profile, so the user never has to
-                // "add a file" first — pick a path and hit connect.
+                // provisions one Aether profile (idempotent — never a
+                // duplicate), so the user never has to "add a file" first.
                 if (aetherTab && !isRunning) {
-                    val aeCache = remember(serversByGroup, selectedGuid) {
-                        val all = serversByGroup.values.flatten()
-                        all.find { it.guid == selectedGuid && it.profile.configType == EConfigType.AETHER }
-                            ?: all.firstOrNull { it.profile.configType == EConfigType.AETHER }
+                    var aeGuid by remember { mutableStateOf(DefaultConfigSource.ensureImplicitAetherProfile()) }
+                    LaunchedEffect(aetherTab) {
+                        aeGuid = DefaultConfigSource.ensureImplicitAetherProfile()
                     }
-                    var provisioning by remember { mutableStateOf(false) }
-                    LaunchedEffect(aetherTab, aeCache == null) {
-                        if (aeCache == null && !provisioning) {
-                            provisioning = true
-                            DefaultConfigSource.createImplicitAetherProfile()?.let { newGuid ->
-                                onAction(MainAction.RefreshGroups)
-                                onAction(MainAction.SelectServer(newGuid))
-                            }
-                        }
-                    }
-                    if (aeCache == null) {
+                    if (aeGuid == null) {
                         Text(
                             "در حال آماده‌سازی کانفیگ Aether…",
                             color = Nc.Sub,
@@ -516,45 +509,26 @@ fun MainScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                         )
                     } else {
-                    AetherQuickSetupCard(
-                        guid = aeCache.guid,
-                        profile = aeCache.profile,
-                        isBlocked = isConnectingLocal,
-                        onAddNew = { onAction(MainAction.ImportManually(EConfigType.AETHER.value)) },
-                        onOpenEditor = {
-                            onAction(MainAction.EditServer(aeCache.guid, aeCache.profile))
-                        },
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
+                        val resolvedGuid = aeGuid ?: ""
+                        AetherQuickSetupCard(
+                            guid = resolvedGuid,
+                            isBlocked = isConnectingLocal,
+                            onOpenEditor = {
+                                MmkvManager.decodeServerConfig(resolvedGuid)?.let {
+                                    onAction(MainAction.EditServer(resolvedGuid, it))
+                                }
+                            },
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
                     }
                 }
 
-                // Aether page guard: matches the Aether core's own rule —
-                // only one Aether profile can run, and scanning/renewing are
-                // locked while the session is alive (enforced in
-                // ServerAetherViewModel; this is just the heads-up text).
-                if (aetherTab && !isRunning) {
-                    Text(
-                        text = "⚠ فقط یک کانفیگ Aether در هر لحظه می‌تواند اجرا شود؛ هنگام اجرا، اسکن اندپوینت و تعویض کلید WARP قفل می‌شوند.",
-                        color = accentPair.main.copy(alpha = .9f),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                            .background(accentPair.main.copy(alpha = .08f))
-                            .border(
-                                1.dp,
-                                accentPair.main.copy(alpha = .35f),
-                                androidx.compose.foundation.shape.RoundedCornerShape(13.dp)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 9.dp)
-                    )
-                }
-
                 // ---- تست + لیست عمودی سرورها (فیلترشده روی گروه + موتور فعال) ----
-                // On the اتر page the server list hides while connected so the
-                // dashboard stays clean (the quick-setup card hides instead).
-                if (!(aetherTab && isRunning)) {
+                // On the اتر page the whole list (and its add/trash header)
+                // is replaced by the quick-setup dashboard — the dashboard
+                // itself manages the config, so there is nothing to add or
+                // bulk-delete and no duplicate card.
+                if (!aetherTab) {
                 MainServerListSection(
                     mainViewModel = mainViewModel,
                     groups = visibleGroups,

@@ -216,13 +216,19 @@ class MainActivity : HelperBaseComponentActivity() {
             return
         }
 
-        if (mainViewModel.uiState.value.isRunning) {
+        // The Xray/Aether core keeps running through the whole warm-up (an
+        // Aether profile scans for up to 120s before the tunnel carries
+        // traffic) — so a tap during that phase must STOP the half-started
+        // attempt, never fire a duplicate start. Proxy-only mode has no
+        // CoreVpnService.isServiceAlive either; the core check covers it.
+        val coreBusy = try {
+            com.narcic.ng.core.CoreServiceManager.isRunning()
+        } catch (_: Exception) {
+            false
+        }
+        if (mainViewModel.uiState.value.isRunning || coreBusy) {
             LauncherManager.stopService(this)
         } else {
-            // A tap while a start attempt is still settling (service alive but
-            // core not yet running) is a cancel, not a new start: send a hard
-            // stop so the half-started service is torn down instead of the
-            // user having to wait out the whole handshake again.
             if (CoreVpnService.isServiceAlive) {
                 LauncherManager.stopService(this)
                 return

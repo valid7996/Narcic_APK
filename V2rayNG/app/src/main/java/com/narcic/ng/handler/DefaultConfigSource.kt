@@ -136,12 +136,24 @@ object DefaultConfigSource {
      * The اتر page's quick-setup dashboard IS the config: opening that page
      * provisions one Aether profile automatically (in the پیش‌فرض اتر
      * group) so the user never has to "add a file" first — they just pick a
-     * path, choose auto/custom connection and hit connect.
+     * path, choose auto/custom connection and hit connect. Idempotent:
+     * returns the existing implicit profile instead of creating duplicates.
      *
-     * @return the new profile's guid, or null if creation failed.
+     * @return the profile's guid, or null if creation failed.
      */
-    fun createImplicitAetherProfile(): String? {
+    fun ensureImplicitAetherProfile(): String? {
         val groupId = perEngineDefaultGroupIdFor(com.narcic.ng.enums.EConfigType.AETHER)
+        // The implicit profile lives in the پیش‌فرض اتر group.
+        MmkvManager.decodeServerList(groupId).firstOrNull()?.let { return it }
+        // Never create a duplicate: reuse any Aether profile anywhere.
+        val groupIds = MmkvManager.decodeSubscriptions().map { it.guid } + ""
+        for (subid in groupIds.distinct()) {
+            for (guid in MmkvManager.decodeServerList(subid)) {
+                MmkvManager.decodeServerConfig(guid)?.takeIf {
+                    it.configType == com.narcic.ng.enums.EConfigType.AETHER
+                }?.let { return guid }
+            }
+        }
         val profile = com.narcic.ng.dto.entities.ProfileItem.create(
             com.narcic.ng.enums.EConfigType.AETHER
         ).apply {
