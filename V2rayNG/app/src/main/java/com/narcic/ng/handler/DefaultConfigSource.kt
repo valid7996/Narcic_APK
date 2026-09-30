@@ -131,4 +131,23 @@ object DefaultConfigSource {
         }
         MmkvManager.encodeSettings(KEY_MIGRATED_ENGINE_DEFAULTS, true)
     }
+
+    /**
+     * The اتر page's quick-setup dashboard IS the config: opening that page
+     * provisions one Aether profile automatically (in the پیش‌فرض اتر
+     * group) so the user never has to "add a file" first — they just pick a
+     * path, choose auto/custom connection and hit connect.
+     *
+     * @return the new profile's guid, or null if creation failed.
+     */
+    fun createImplicitAetherProfile(): String? {
+        val groupId = perEngineDefaultGroupIdFor(com.narcic.ng.enums.EConfigType.AETHER)
+        val profile = com.narcic.ng.dto.entities.ProfileItem.create(
+            com.narcic.ng.enums.EConfigType.AETHER
+        ).apply {
+            remarks = "Aether"
+            subscriptionId = groupId
+        }
+        return MmkvManager.encodeServerConfig("", profile).takeIf { it.isNotEmpty() }
+    }
 }

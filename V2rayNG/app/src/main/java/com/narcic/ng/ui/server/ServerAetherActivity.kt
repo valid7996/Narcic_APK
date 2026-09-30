@@ -694,7 +694,7 @@ private fun logColor(entry: AetherLogEntry): Color = when {
  * فارسی + ISO code), shown as a picker on the Aether editor's "Exit country"
  * field so the code never has to be typed by hand. Blank/خودکار = any country.
  */
-private val AETHER_EXIT_COUNTRIES: List<Pair<String, String>> = listOf(
+internal val AETHER_EXIT_COUNTRIES: List<Pair<String, String>> = listOf(
     "🇦🇹 اتریش (Austria)" to "AT",
     "🇦🇺 استرالیا (Australia)" to "AU",
     "🇧🇪 بلژیک (Belgium)" to "BE",
