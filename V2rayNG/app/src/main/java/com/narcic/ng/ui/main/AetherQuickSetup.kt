@@ -146,6 +146,11 @@ fun AetherQuickSetupCard(
     val scanMode = profile.aetherScanMode ?: "balanced"
     val obfuscation = profile.aetherObfuscation ?: "auto"
     val ipVersion = profile.aetherIpVersion ?: "v4"
+    val cdnSni = profile.aetherPsiphonCdnSni ?: ""
+    val dns = profile.aetherDns ?: ""
+    val exitLoc = profile.aetherExitLoc ?: ""
+    val listenPort = profile.aetherListenPort ?: "10819"
+    val ech = profile.aetherEch == true
     val address = profile.server ?: ""
     val port = profile.serverPort ?: ""
     val outer = profile.aetherWiwOuter ?: ""
@@ -231,10 +236,13 @@ fun AetherQuickSetupCard(
         // ════ کادر ۲: زنجیره / تنظیمات حمل‌ونقل ════
         if (!onlyPsiphon && !onlyTor) {
             SectionLabel("۲ · زنجیره‌ی حمل‌ونقل", txtSub)
-            ToggleRow("سایفون (زنجیره)", psiphon == "chain", Nc.BadgeAether, txtMain) { on ->
-                mutate { it.aetherPsiphon = if (on) "chain" else "off" }
-            }
-            if (psiphon == "chain") {
+            // Three-way: خاموش / WARP→سایفون / سایفون→WARP
+            CarrierSegment(
+                label = "سایفون", accent = Nc.BadgeAether, txtMain = txtMain,
+                value = psiphon, offLabel = "خاموش",
+                chainLabel = "WARP → سایفون", reverseLabel = "سایفون → WARP",
+            ) { picked -> mutate { it.aetherPsiphon = picked } }
+            if (psiphon != "off") {
                 SubField("Psiphon connection") {
                     MiniDropdown(
                         value = psiphonMode,
@@ -247,14 +255,26 @@ fun AetherQuickSetupCard(
                         options = listOf("خودکار (Auto)" to "") + AETHER_EXIT_COUNTRIES.map { it.first to it.second },
                     ) { picked -> mutate { it.aetherPsiphonRegion = picked } }
                 }
-                SubField("CDN fronting (اختیاری)") {
-                    MiniTextField(cdnIps, "با کاما جدا کنید") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
+                // CDN fronting feeds the fronted transports alone; the direct
+                // shape never uses it (same rule as the full editor).
+                if (psiphonMode != "direct") {
+                    SubField("CDN fronting IPs (اختیاری)") {
+                        MiniTextField(cdnIps, "با کاما جدا کنید؛ خالی = لیست داخلی") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
+                    }
+                    if (cdnIps.isNotBlank()) {
+                        SubField("CDN fronting server names") {
+                            MiniTextField(cdnSni, "نام سرورها با کاما") { picked -> mutate { it.aetherPsiphonCdnSni = picked } }
+                        }
+                    }
                 }
             }
-            ToggleRow("تور (زنجیره)", tor == "chain", Nc.BadgeAether, txtMain) { on ->
-                mutate { it.aetherTor = if (on) "chain" else "off" }
-            }
-            if (tor == "chain") {
+            Spacer(Modifier.height(4.dp))
+            CarrierSegment(
+                label = "تور", accent = Nc.BadgeAether, txtMain = txtMain,
+                value = tor, offLabel = "خاموش",
+                chainLabel = "WARP → تور", reverseLabel = "تور → WARP",
+            ) { picked -> mutate { it.aetherTor = picked } }
+            if (tor != "off") {
                 SubField("Bridges") {
                     MiniDropdown(
                         value = torBridges,
@@ -296,8 +316,15 @@ fun AetherQuickSetupCard(
                     options = listOf("خودکار (Auto)" to "") + AETHER_EXIT_COUNTRIES.map { it.first to it.second },
                 ) { picked -> mutate { it.aetherPsiphonRegion = picked } }
             }
-            SubField("CDN fronting (اختیاری)") {
-                MiniTextField(cdnIps, "با کاما جدا کنید") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
+            if (psiphonMode != "direct") {
+                SubField("CDN fronting IPs (اختیاری)") {
+                    MiniTextField(cdnIps, "با کاما جدا کنید؛ خالی = لیست داخلی") { picked -> mutate { it.aetherPsiphonCdnIps = picked } }
+                }
+                if (cdnIps.isNotBlank()) {
+                    SubField("CDN fronting server names") {
+                        MiniTextField(cdnSni, "نام سرورها با کاما") { picked -> mutate { it.aetherPsiphonCdnSni = picked } }
+                    }
+                }
             }
         } else {
             SectionLabel("۲ · تنظیمات تور (فقط تور)", txtSub)
@@ -500,6 +527,38 @@ fun AetherQuickSetupCard(
             }
         }
 
+        // ── تنظیمات پیشرفته (تاشو): DNS داخل تونل، کشور خروج، پورت گوش، ECH ──
+        var showAdvanced by remember(guid) { mutableStateOf(false) }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(11.dp))
+                .background(Color.White.copy(alpha = .04f))
+                .clickable { showAdvanced = !showAdvanced }
+                .padding(horizontal = 11.dp, vertical = 8.dp)
+        ) {
+            Text("تنظیمات پیشرفته", color = txtMain, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            Text(if (showAdvanced) "▴" else "▾", color = Nc.Sub, fontSize = 10.sp)
+        }
+        if (showAdvanced) {
+            SubField("DNS داخل تونل") {
+                MiniTextField(dns, "خالی = 1.1.1.1 و 1.0.0.1") { picked -> mutate { it.aetherDns = picked } }
+            }
+            SubField("Exit location") {
+                MiniTextField(exitLoc, "مثل DE,SE فقط این‌ها · !IR,RU این‌ها نه · خالی = همه") { picked -> mutate { it.aetherExitLoc = picked } }
+            }
+            SubField("Listen port") {
+                MiniTextField(listenPort, "10819") { picked -> mutate { it.aetherListenPort = picked } }
+            }
+            if (protocol == "masque") {
+                ToggleRowSwitch("Encrypted Client Hello (ECH)", ech, Nc.BadgeAether, txtMain) { on ->
+                    mutate { it.aetherEch = on }
+                }
+            }
+        }
+
         // ════ کادر ۴: لاگ ════
         SectionLabel("۴ · لاگ", txtSub)
         Box(
@@ -571,7 +630,7 @@ private fun ChoiceChip(
 }
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, accent: Color, txtMain: Color, onToggle: (Boolean) -> Unit) {
+private fun ToggleRowSwitch(label: String, checked: Boolean, accent: Color, txtMain: Color, onToggle: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -586,6 +645,27 @@ private fun ToggleRow(label: String, checked: Boolean, accent: Color, txtMain: C
             checked = checked, onCheckedChange = onToggle,
             colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = accent),
         )
+    }
+}
+
+@Composable
+private fun CarrierSegment(
+    label: String,
+    value: String,
+    accent: Color,
+    txtMain: Color,
+    offLabel: String,
+    chainLabel: String,
+    reverseLabel: String,
+    onPick: (String) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = txtMain, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            ChoiceChip(offLabel, value == "off", accent, Modifier.weight(1f)) { onPick("off") }
+            ChoiceChip(chainLabel, value == "chain", accent, Modifier.weight(1f)) { onPick("chain") }
+            ChoiceChip(reverseLabel, value == "reverse", accent, Modifier.weight(1f)) { onPick("reverse") }
+        }
     }
 }
 
