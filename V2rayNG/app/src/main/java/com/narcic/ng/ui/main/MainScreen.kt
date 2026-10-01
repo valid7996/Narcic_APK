@@ -38,12 +38,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -113,6 +115,7 @@ fun MainScreen(
     var showSubscriptions by remember { mutableStateOf(false) }
     var showAddSubscription by remember { mutableStateOf(false) }
     var showMoreSheet by remember { mutableStateOf(false) }
+    var showMapScreen by remember { mutableStateOf(false) }
 
     // Top-left drawer: "Import config" (link/clipboard/QR/local/manual) +
     // "Manage configs" (test/sort/export-all + bulk delete).
@@ -341,6 +344,8 @@ fun MainScreen(
     BackHandler(enabled = !drawerState.isOpen) { onMinimize() }
     // Registered after the root handler so an open "more" sheet wins back.
     BackHandler(enabled = showMoreSheet) { showMoreSheet = false }
+    // …and the full-screen map wins over everything.
+    BackHandler(enabled = showMapScreen) { showMapScreen = false }
 
     val isDark = LocalDarkTheme.current
     val backdrop = remember(isDark) {
@@ -495,16 +500,31 @@ fun MainScreen(
                     speedHistory = speedHistory,
                 )
 
-                // ── connection map: real-IP location → exit country ──
+                // ── دکمه‌ی نقشه (صفحه‌ی مستقل نقشه با زوم/جابجایی) ──
                 if (isRunning) {
-                    com.narcic.ng.ui.map.WorldMapCard(
-                        remoteCountryCode = uiState.remoteCountryCode,
-                        remoteCity = uiState.remoteCity,
-                        remoteIsp = uiState.remoteIsp,
-                        remoteIp = uiState.remoteIp,
-                        remoteCountryName = uiState.remoteCountryName,
-                        accent = accentPair.main,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                                .background(accentPair.main.copy(alpha = .14f))
+                                .border(
+                                    1.dp,
+                                    accentPair.main.copy(alpha = .45f),
+                                    androidx.compose.foundation.shape.RoundedCornerShape(999.dp)
+                                )
+                                .clickable { showMapScreen = true }
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Text("🗺", fontSize = 12.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text("نقشه", color = accentPair.main, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -601,6 +621,20 @@ fun MainScreen(
             message = uiState.awgConnectingMessage.ifBlank { "در حال اتصال، لطفاً صبر کنید..." },
             accent = accentPair.main,
         )
+
+        // ── full-screen map (نقشه): zoom/pan, real-IP & exit markers, details ──
+        if (showMapScreen) {
+            com.narcic.ng.ui.map.MapScreenOverlay(
+                remoteCountryCode = uiState.remoteCountryCode,
+                remoteCity = uiState.remoteCity,
+                remoteIsp = uiState.remoteIsp,
+                remoteIp = uiState.remoteIp,
+                remoteCountryName = uiState.remoteCountryName,
+                serverAddress = connectedServer?.profile?.server.orEmpty(),
+                accent = accentPair.main,
+                onClose = { showMapScreen = false },
+            )
+        }
 
         // ── "more" sheet: the entries that used to live in the 4-item
         // bottom nav (سابسکریپشن / آمار) plus the previously-unreachable

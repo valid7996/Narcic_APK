@@ -704,6 +704,88 @@ object CoreOutboundBuilder {
             }
         }
     }
+    /**
+     * Builds a wireguard outbound from an AmneziaWG profile's raw .conf text
+     * (best effort — the junk/obfuscation parameters are Amnezia-specific and
+     * are passed only if the paired Xray build supports them; standard WG
+     * servers accept this outbound as-is).
+     */
+    fun awgOutbound(profileItem: ProfileItem): OutboundBean? {
+        val conf = profileItem.awgConfigText ?: return null
+        val lines = conf.lines().map { it.trim() }
+        fun valueOf(key: String): String? = lines
+            .firstOrNull { it.startsWith("=", ignoreCase = true) }
+            ?.substringAfter('=')?.trim()?.takeIf { it.isNotEmpty() }
+
+        val outbound = createInitOutbound(EConfigType.WIREGUARD) ?: return null
+        outbound.settings?.let { wg ->
+            wg.secretKey = valueOf("PrivateKey")
+            val address = valueOf("Address")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+            if (!address.isNullOrEmpty()) wg.address = address
+            wg.mtu = valueOf("MTU")?.toIntOrNull()
+            wg.peers?.firstOrNull()?.let { peer ->
+                peer.publicKey = valueOf("PublicKey") ?: peer.publicKey
+                val endpoint = valueOf("Endpoint") ?: return null
+                peer.endpoint = if (endpoint.contains("://")) endpoint.substringAfter("://") else endpoint
+                peer.preSharedKey = valueOf("PresharedKey")
+            }
+        }
+        return outbound
+    }
+
+    fun injectCarrierProxy(configJson: String, carrierPort: Int): String {
+        return runCatching {
+            val root = JsonUtil.parseString(configJson) ?: return configJson
+            val outbounds = root.getAsJsonArray("outbounds")
+                ?: return configJson
+            val byTag = HashMap<String, JsonObject>()
+            for (element in outbounds) {
+                (element as? JsonObject)?.get("tag")?.takeIf { it.isJsonPrimitive }
+                    ?.let { byTag[it.asString] = element }
+            }
+
+            // Walk the dialerProxy chain from the first outbound to its root entry.
+            fun dialerTagOf(o: JsonObject): String? =
+                (o.getAsJsonObject("streamSettings")?.getAsJsonObject("sockopt"))
+                    ?.get("dialerProxy")?.takeIf { it.isJsonPrimitive }?.asString
+
+            var entry = outbounds.firstOrNull() as? JsonObject ?: return configJson
+            var steps = 0
+            while (steps++ < outbounds.size()) {
+                val next = dialerTagOf(entry)?.takeIf { it != "fragment" }?.let { byTag[it] } ?: break
+                entry = next
+            }
+
+            // Carrier SOCKS outbound.
+            val carrier = JsonObject().apply {
+                addProperty("protocol", "socks")
+                add(
+                    "settings", JsonObject().apply {
+                        add(
+                            "servers", JsonArray().apply {
+                                add(JsonObject().apply {
+                                    addProperty("address", "127.0.0.1")
+                                    addProperty("port", carrierPort)
+                                })
+                            }
+                        )
+                    }
+                )
+                addProperty("tag", "carrier")
+            }
+            outbounds.add(carrier)
+
+            // Route the entry outbound through the carrier.
+            val stream = entry.getAsJsonObject("streamSettings")
+                ?: JsonObject().also { entry.add("streamSettings", it) }
+            val sockopt = stream.getAsJsonObject("sockopt")
+                ?: JsonObject().also { stream.add("sockopt", it) }
+            sockopt.addProperty("dialerProxy", "carrier")
+
+            root.toString()
+        }.getOrDefault(configJson)
+    }
+
 }
 
 /**
@@ -716,55 +798,3 @@ object CoreOutboundBuilder {
  * @param configJson the inner profile's full Xray config JSON
  * @param carrierPort the local SOCKS port the carrier engine listens on
  */
-fun injectCarrierProxy(configJson: String, carrierPort: Int): String {
-    return runCatching {
-        val root = JsonUtil.parseString(configJson) ?: return configJson
-        val outbounds = root.getAsJsonArray("outbounds")
-            ?: return configJson
-        val byTag = HashMap<String, JsonObject>()
-        for (element in outbounds) {
-            (element as? JsonObject)?.get("tag")?.takeIf { it.isJsonPrimitive }
-                ?.let { byTag[it.asString] = element }
-        }
-
-        // Walk the dialerProxy chain from the first outbound to its root entry.
-        fun dialerTagOf(o: JsonObject): String? =
-            (o.getAsJsonObject("streamSettings")?.getAsJsonObject("sockopt"))
-                ?.get("dialerProxy")?.takeIf { it.isJsonPrimitive }?.asString
-
-        var entry = outbounds.firstOrNull() as? JsonObject ?: return configJson
-        var steps = 0
-        while (steps++ < outbounds.size()) {
-            val next = dialerTagOf(entry)?.takeIf { it != "fragment" }?.let { byTag[it] } ?: break
-            entry = next
-        }
-
-        // Carrier SOCKS outbound.
-        val carrier = JsonObject().apply {
-            addProperty("protocol", "socks")
-            add(
-                "settings", JsonObject().apply {
-                    add(
-                        "servers", JsonArray().apply {
-                            add(JsonObject().apply {
-                                addProperty("address", "127.0.0.1")
-                                addProperty("port", carrierPort)
-                            })
-                        }
-                    )
-                }
-            )
-            addProperty("tag", "carrier")
-        }
-        outbounds.add(carrier)
-
-        // Route the entry outbound through the carrier.
-        val stream = entry.getAsJsonObject("streamSettings")
-            ?: JsonObject().also { entry.add("streamSettings", it) }
-        val sockopt = stream.getAsJsonObject("sockopt")
-            ?: JsonObject().also { stream.add("sockopt", it) }
-        sockopt.addProperty("dialerProxy", "carrier")
-
-        root.toString()
-    }.getOrDefault(configJson)
-}

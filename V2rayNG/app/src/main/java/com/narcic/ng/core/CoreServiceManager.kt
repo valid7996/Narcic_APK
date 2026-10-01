@@ -11,11 +11,14 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.system.OsConstants
 import androidx.core.content.ContextCompat
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.narcic.ng.AppConfig
 import com.narcic.ng.R
 import com.narcic.ng.contracts.IDialerService
 import com.narcic.ng.contracts.ServiceControl
 import com.narcic.ng.dto.OutboundTrafficStat
+import com.narcic.ng.dto.V2rayConfig.OutboundBean
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.enums.BrowserDialerMode
 import com.narcic.ng.enums.EConfigType
@@ -167,27 +170,79 @@ object CoreServiceManager {
             error("Failed to start desync engine: ${e.message ?: e.javaClass.simpleName}")
         }
 
-        // ── Two-engine chain (CROSS_CHAIN): the OUTER carrier (Aether/WARP)
-        // starts first; the INNER profile's Xray config is rewritten to dial
-        // through the carrier's local SOCKS port. ──
+        // ── Two-engine chain (CROSS_CHAIN): member ۱ (chainOuterId) is the
+        // FIRST hop, member ۲ (chainInnerId) is the EXIT. Traffic:
+        // تونل → سرور ۲ → سرور ۱ → اینترنت. Every engine type is supported in
+        // EITHER slot (no forced roles):
+        //   Aether member  → its own core process + a socks outbound at its port
+        //   WG/AWG member  → wireguard outbound built from its config
+        //   Xray-family    → its normal outbound
+        // All non-exit layers are appended as tagged outbounds chained via
+        // dialerProxy; only the exit layer owns the tun. ──
         var content: String
-        var carrierProfile: ProfileItem? = null
+        val aetherWarmup = ArrayList<Pair<String, ProfileItem>>()
         if (config.configType == EConfigType.CROSS_CHAIN) {
-            val outer = MmkvManager.decodeServerConfig(config.chainOuterId.orEmpty())
-            val innerGuid = config.chainInnerId.orEmpty()
-            if (outer == null || outer.configType != EConfigType.AETHER) {
-                error(service.getString(R.string.crosschain_bad_carrier, config.chainOuterId.orEmpty().take(8)))
+            val firstGuid = config.chainOuterId.orEmpty()
+            val exitGuid = config.chainInnerId.orEmpty()
+            if (firstGuid == exitGuid) {
+                error(service.getString(R.string.crosschain_bad_carrier, firstGuid.take(8)))
             }
-            if (!AetherCoreManager.isSupported(service)) {
+
+            fun fragmentOf(member: ProfileItem, memberGuid: String, tag: String): OutboundBean? {
+                return when (member.configType) {
+                    EConfigType.AETHER -> {
+                        aetherWarmup += memberGuid to member
+                        OutboundBean(
+                            tag = tag,
+                            protocol = "socks",
+                            settings = OutboundBean.OutSettingsBean(
+                                address = "127.0.0.1",
+                                port = AetherCore.of(member).port.toInt(),
+                            ),
+                        )
+                    }
+                    EConfigType.WIREGUARD -> CoreOutboundBuilder.convert(member)?.apply { this.tag = tag }
+                    EConfigType.AMNEZIAWG -> CoreOutboundBuilder.awgOutbound(member)?.apply { this.tag = tag }
+                    EConfigType.VMESS, EConfigType.VLESS, EConfigType.SHADOWSOCKS,
+                    EConfigType.TROJAN, EConfigType.HTTP -> CoreOutboundBuilder.convert(member)?.apply { this.tag = tag }
+                    else -> null
+                }
+            }
+
+            val first = MmkvManager.decodeServerConfig(firstGuid)
+                ?: error(service.getString(R.string.crosschain_bad_carrier, firstGuid.take(8)))
+            val exit = MmkvManager.decodeServerConfig(exitGuid)
+                ?: error(service.getString(R.string.crosschain_bad_inner, exitGuid.take(8)))
+
+            if (aetherWarmup.isNotEmpty() && !AetherCoreManager.isSupported(service)) {
                 error(service.getString(R.string.aether_unsupported_abi))
             }
-            val innerResult = CoreConfigManager.getV2rayConfig(service, innerGuid, desyncPort)
-            if (!innerResult.status) {
-                error(innerResult.errorMessage.ifBlank { "Failed to build inner chain config" })
-            }
-            carrierProfile = outer
-            content = injectCarrierProxy(innerResult.content, AetherCore.of(outer).port)
             aetherExitHandled = false
+
+            // Exit layer: the full config of member ۲ (it owns the tun).
+            val exitResult = CoreConfigManager.getV2rayConfig(service, exitGuid, desyncPort)
+            if (!exitResult.status) {
+                error(exitResult.errorMessage.ifBlank { "Failed to build exit config" })
+            }
+            val root = com.narcic.ng.util.JsonUtil.parseString(exitResult.content)?.takeIf { it.isJsonObject }
+                ?: error("Failed to parse exit config")
+            val outbounds = root.getAsJsonArray("outbounds")
+                ?: error("Exit config has no outbounds")
+
+            // Carrier layer: appended as a tagged outbound, then the exit's
+            // first outbound is pointed at it via dialerProxy.
+            val firstFragment = fragmentOf(first, firstGuid, "chain1")
+                ?: error(service.getString(R.string.crosschain_bad_carrier, first.remarks))
+            val entry = outbounds.firstOrNull() as? JsonObject
+            if (entry != null) {
+                val stream = entry.getAsJsonObject("streamSettings")
+                    ?: JsonObject().also { entry.add("streamSettings", it) }
+                val sockopt = stream.getAsJsonObject("sockopt")
+                    ?: JsonObject().also { stream.add("sockopt", it) }
+                sockopt.addProperty("dialerProxy", "chain1")
+            }
+            outbounds.add(com.google.gson.JsonParser.parseString(com.google.gson.Gson().toJson(firstFragment)).asJsonObject)
+            content = root.toString()
         } else {
             val result = CoreConfigManager.getV2rayConfig(service, guid, desyncPort)
             LogUtil.d(AppConfig.TAG, result.content)
@@ -202,7 +257,7 @@ object CoreServiceManager {
             config.configType == EConfigType.AETHER -> {
                 aetherExitHandled = false
             }
-            carrierProfile != null -> {
+            aetherWarmup.isNotEmpty() -> {
                 aetherExitHandled = false
             }
             else -> {
@@ -210,7 +265,7 @@ object CoreServiceManager {
             }
         }
 
-        launchNativeCore(service, guid, config, carrierProfile, content, vpnInterface, isReload)
+        launchNativeCore(service, guid, config, aetherWarmup, content, vpnInterface, isReload)
     }
 
     @Throws(Exception::class)
@@ -218,7 +273,7 @@ object CoreServiceManager {
         service: Service,
         guid: String,
         config: ProfileItem,
-        aetherCarrier: ProfileItem?,
+        aetherWarmup: List<Pair<String, ProfileItem>>,
         content: String,
         vpnInterface: ParcelFileDescriptor?,
         isReload: Boolean,
@@ -266,8 +321,8 @@ object CoreServiceManager {
         when {
             config.configType == EConfigType.AETHER ->
                 announceAetherWarmUp(service, guid, config, isReload)
-            aetherCarrier != null ->
-                announceAetherWarmUp(service, config.chainOuterId.orEmpty(), aetherCarrier, isReload)
+            aetherWarmup.isNotEmpty() ->
+                aetherWarmup.first().let { (g, m) -> announceAetherWarmUp(service, g, m, isReload) }
             !isReload ->
                 MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
