@@ -485,6 +485,8 @@ fun MainScreen(
                     uploadSpeedText = uiState.uploadSpeedText,
                     connectionDurationText = uiState.connectionDurationText,
                     remoteIp = uiState.remoteIp,
+                    remoteCity = uiState.remoteCity,
+                    remoteIsp = uiState.remoteIsp,
                     remoteCountryName = uiState.remoteCountryName,
                     remoteCountryCode = uiState.remoteCountryCode,
                     engineLabel = engineLabel,
@@ -492,6 +494,18 @@ fun MainScreen(
                     accent = accentPair.main,
                     speedHistory = speedHistory,
                 )
+
+                // ── connection map: real-IP location → exit country ──
+                if (isRunning) {
+                    com.narcic.ng.ui.map.WorldMapCard(
+                        remoteCountryCode = uiState.remoteCountryCode,
+                        remoteCity = uiState.remoteCity,
+                        remoteIsp = uiState.remoteIsp,
+                        remoteIp = uiState.remoteIp,
+                        remoteCountryName = uiState.remoteCountryName,
+                        accent = accentPair.main,
+                    )
+                }
 
                 Spacer(Modifier.height(10.dp))
 
@@ -549,6 +563,7 @@ fun MainScreen(
                 MainServerListSection(
                     mainViewModel = mainViewModel,
                     groups = visibleGroups,
+                    allServers = serversByGroup.values.flatten(),
                     selectedGroupId = uiState.selectedGroupId,
                     selectedGuid = selectedGuid,
                     isTesting = uiState.isTesting,

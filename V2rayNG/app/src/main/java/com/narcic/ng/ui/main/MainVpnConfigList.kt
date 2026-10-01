@@ -41,7 +41,11 @@ import com.narcic.ng.R
 import com.narcic.ng.dto.GroupMapItem
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.ServersCache
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.text.style.TextOverflow
 import com.narcic.ng.enums.EConfigType
+import com.narcic.ng.handler.MmkvManager
 import com.narcic.ng.ui.compose.ConfigsHeaderBar
 import com.narcic.ng.ui.compose.Nc
 
@@ -52,6 +56,7 @@ import com.narcic.ng.ui.compose.Nc
 fun MainServerListSection(
     mainViewModel: MainViewModel,
     groups: List<GroupMapItem>,
+    allServers: List<ServersCache> = emptyList(),
     selectedGroupId: String,
     selectedGuid: String?,
     isTesting: Boolean,
@@ -72,6 +77,44 @@ fun MainServerListSection(
 ) {
     var shareTarget by remember { mutableStateOf<Pair<String, ProfileItem>?>(null) }
     var showAddOptionsDialog by remember { mutableStateOf(false) }
+    var showCrossChainDialog by remember { mutableStateOf<String?>(null) }
+
+    // ── Two-engine chain creation / edit ──
+    if (showCrossChainDialog != null) {
+        val editGuid = showCrossChainDialog
+        val existing = editGuid?.let { MmkvManager.decodeServerConfig(it) }
+        val carriers = allServers.filter { it.profile.configType == EConfigType.AETHER }
+        val dialers = allServers.filter {
+            it.profile.configType in listOf(
+                EConfigType.VMESS, EConfigType.VLESS, EConfigType.SHADOWSOCKS,
+                EConfigType.TROJAN, EConfigType.HTTP,
+            )
+        }
+        CrossChainDialog(
+            carriers = carriers.map { it.guid to it.profile.remarks },
+            dialers = dialers.map { it.guid to it.profile.remarks },
+            initialRemarks = existing?.remarks ?: "زنجیره: Aether → سرور",
+            initialCarrier = existing?.chainOuterId ?: carriers.firstOrNull()?.guid,
+            initialInner = existing?.chainInnerId ?: dialers.firstOrNull()?.guid,
+            onDismiss = { showCrossChainDialog = null },
+            onConfirm = { remarks, carrierGuid, innerGuid ->
+                val profile = existing
+                    ?: ProfileItem.create(EConfigType.CROSS_CHAIN).also { created ->
+                        created.subscriptionId =
+                            com.narcic.ng.handler.DefaultConfigSource.perEngineDefaultGroupIdFor(
+                                EConfigType.CROSS_CHAIN
+                            )
+                    }
+                profile.remarks = remarks.ifBlank { "زنجیره: Aether → سرور" }
+                profile.chainOuterId = carrierGuid
+                profile.chainInnerId = innerGuid
+                val guid = MmkvManager.encodeServerConfig(editGuid.orEmpty(), profile)
+                showCrossChainDialog = null
+                onShareAction(MainAction.RefreshGroups)
+                onShareAction(MainAction.SelectServer(guid))
+            },
+        )
+    }
 
     if (showAddOptionsDialog) {
         androidx.compose.material3.AlertDialog(
@@ -112,6 +155,19 @@ fun MainServerListSection(
                         Icon(painterResource(R.drawable.ic_scan_24dp), contentDescription = null, Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
                         Text("اسکن بارکد QR")
+                    }
+                    // Two-engine chain: Aether/WARP carrier → an Xray-family server.
+                    OutlinedButton(
+                        onClick = {
+                            showAddOptionsDialog = false
+                            showCrossChainDialog = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_routing_24dp), contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text("زنجیره دوموتوره (اتر → سرور)")
                     }
                     // Manual add is engine-scoped: the امنزیا page offers only
                     // the WireGuard-family editors and the وی‌تو‌ری page only
@@ -273,7 +329,7 @@ fun MainServerListSection(
                             rank = index + 1,
                             accent = accent,
                             onSelectServer = onSelectServer,
-                            onEditServer = onEditServer,
+                            onEditServer = { g, p -> if (p.configType == EConfigType.CROSS_CHAIN) showCrossChainDialog = g else onEditServer(g, p) },
                             onShareClick = { guid, profile -> shareTarget = guid to profile },
                             onRemoveServer = onRemoveServer
                         )
@@ -316,7 +372,7 @@ fun MainServerListSection(
                         rank = null,
                         accent = accent,
                         onSelectServer = onSelectServer,
-                        onEditServer = onEditServer,
+                        onEditServer = { g, p -> if (p.configType == EConfigType.CROSS_CHAIN) showCrossChainDialog = g else onEditServer(g, p) },
                         onShareClick = { guid, profile -> shareTarget = guid to profile },
                         onRemoveServer = onRemoveServer
                     )
@@ -344,6 +400,7 @@ private fun protocolBadge(type: EConfigType): ProtocolBadge = when (type) {
     EConfigType.CUSTOM -> ProtocolBadge("CF", Nc.Violet)
     EConfigType.POLICYGROUP -> ProtocolBadge("PG", Nc.Violet)
     EConfigType.PROXYCHAIN -> ProtocolBadge("PC", Nc.Cyan)
+    EConfigType.CROSS_CHAIN -> ProtocolBadge("CC", Nc.Violet)
     EConfigType.AETHER -> ProtocolBadge("AE", Nc.BadgeAether)
 }
 
@@ -447,5 +504,119 @@ private fun VpnConfigRow(
         onShare = { onShareClick(guid, profile) },
         onDelete = { onRemoveServer(guid) },
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+    )
+}
+
+/**
+ * Two-engine chain creation/edit sheet: pick the OUTER carrier (an Aether/WARP
+ * profile — its own Psiphon/Tor settings apply) and the INNER dialer (an
+ * Xray-family profile), then the runtime wires inner → carrier → internet.
+ */
+@Composable
+private fun CrossChainDialog(
+    carriers: List<Pair<String, String>>,
+    dialers: List<Pair<String, String>>,
+    initialRemarks: String,
+    initialCarrier: String?,
+    initialInner: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (remarks: String, carrier: String, inner: String) -> Unit,
+) {
+    var remarks by remember { mutableStateOf(initialRemarks) }
+    var carrier by remember { mutableStateOf(initialCarrier) }
+    var inner by remember { mutableStateOf(initialInner) }
+    var carrierOpen by remember { mutableStateOf(false) }
+    var innerOpen by remember { mutableStateOf(false) }
+    val accent = Nc.BadgeAether
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("زنجیره دوموتوره", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "ترافیک: تونل → سرور داخلی → حامل (Aether/WARP) → اینترنت",
+                    fontSize = 10.sp, color = Nc.Sub, lineHeight = 15.sp,
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = remarks,
+                    onValueChange = { remarks = it },
+                    label = { Text("نام زنجیره", fontSize = 10.sp) },
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = Nc.Txt),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    singleLine = true,
+                )
+                Text("حامل (بیرونی — Aether/WARP)", fontSize = 10.sp, color = Nc.Sub, fontWeight = FontWeight.Bold)
+                Box {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = .05f))
+                            .border(1.dp, Nc.Stroke, RoundedCornerShape(10.dp))
+                            .clickable { carrierOpen = !carrierOpen }
+                            .padding(horizontal = 10.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            carriers.firstOrNull { it.first == carrier }?.second
+                                ?: if (carriers.isEmpty()) "هیچ کانفیگ Aether وجود ندارد" else "انتخاب کنید",
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Nc.Txt,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(if (carrierOpen) "▴" else "▾", color = Nc.Sub, fontSize = 10.sp)
+                    }
+                    DropdownMenu(expanded = carrierOpen, onDismissRequest = { carrierOpen = false }) {
+                        carriers.forEach { (guid, name) ->
+                            DropdownMenuItem(
+                                text = { Text(name, fontSize = 11.sp) },
+                                onClick = { carrier = guid; carrierOpen = false },
+                            )
+                        }
+                    }
+                }
+                Text("سرور داخلی (Xray-family)", fontSize = 10.sp, color = Nc.Sub, fontWeight = FontWeight.Bold)
+                Box {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = .05f))
+                            .border(1.dp, Nc.Stroke, RoundedCornerShape(10.dp))
+                            .clickable { innerOpen = !innerOpen }
+                            .padding(horizontal = 10.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            dialers.firstOrNull { it.first == inner }?.second
+                                ?: if (dialers.isEmpty()) "هیچ سرور Xray-family وجود ندارد" else "انتخاب کنید",
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Nc.Txt,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(if (innerOpen) "▴" else "▾", color = Nc.Sub, fontSize = 10.sp)
+                    }
+                    DropdownMenu(expanded = innerOpen, onDismissRequest = { innerOpen = false }) {
+                        dialers.forEach { (guid, name) ->
+                            DropdownMenuItem(
+                                text = { Text(name, fontSize = 11.sp) },
+                                onClick = { inner = guid; innerOpen = false },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                enabled = carrier != null && inner != null,
+                onClick = { onConfirm(remarks, carrier.orEmpty(), inner.orEmpty()) },
+            ) { Text("ساخت زنجیره", color = accent, fontWeight = FontWeight.ExtraBold) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("انصراف") }
+        },
     )
 }

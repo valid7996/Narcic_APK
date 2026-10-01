@@ -102,8 +102,13 @@ object SpeedtestManager {
         return "(${country ?: "unknown"}) ${ip ?: "unknown"}"
     }
 
-    /** Exit IP and ISO-3166-1 alpha-2 country code, for the main screen's connection stats panel. */
-    data class RemoteIpDetails(val ip: String, val countryCode: String?)
+    /** Exit IP, ISO-3166-1 alpha-2 country code, city and ISP, for the main dashboard. */
+    data class RemoteIpDetails(
+        val ip: String,
+        val countryCode: String?,
+        val city: String?,
+        val isp: String?,
+    )
 
     fun getRemoteIPInfoDetailed(): RemoteIpDetails? {
         val ipInfo = fetchRemoteIpApiInfo() ?: return null
@@ -122,6 +127,17 @@ object SpeedtestManager {
         ).firstOrNull { !it.isNullOrBlank() }
             ?: ipInfo.country?.takeIf { it.length == 2 }
 
-        return RemoteIpDetails(ip = ip, countryCode = countryCode?.uppercase(Locale.US))
+        val city = listOf(ipInfo.city)
+            .firstOrNull { !it.isNullOrBlank() }
+
+        val isp = listOf(ipInfo.isp, ipInfo.org)
+            .firstOrNull { !it.isNullOrBlank() }
+
+        return RemoteIpDetails(
+            ip = ip,
+            countryCode = countryCode?.uppercase(Locale.US),
+            city = city,
+            isp = isp,
+        )
     }
 }

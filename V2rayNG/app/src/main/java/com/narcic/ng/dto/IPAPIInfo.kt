@@ -9,6 +9,9 @@ data class IPAPIInfo(
     var country_name: String? = null,
     var country_code: String? = null,
     var countryCode: String? = null,
+    var city: String? = null,
+    var isp: String? = null,
+    var org: String? = null,
     var location: LocationBean? = null
 ) {
     data class LocationBean(

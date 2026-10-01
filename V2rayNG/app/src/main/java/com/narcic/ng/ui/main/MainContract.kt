@@ -37,6 +37,8 @@ data class MainUiState(
     val remoteIp: String = "",
     val remoteCountryName: String = "",
     val remoteCountryCode: String = "",
+    val remoteCity: String = "",
+    val remoteIsp: String = "",
     // Monotonically increasing one-shot trigger: the Activity observes this
     // and performs a real connect (VPN permission + start) whenever it
     // changes, after AutoConnect has picked and selected the best server.

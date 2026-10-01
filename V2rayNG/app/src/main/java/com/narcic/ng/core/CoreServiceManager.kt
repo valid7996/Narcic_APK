@@ -166,23 +166,51 @@ object CoreServiceManager {
             LogUtil.e(AppConfig.TAG, "StartCore-Manager: Failed to start desync engine", e)
             error("Failed to start desync engine: ${e.message ?: e.javaClass.simpleName}")
         }
-        val result = CoreConfigManager.getV2rayConfig(service, guid, desyncPort)
-        LogUtil.d(AppConfig.TAG, result.content)
-        if (!result.status) {
-            error(result.errorMessage.ifBlank { "Failed to get V2Ray config" })
-        }
 
-        cancelAetherWarmUp()
-        if (config.configType == EConfigType.AETHER) {
+        // ── Two-engine chain (CROSS_CHAIN): the OUTER carrier (Aether/WARP)
+        // starts first; the INNER profile's Xray config is rewritten to dial
+        // through the carrier's local SOCKS port. ──
+        var content: String
+        var carrierProfile: ProfileItem? = null
+        if (config.configType == EConfigType.CROSS_CHAIN) {
+            val outer = MmkvManager.decodeServerConfig(config.chainOuterId.orEmpty())
+            val innerGuid = config.chainInnerId.orEmpty()
+            if (outer == null || outer.configType != EConfigType.AETHER) {
+                error(service.getString(R.string.crosschain_bad_carrier, config.chainOuterId.orEmpty().take(8)))
+            }
             if (!AetherCoreManager.isSupported(service)) {
                 error(service.getString(R.string.aether_unsupported_abi))
             }
+            val innerResult = CoreConfigManager.getV2rayConfig(service, innerGuid, desyncPort)
+            if (!innerResult.status) {
+                error(innerResult.errorMessage.ifBlank { "Failed to build inner chain config" })
+            }
+            carrierProfile = outer
+            content = injectCarrierProxy(innerResult.content, AetherCore.of(outer).port)
             aetherExitHandled = false
         } else {
-            AetherCoreManager.stop()
+            val result = CoreConfigManager.getV2rayConfig(service, guid, desyncPort)
+            LogUtil.d(AppConfig.TAG, result.content)
+            if (!result.status) {
+                error(result.errorMessage.ifBlank { "Failed to get V2Ray config" })
+            }
+            content = result.content
         }
 
-        launchNativeCore(service, guid, config, result.content, vpnInterface, isReload)
+        cancelAetherWarmUp()
+        when {
+            config.configType == EConfigType.AETHER -> {
+                aetherExitHandled = false
+            }
+            carrierProfile != null -> {
+                aetherExitHandled = false
+            }
+            else -> {
+                AetherCoreManager.stop()
+            }
+        }
+
+        launchNativeCore(service, guid, config, carrierProfile, content, vpnInterface, isReload)
     }
 
     @Throws(Exception::class)
@@ -190,6 +218,7 @@ object CoreServiceManager {
         service: Service,
         guid: String,
         config: ProfileItem,
+        aetherCarrier: ProfileItem?,
         content: String,
         vpnInterface: ParcelFileDescriptor?,
         isReload: Boolean,
@@ -234,10 +263,13 @@ object CoreServiceManager {
             else -> {}
         }
 
-        if (config.configType == EConfigType.AETHER) {
-            announceAetherWarmUp(service, guid, config, isReload)
-        } else if (!isReload) {
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
+        when {
+            config.configType == EConfigType.AETHER ->
+                announceAetherWarmUp(service, guid, config, isReload)
+            aetherCarrier != null ->
+                announceAetherWarmUp(service, config.chainOuterId.orEmpty(), aetherCarrier, isReload)
+            !isReload ->
+                MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")

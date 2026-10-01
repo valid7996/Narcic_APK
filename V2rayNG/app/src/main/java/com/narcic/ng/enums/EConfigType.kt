@@ -21,7 +21,10 @@ enum class EConfigType(val value: Int, val protocolScheme: String) {
     // type added upstream later cannot collide with it on merge.
     AETHER(500, AppConfig.AETHER),
     POLICYGROUP(101, AppConfig.CUSTOM),
-    PROXYCHAIN(102, AppConfig.CUSTOM);
+    PROXYCHAIN(102, AppConfig.CUSTOM),
+    // Two-engine chain: an outer carrier engine (Aether/WARP today) carries
+    // an inner Xray-family profile. Fork-only, like AETHER.
+    CROSS_CHAIN(103, AppConfig.CUSTOM);
 
     companion object {
         fun fromInt(value: Int) = entries.firstOrNull { it.value == value }

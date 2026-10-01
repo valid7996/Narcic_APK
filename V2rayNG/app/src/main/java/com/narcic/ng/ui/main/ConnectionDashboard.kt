@@ -74,6 +74,8 @@ fun ConnectionDashboard(
     uploadSpeedText: String,
     connectionDurationText: String,
     remoteIp: String,
+    remoteCity: String,
+    remoteIsp: String,
     remoteCountryName: String,
     remoteCountryCode: String,
     engineLabel: String,
@@ -102,6 +104,8 @@ fun ConnectionDashboard(
                 uploadSpeedText = uploadSpeedText,
                 connectionDurationText = connectionDurationText,
                 remoteIp = remoteIp,
+                remoteCity = remoteCity,
+                remoteIsp = remoteIsp,
                 remoteCountryName = remoteCountryName,
                 remoteCountryCode = remoteCountryCode,
                 engineLabel = engineLabel,
@@ -123,6 +127,8 @@ private fun DashboardCard(
     uploadSpeedText: String,
     connectionDurationText: String,
     remoteIp: String,
+    remoteCity: String,
+    remoteIsp: String,
     remoteCountryName: String,
     remoteCountryCode: String,
     engineLabel: String,
@@ -185,17 +191,18 @@ private fun DashboardCard(
             )
         }
 
-        // ── location: flag + country + IP ──
+        // ── location: flag + city/country + IP ──
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 11.dp)) {
             Text(flagEmoji(remoteCountryCode), fontSize = 24.sp)
             Spacer(Modifier.width(11.dp))
             Column {
                 Text(
-                    remoteCountryName.ifBlank { engineLabel },
+                    listOf(remoteCity, remoteCountryName).filter { it.isNotBlank() }
+                        .joinToString(" · ").ifBlank { engineLabel },
                     color = txtMain, fontSize = 13.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1
                 )
                 Text(
-                    remoteIp.ifBlank { "—" },
+                    listOf(remoteIsp, remoteIp).filter { it.isNotBlank() }.joinToString(" · "),
                     color = txtSub, fontSize = 9.5.sp, fontFamily = FontFamily.Monospace, maxLines = 1
                 )
             }

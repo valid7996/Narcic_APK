@@ -578,6 +578,8 @@
     <string name="aether_same_hop">The two hops must be different addresses</string>
     <string name="aether_invalid_fragment">Use a number or a range such as 16-32: size 1–4096 bytes, delay 0–1000 ms</string>
     <string name="aether_unsupported_abi">The Aether core is not available for this device</string>
+    <string name="crosschain_bad_carrier">Invalid chain carrier: %1$s</string>
+    <string name="crosschain_bad_inner">Invalid chain inner: %1$s</string>
     <string name="aether_core_stopped">The Aether core stopped running</string>
     <string name="aether_core_connecting">The Aether core is still connecting</string>
     <string name="aether_action_renew_key">Get a new WARP key</string>

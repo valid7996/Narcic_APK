@@ -105,6 +105,10 @@ data class ProfileItem(
     /** Loopback port the Aether core of this profile listens on; null means the default, AppConfig.PORT_AETHER_SOCKS. */
     var aetherListenPort: String? = null,
 
+    /** Two-engine chain members: the inner dialer and the outer carrier (Aether/WARP). */
+    var chainInnerId: String? = null,
+    var chainOuterId: String? = null,
+
     /** Where Psiphon stands in the tunnel, an AetherPsiphon type; null means it is not used. */
     var aetherPsiphon: String? = null,
     var aetherPsiphonMode: String? = null,

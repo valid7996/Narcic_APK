@@ -1356,7 +1356,9 @@ class MainViewModel(
                         it.copy(
                             remoteIp = info.ip,
                             remoteCountryCode = info.countryCode.orEmpty(),
-                            remoteCountryName = countryName
+                            remoteCountryName = countryName,
+                            remoteCity = info.city.orEmpty(),
+                            remoteIsp = info.isp.orEmpty()
                         )
                     }
                     break
@@ -1380,7 +1382,9 @@ class MainViewModel(
                 uploadSpeedText = "",
                 remoteIp = "",
                 remoteCountryName = "",
-                remoteCountryCode = ""
+                remoteCountryCode = "",
+                remoteCity = "",
+                remoteIsp = ""
             )
         }
     }
