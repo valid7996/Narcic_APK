@@ -792,7 +792,8 @@ object CoreOutboundBuilder {
      * other rule, so nothing the helper dials can be caught by the profile's own
      * geo or catch-all rules. The helper reaches the carrier's outbound without
      * the carrier being an Xray dialable hop itself (e.g. a WireGuard carrier for
-     * an Aether core's upstream).
+     * an Aether core's upstream). The inbound sniffs nothing, the way a carrier
+     * must: it dials exactly what its client asked for.
      */
     fun addCarrierInbound(root: JsonObject, port: Int, inboundTag: String, carrierTag: String) {
         val inbounds = root.getAsJsonArray("inbounds")
@@ -824,6 +825,74 @@ object CoreOutboundBuilder {
         )
         oldRules?.forEach { newRules.add(it) }
         routing.add("rules", newRules)
+    }
+
+    /**
+     * Attaches [carrierTag] the way ZedSecure's withCarrierProxy does (AGPL-3.0):
+     * the dialerProxy chain of the first outbound is walked to its ROOT — the
+     * outbound that actually dials the network — and the carrier is attached
+     * THERE. An exit that already carries its own fragment keeps its shape: the
+     * walk lands on the fragment dialer, the carrier takes its place, and the
+     * fragment outbound is dropped, since a carrier brings its own transport and
+     * keeping it would only split packets twice. False when [root] has no
+     * outbounds to attach to.
+     */
+    fun attachCarrierToRoot(root: JsonObject, carrierTag: String): Boolean {
+        val outbounds = root.getAsJsonArray("outbounds") ?: return false
+        if (outbounds.size() == 0) return false
+        val byTag = HashMap<String, JsonObject>()
+        for (element in outbounds) {
+            (element as? JsonObject)?.get("tag")?.takeIf { it.isJsonPrimitive }?.asString?.let { tag ->
+                byTag[tag] = element
+            }
+        }
+
+        var target = outbounds.firstOrNull() as? JsonObject ?: return false
+        var steps = 0
+        while (steps++ < outbounds.size()) {
+            val nextTag = dialerTagOf(target) ?: break
+            val next = nextTag.takeIf { it != "fragment" }?.let { byTag[it] }
+            if (next == null) break
+            target = next
+        }
+        setDialerProxy(target, carrierTag)
+
+        // The fragment outbound the walk stopped at is no longer in the path.
+        outbounds.removeAll { element ->
+            (element as? JsonObject)?.get("tag")?.takeIf { it.isJsonPrimitive }?.asString == "fragment"
+        }
+        return true
+    }
+
+    private fun dialerTagOf(outbound: JsonObject): String? =
+        outbound.getAsJsonObject("streamSettings")?.getAsJsonObject("sockopt")
+            ?.get("dialerProxy")?.takeIf { it.isJsonPrimitive }?.asString
+
+    private fun setDialerProxy(outbound: JsonObject, dialerTag: String) {
+        val stream = outbound.getAsJsonObject("streamSettings")
+            ?: JsonObject().also { outbound.add("streamSettings", it) }
+        val sockopt = stream.getAsJsonObject("sockopt")
+            ?: JsonObject().also { stream.add("sockopt", it) }
+        sockopt.addProperty("dialerProxy", dialerTag)
+    }
+
+    /**
+     * ZedSecure's UDP gate (AGPL-3.0): the label of the exit protocol that
+     * cannot ride [carrierType], or null when the pair is fine. The Aether
+     * carrier dials its core's SOCKS, and that tunnel carries TCP alone — an
+     * exit whose transport needs UDP (the WireGuard family, Hysteria, kcp)
+     * would quietly fail inside it, so the pair is refused up front. Every
+     * other carrier owns a UDP-capable inbound.
+     */
+    fun udpCarrierMismatch(carrierType: EConfigType, exitType: EConfigType, exitNetwork: String?): String? {
+        if (carrierType != EConfigType.AETHER) return null
+        if (exitType == EConfigType.AETHER) return null
+        val udpProtocol = exitType in listOf(
+            EConfigType.WIREGUARD, EConfigType.AMNEZIAWG,
+            EConfigType.HYSTERIA, EConfigType.HYSTERIA2,
+        )
+        val udpTransport = exitNetwork?.lowercase() in setOf("kcp", "mkcp")
+        return if (udpProtocol || udpTransport) exitType.name else null
     }
 }
 

@@ -187,7 +187,9 @@ object CoreServiceManager {
         //   WG/AWG member  → wireguard outbound built from its config
         //   Xray-family    → its normal outbound
         // A carrier that is itself dialable is chained via dialerProxy on the
-        // exit's first outbound. An Aether EXIT is the one shape dialerProxy
+        // ROOT of the exit's dialerProxy chain (ZedSecure's withCarrierProxy,
+        // AGPL-3.0), so an exit that carries its own fragment keeps its shape.
+        // An Aether EXIT is the one shape dialerProxy
         // cannot carry — its outbound dials the loopback — so its core instead
         // dials out through the carrier over a loopback socks inbound
         // (aetherUpstreamPort) and is warmed up like a carrier would be. ──
@@ -253,20 +255,19 @@ object CoreServiceManager {
             // the warm-up list so the app waits for it before declaring start.
             val firstFragment = fragmentOf(first, firstGuid, "chain1")
                 ?: error(service.getString(R.string.crosschain_bad_carrier, first.remarks))
+            // ZedSecure's UDP gate (AGPL-3.0): an Aether carrier dials its core's
+            // SOCKS, and that tunnel carries TCP alone — a UDP-family exit would
+            // quietly fail inside it, so the pair is refused up front.
+            CoreOutboundBuilder.udpCarrierMismatch(first.configType, exit.configType, exit.network)?.let { protocol ->
+                error(service.getString(R.string.crosschain_udp_unsupported, protocol, first.remarks))
+            }
             if (exitIsAether) {
                 val carrierInPort = Utils.findRandomFreePort()
                 CoreOutboundBuilder.addCarrierInbound(root, carrierInPort, "chain1in", "chain1")
                 aetherUpstreamPort = carrierInPort
                 aetherWarmup += exitGuid to exit
-            } else {
-                val entry = outbounds.firstOrNull() as? JsonObject
-                if (entry != null) {
-                    val stream = entry.getAsJsonObject("streamSettings")
-                        ?: JsonObject().also { entry.add("streamSettings", it) }
-                    val sockopt = stream.getAsJsonObject("sockopt")
-                        ?: JsonObject().also { stream.add("sockopt", it) }
-                    sockopt.addProperty("dialerProxy", "chain1")
-                }
+            } else if (!CoreOutboundBuilder.attachCarrierToRoot(root, "chain1")) {
+                error(service.getString(R.string.crosschain_bad_inner, exit.remarks))
             }
             outbounds.add(com.google.gson.JsonParser.parseString(com.google.gson.Gson().toJson(firstFragment)).asJsonObject)
             content = root.toString()

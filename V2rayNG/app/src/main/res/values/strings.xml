@@ -581,6 +581,7 @@
     <string name="crosschain_bad_carrier">Invalid chain carrier: %1$s</string>
     <string name="crosschain_bad_inner">Invalid chain inner: %1$s</string>
     <string name="crosschain_bad_pair">Both chain layers cannot be Aether profiles</string>
+    <string name="crosschain_udp_unsupported">The exit needs UDP (%1$s) but the carrier\'s tunnel carries TCP only: %2$s</string>
     <string name="aether_core_stopped">The Aether core stopped running</string>
     <string name="aether_core_connecting">The Aether core is still connecting</string>
     <string name="aether_action_renew_key">Get a new WARP key</string>
