@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1120"/>
+      <stop offset="0.55" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1e1033"/>
+    </linearGradient>
+    <radialGradient id="glowViolet" cx="0.82" cy="0.15" r="0.55">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCyan" cx="0.12" cy="0.9" r="0.5">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="topline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="320" fill="url(#bg)"/>
+  <rect width="1200" height="320" fill="url(#grid)"/>
+  <rect width="1200" height="320" fill="url(#glowViolet)"/>
+  <rect width="1200" height="320" fill="url(#glowCyan)"/>
+  <rect x="0" y="0" width="1200" height="6" fill="url(#topline)"/>
+
+  <!-- chain link glyph -->
+  <g transform="translate(84 96)" fill="none" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round" opacity="0.95">
+    <path d="M34 14 a20 20 0 0 1 28 0 l26 26 a20 20 0 0 1 -28 28"/>
+    <path d="M30 70 a20 20 0 0 1 -28 0 l-26 -26 a20 20 0 0 1 28 -28" transform="translate(52 -28)"/>
+  </g>
+
+  <text x="180" y="138" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="72" font-weight="800" letter-spacing="10" fill="#f8fafc">NARCIC NG</text>
+  <text x="182" y="180" font-family="'Segoe UI',Tahoma,sans-serif" font-size="24" font-weight="600" fill="#c4b5fd">Four engines. One tunnel.</text>
+  <text x="182" y="214" font-family="'Segoe UI',Tahoma,sans-serif" font-size="22" fill="#94a3b8">چهار موتور، یک تونل · أربعة محرّكات، نفقٌ واحد</text>
+
+  <!-- engine chips -->
+  <g font-family="'Segoe UI',Arial,sans-serif" font-size="17" font-weight="700">
+    <rect x="182" y="244" width="98" height="36" rx="18" fill="#22d3ee" fill-opacity="0.12" stroke="#22d3ee" stroke-opacity="0.55"/>
+    <text x="231" y="268" text-anchor="middle" fill="#67e8f9">XRAY</text>
+    <rect x="292" y="244" width="150" height="36" rx="18" fill="#34d399" fill-opacity="0.12" stroke="#34d399" stroke-opacity="0.55"/>
+    <text x="367" y="268" text-anchor="middle" fill="#6ee7b7">AMNEZIAWG</text>
+    <rect x="454" y="244" width="102" height="36" rx="18" fill="#fb923c" fill-opacity="0.12" stroke="#fb923c" stroke-opacity="0.55"/>
+    <text x="505" y="268" text-anchor="middle" fill="#fdba74">AETHER</text>
+    <rect x="568" y="244" width="94" height="36" rx="18" fill="#8b5cf6" fill-opacity="0.14" stroke="#8b5cf6" stroke-opacity="0.6"/>
+    <text x="615" y="268" text-anchor="middle" fill="#c4b5fd">CHAIN</text>
+  </g>
+</svg>
