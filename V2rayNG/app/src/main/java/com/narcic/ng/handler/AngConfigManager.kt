@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.text.TextUtils
 import com.narcic.ng.AppConfig
+import com.narcic.ng.awg.AwgManager
 import com.narcic.ng.R
 import com.narcic.ng.core.CoreConfigManager
 import com.narcic.ng.dto.SubscriptionUpdateResult
@@ -11,11 +12,13 @@ import com.narcic.ng.dto.UrlContentRequest
 import com.narcic.ng.dto.entities.ProfileItem
 import com.narcic.ng.dto.entities.SubscriptionCache
 import com.narcic.ng.dto.entities.SubscriptionItem
+import com.narcic.ng.enums.AetherPsiphon
 import com.narcic.ng.enums.EConfigType
 import com.narcic.ng.extension.isNotNullEmpty
 import com.narcic.ng.fmt.CustomFmt
 import com.narcic.ng.fmt.AetherFmt
 import com.narcic.ng.fmt.Hysteria2Fmt
+import com.narcic.ng.fmt.NarcicChainFmt
 import com.narcic.ng.fmt.ShadowsocksFmt
 import com.narcic.ng.fmt.SocksFmt
 import com.narcic.ng.fmt.TrojanFmt
@@ -180,6 +183,13 @@ object AngConfigManager {
      * @return A pair containing the number of configurations and subscriptions imported.
      */
     fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
+        // Narcic Chain links are handled whole (one link stands for several
+        // profiles); the remaining lines go the ordinary way.
+        val chainCount = importNarcicChainBatch(server, subid)
+        val server = server?.lineSequence()
+            ?.filterNot { it.trim().startsWith(AppConfig.NARCIC_CHAIN, ignoreCase = true) }
+            ?.joinToString("\n")
+
         var count = parseBatchConfig(Utils.decode(server), subid, append)
         if (count <= 0) {
             count = parseBatchConfig(server, subid, append)
@@ -196,8 +206,134 @@ object AngConfigManager {
             updateConfigViaSubAll()
         }
 
-        return count to countSub
+        return (count + chainCount) to countSub
     }
+
+    /**
+     * Imports the [AppConfig.NARCIC_CHAIN] links inside [server]. One link stands for the whole
+     * two-engine chain: the AmneziaWG carrier's config text is embedded in the link, and so is the
+     * Psiphon exit region. The profiles the links share are found once and reused — one carrier
+     * profile by its config text, one Aether profile per exit region, one chain profile per pair —
+     * so importing the set again refreshes nothing and duplicates nothing. A link without a region
+     * is the carrier's plain config on its own, the profile the امنزیا page runs standalone.
+     *
+     * @return The number of links imported.
+     */
+    private fun importNarcicChainBatch(server: String?, subid: String): Int {
+        if (server.isNullOrEmpty()) return 0
+        var count = 0
+        server.lines()
+            .map { it.trim() }
+            .filter { it.startsWith(AppConfig.NARCIC_CHAIN, ignoreCase = true) }
+            .distinct()
+            .forEach { line ->
+                val parsed = NarcicChainFmt.parse(line) ?: return@forEach
+                try {
+                    val imported = if (parsed.region == null) {
+                        importNarcicDirect(parsed, subid)
+                    } else {
+                        importNarcicChain(parsed, subid)
+                    }
+                    if (imported) count++
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import a Narcic Chain link", e)
+                }
+            }
+        return count
+    }
+
+    /** The plain AmneziaWG profile a region-less link stands for; true when it was new. */
+    private fun importNarcicDirect(parsed: NarcicChainFmt.Parsed, subid: String): Boolean {
+        val confText = AwgManager.sanitizeConfigText(parsed.confText)
+        firstStoredProfile { it.configType == EConfigType.AMNEZIAWG && AwgManager.sanitizeConfigText(it.awgConfigText.orEmpty()) == confText }
+            ?.let { return false }
+
+        val profile = ProfileItem.create(EConfigType.AMNEZIAWG).apply {
+            remarks = parsed.name
+            awgConfigText = confText
+            subscriptionId = resolveSubscriptionId(subid, this)
+        }
+        profile.description = generateDescription(profile)
+        MmkvManager.encodeServerConfig("", profile)
+        return true
+    }
+
+    /** The chain profile a region link stands for, its two members found or created first; true when the chain was new. */
+    private fun importNarcicChain(parsed: NarcicChainFmt.Parsed, subid: String): Boolean {
+        val region = parsed.region ?: return false
+        val confText = AwgManager.sanitizeConfigText(parsed.confText)
+
+        val carrier = firstStoredProfile {
+            it.configType == EConfigType.AMNEZIAWG && AwgManager.sanitizeConfigText(it.awgConfigText.orEmpty()) == confText
+        } ?: run {
+            val profile = ProfileItem.create(EConfigType.AMNEZIAWG).apply {
+                remarks = NARCIC_CARRIER_NAME
+                awgConfigText = confText
+                subscriptionId = resolveSubscriptionId(subid, this)
+            }
+            profile.description = generateDescription(profile)
+            val guid = MmkvManager.encodeServerConfig("", profile)
+            guid to profile
+        }
+
+        val exit = firstStoredProfile {
+            it.configType == EConfigType.AETHER &&
+                AetherPsiphon.fromString(it.aetherPsiphon) == AetherPsiphon.ONLY &&
+                it.aetherPsiphonRegion.equals(region, ignoreCase = true)
+        } ?: run {
+            val profile = ProfileItem.create(EConfigType.AETHER).apply {
+                remarks = "Narcic Psiphon ${flagOf(region)}"
+                aetherPsiphon = AetherPsiphon.ONLY.type
+                aetherPsiphonRegion = region
+                // The exit lives with the chains it serves, not in the اتر
+                // default group: that group's profiles are the user's own and
+                // one of them is the page's implicit quick-setup profile.
+                subscriptionId =
+                    if (subid.isNotBlank()) subid
+                    else DefaultConfigSource.perEngineDefaultGroupIdFor(EConfigType.CROSS_CHAIN)
+            }
+            profile.description = generateDescription(profile)
+            val guid = MmkvManager.encodeServerConfig("", profile)
+            guid to profile
+        }
+
+        val existing = firstStoredProfile {
+            it.configType == EConfigType.CROSS_CHAIN && it.chainOuterId == carrier.first && it.chainInnerId == exit.first
+        }
+        if (existing != null) return false
+
+        val profile = ProfileItem.create(EConfigType.CROSS_CHAIN).apply {
+            remarks = parsed.name
+            chainOuterId = carrier.first
+            chainInnerId = exit.first
+            subscriptionId = resolveSubscriptionId(subid, this)
+        }
+        profile.description = generateDescription(profile)
+        MmkvManager.encodeServerConfig("", profile)
+        return true
+    }
+
+    /** The name the shared AmneziaWG carrier gets when only the chain links brought it in. */
+    private const val NARCIC_CARRIER_NAME = "Narcic AMWG 🇮🇷"
+
+    /** The first stored profile [predicate] accepts, as its guid and config, over every group there is. */
+    private fun firstStoredProfile(predicate: (ProfileItem) -> Boolean): Pair<String, ProfileItem>? {
+        val groupIds = (MmkvManager.decodeSubscriptions().map { it.guid } + "").distinct()
+        for (subid in groupIds) {
+            for (guid in MmkvManager.decodeServerList(subid)) {
+                val config = MmkvManager.decodeServerConfig(guid) ?: continue
+                if (predicate(config)) return guid to config
+            }
+        }
+        return null
+    }
+
+    /** An ISO-2 code as its flag pair; empty for anything that is not two letters. */
+    private fun flagOf(code: String): String =
+        code.takeIf { Regex("^[A-Z]{2}$").matches(it) }
+            ?.map { Character.toChars(0x1F1E6 + (it - 'A')).concatToString() }
+            ?.joinToString("")
+            .orEmpty()
 
     /**
      * Parses a batch of subscriptions.

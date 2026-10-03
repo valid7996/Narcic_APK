@@ -81,10 +81,12 @@ object DefaultConfigSource {
     const val DEFAULT_GROUP_AWG_NAME = "پیش‌فرض امنزیا"
     const val DEFAULT_GROUP_V2_NAME = "پیش‌فرض وی‌تو‌ری"
     const val DEFAULT_GROUP_AETHER_NAME = "پیش‌فرض اتر"
+    const val DEFAULT_GROUP_CHAIN_NAME = "پیش‌فرض زنجیره"
 
     private const val KEY_DEFAULT_GROUP_AWG = "cache_default_group_awg"
     private const val KEY_DEFAULT_GROUP_V2 = "cache_default_group_v2"
     private const val KEY_DEFAULT_GROUP_AETHER = "cache_default_group_ae"
+    private const val KEY_DEFAULT_GROUP_CHAIN = "cache_default_group_chain"
     private const val KEY_MIGRATED_ENGINE_DEFAULTS = "cache_migrated_engine_defaults_v1"
 
     /**
@@ -97,6 +99,7 @@ object DefaultConfigSource {
             com.narcic.ng.enums.EConfigType.WIREGUARD,
             com.narcic.ng.enums.EConfigType.AMNEZIAWG -> KEY_DEFAULT_GROUP_AWG to DEFAULT_GROUP_AWG_NAME
             com.narcic.ng.enums.EConfigType.AETHER -> KEY_DEFAULT_GROUP_AETHER to DEFAULT_GROUP_AETHER_NAME
+            com.narcic.ng.enums.EConfigType.CROSS_CHAIN -> KEY_DEFAULT_GROUP_CHAIN to DEFAULT_GROUP_CHAIN_NAME
             else -> KEY_DEFAULT_GROUP_V2 to DEFAULT_GROUP_V2_NAME
         }
         val existing = MmkvManager.decodeSettingsString(key)
@@ -143,17 +146,31 @@ object DefaultConfigSource {
      */
     fun ensureImplicitAetherProfile(): String? {
         val groupId = perEngineDefaultGroupIdFor(com.narcic.ng.enums.EConfigType.AETHER)
-        // The implicit profile lives in the پیش‌فرض اتر group.
-        MmkvManager.decodeServerList(groupId).firstOrNull()?.let { return it }
-        // Never create a duplicate: reuse any Aether profile anywhere.
+        // The implicit profile lives in the پیش‌فرض اتر group — the bare ones
+        // first, so a purpose-built profile (Psiphon-only, like the exits the
+        // Narcic Chain links stand up) is adopted only when nothing else is here.
+        fun isBare(config: com.narcic.ng.dto.entities.ProfileItem) =
+            com.narcic.ng.enums.AetherPsiphon.fromString(config.aetherPsiphon) == com.narcic.ng.enums.AetherPsiphon.OFF
+        MmkvManager.decodeServerList(groupId)
+            .firstNotNullOfOrNull { guid ->
+                MmkvManager.decodeServerConfig(guid)?.takeIf { isBare(it) }?.let { guid }
+            }
+            ?.let { return it }
+        // Never create a duplicate: reuse any Aether profile anywhere — the
+        // bare ones first, a purpose-built one only when there is nothing else.
+        var fallback: String? = null
         val groupIds = MmkvManager.decodeSubscriptions().map { it.guid } + ""
         for (subid in groupIds.distinct()) {
             for (guid in MmkvManager.decodeServerList(subid)) {
                 MmkvManager.decodeServerConfig(guid)?.takeIf {
                     it.configType == com.narcic.ng.enums.EConfigType.AETHER
-                }?.let { return guid }
+                }?.let { profile ->
+                    if (isBare(profile)) return guid
+                    if (fallback == null) fallback = guid
+                }
             }
         }
+        fallback?.let { return it }
         val profile = com.narcic.ng.dto.entities.ProfileItem.create(
             com.narcic.ng.enums.EConfigType.AETHER
         ).apply {

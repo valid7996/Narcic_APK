@@ -714,7 +714,7 @@ object CoreOutboundBuilder {
         val conf = profileItem.awgConfigText ?: return null
         val lines = conf.lines().map { it.trim() }
         fun valueOf(key: String): String? = lines
-            .firstOrNull { it.startsWith("=", ignoreCase = true) }
+            .firstOrNull { it.substringBefore('=').trim().equals(key, ignoreCase = true) && '=' in it }
             ?.substringAfter('=')?.trim()?.takeIf { it.isNotEmpty() }
 
         val outbound = createInitOutbound(EConfigType.WIREGUARD) ?: return null
@@ -786,6 +786,45 @@ object CoreOutboundBuilder {
         }.getOrDefault(configJson)
     }
 
+    /**
+     * Hands [carrierTag] to a helper process over the loopback: a local socks
+     * inbound is added to [root] and a routing rule for it is put AHEAD of every
+     * other rule, so nothing the helper dials can be caught by the profile's own
+     * geo or catch-all rules. The helper reaches the carrier's outbound without
+     * the carrier being an Xray dialable hop itself (e.g. a WireGuard carrier for
+     * an Aether core's upstream).
+     */
+    fun addCarrierInbound(root: JsonObject, port: Int, inboundTag: String, carrierTag: String) {
+        val inbounds = root.getAsJsonArray("inbounds")
+            ?: JsonArray().also { root.add("inbounds", it) }
+        inbounds.add(
+            JsonObject().apply {
+                addProperty("tag", inboundTag)
+                addProperty("listen", AppConfig.LOOPBACK)
+                addProperty("port", port)
+                addProperty("protocol", "socks")
+                add(
+                    "settings", JsonObject().apply {
+                        addProperty("auth", "noauth")
+                        addProperty("udp", true)
+                    }
+                )
+            }
+        )
+
+        val routing = root.getAsJsonObject("routing")
+            ?: JsonObject().also { root.add("routing", it) }
+        val oldRules = routing.getAsJsonArray("rules")
+        val newRules = JsonArray()
+        newRules.add(
+            JsonObject().apply {
+                add("inboundTag", JsonArray().apply { add(inboundTag) })
+                addProperty("outboundTag", carrierTag)
+            }
+        )
+        oldRules?.forEach { newRules.add(it) }
+        routing.add("rules", newRules)
+    }
 }
 
 /**

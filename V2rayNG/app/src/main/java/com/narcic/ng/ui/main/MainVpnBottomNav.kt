@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -201,14 +202,15 @@ fun MainEngineTabBar(
     }
 }
 
-// ───────────── camera-style corner switch (امنزیا / وی‌تو‌ری / اتر) ─────────────
+// ───────────── camera-style corner switch (امنزیا / وی‌تو‌ری / اتر / زنجیره) ─────────────
 
 /**
- * The 3-page switch, camera-app style: three circles pinned to the top
+ * The 4-page switch, camera-app style: four circles pinned to the top
  * corner instead of a bottom bar — وی‌تو‌ری with its signature V mark,
- * امنزیا with the Amnezia cloud, اتر with the at (@) sign. The selected
- * circle rings with its engine's accent; browsing pages stays UI-local
- * list filtering, exactly like the bottom bar it replaces.
+ * امنزیا with the Amnezia cloud, اتر with the at (@) sign, زنجیره with
+ * the chain link. The selected circle rings with its engine's accent;
+ * browsing pages stays UI-local list filtering, exactly like the bottom
+ * bar it replaces.
  */
 @Composable
 fun MainEngineSwitch(
@@ -216,10 +218,11 @@ fun MainEngineSwitch(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Compact horizontal strip (camera mode-selector style): three 34dp
-    // icon-only circles — V (وی‌تو‌ری), cloud (امنزیا), @ (اتر). The selected
-    // circle rings with its engine accent; the active engine's name is
-    // already shown by the hero status and the dashboard, so no labels here.
+    // Compact horizontal strip (camera mode-selector style): four 34dp
+    // icon-only circles — V (وی‌تو‌ری), cloud (امنزیا), @ (اتر), link (زنجیره).
+    // The selected circle rings with its engine accent; the active engine's
+    // name is already shown by the hero status and the dashboard, so no
+    // labels here.
     Row(
         horizontalArrangement = Arrangement.spacedBy(9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -243,6 +246,12 @@ fun MainEngineSwitch(
             contentDescription = "اتر",
             onClick = { onSelect("ae") },
         ) { tint -> Icon(Icons.Rounded.AlternateEmail, null, tint = tint, modifier = Modifier.size(16.dp)) }
+        EngineSwitchCircle(
+            accent = Nc.Violet,
+            selected = selectedTab == "nc",
+            contentDescription = "زنجیره",
+            onClick = { onSelect("nc") },
+        ) { tint -> Icon(Icons.Rounded.Link, null, tint = tint, modifier = Modifier.size(16.dp)) }
     }
 }
 

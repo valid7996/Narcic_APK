@@ -120,6 +120,9 @@ object AetherCoreManager {
 
     /** Environment variable naming the directory the Psiphon client keeps its datastore in; see [psiphonStateDir]. */
     internal const val PSIPHON_DIR_ENV = "AETHER_PSIPHON_DIR"
+
+    /** The proxy already running here that the core dials out through; see [start]. */
+    internal const val UPSTREAM_ENV = "AETHER_UPSTREAM"
     private const val PSIPHON_STATE_DIR = "psiphon"
     private const val PSIPHON_PROBE_DIR = "psiphon-probe"
 
@@ -407,7 +410,12 @@ object AetherCoreManager {
         }
     }
 
-    internal fun startProcess(context: Context, arguments: List<String>, markSession: Boolean = false): Process {
+    internal fun startProcess(
+        context: Context,
+        arguments: List<String>,
+        markSession: Boolean = false,
+        upstreamPort: Int? = null,
+    ): Process {
         val workDir = AetherIdentityManager.workDir(context).apply { mkdirs() }
         val shippedList = if (PSIPHON_SERVER_ENTRIES in arguments) {
             PsiphonServerList.entriesFile(File(Utils.userAssetPath(context)), workDir) { problem ->
@@ -422,6 +430,9 @@ object AetherCoreManager {
         builder.environment().apply {
             put(OWNER_ENV, android.os.Process.myPid().toString())
             if (markSession) put(SESSION_ENV, "1")
+            // The core dials out through a proxy already running here (the chain
+            // carrier's loopback socks inbound); the core reads the same word --upstream takes.
+            if (upstreamPort != null) put(UPSTREAM_ENV, "socks5://127.0.0.1:$upstreamPort")
             psiphonBinary(context).takeIf { it.canExecute() }?.let { put(PSIPHON_BIN_ENV, it.absolutePath) }
             transportBinary(context).takeIf { it.canExecute() }?.let { transport ->
                 put(TOR_PT_ENV, torTransports.joinToString(";") { "$it=${transport.absolutePath}" })
@@ -492,7 +503,13 @@ object AetherCoreManager {
      * for the caller has just told the test service to cancel them.
      */
     @Synchronized
-    fun start(context: Context, core: AetherCore, afterProbes: Boolean = false, onExit: () -> Unit) {
+    fun start(
+        context: Context,
+        core: AetherCore,
+        afterProbes: Boolean = false,
+        onExit: () -> Unit,
+        upstreamPort: Int? = null,
+    ) {
         stop()
         clearSessionLog()
         val appContext = context.applicationContext
@@ -500,7 +517,13 @@ object AetherCoreManager {
         // The ready word is an info line; a quieter setting must not leave a Psiphon session waiting for it.
         if (readyNeedsWord(core.arguments) && logLevel !in infoLevels) logLevel = DEFAULT_LOG_LEVEL
         val arguments = withLogLevel(core.arguments, logLevel)
-        val next = Session(core.port, needsWord = readyNeedsWord(arguments) && showsInfo(arguments), context = appContext, onExit = onExit)
+        val next = Session(
+            core.port,
+            needsWord = readyNeedsWord(arguments) && showsInfo(arguments),
+            context = appContext,
+            onExit = onExit,
+            upstreamPort = upstreamPort,
+        )
         session = next
         lifecycle.execute { open(next, appContext, arguments, afterProbes) }
     }
@@ -948,7 +971,7 @@ object AetherCoreManager {
         if (session !== target) return
         reapStale(context, listenerAddressOf(arguments))
         val process = try {
-            startProcess(context, arguments, markSession = true)
+            startProcess(context, arguments, markSession = true, upstreamPort = target.upstreamPort)
         } catch (e: IOException) {
             LogUtil.e(AppConfig.TAG, "AetherCore: failed to launch the core", e)
             if (release(target)) target.onExit()
@@ -996,7 +1019,13 @@ object AetherCoreManager {
     }
 
     /** [wordSeen] starts true where no word is needed, so the listener alone decides there. */
-    private class Session(val port: Int, needsWord: Boolean, val context: Context, val onExit: () -> Unit) {
+    private class Session(
+        val port: Int,
+        needsWord: Boolean,
+        val context: Context,
+        val onExit: () -> Unit,
+        val upstreamPort: Int? = null,
+    ) {
         var process: Process? = null
 
         @Volatile

@@ -282,6 +282,9 @@ object AppConfig {
     const val AETHER = "aether://"
     const val V2RAYNFMTS = "v2rayn://"
 
+    /** A self-contained Narcic Chain link: the AmneziaWG carrier's config text plus the Psiphon exit region. */
+    const val NARCIC_CHAIN = "narcicchain://"
+
     /** Give a good name to this, IDK*/
     const val VPN = "VPN"
     const val VPN_MTU = 1500

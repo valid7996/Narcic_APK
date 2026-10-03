@@ -67,6 +67,14 @@ object CoreServiceManager {
     @Volatile
     private var aetherExitHandled = false
 
+    /**
+     * The loopback socks inbound the chain carrier is handed to the Aether core on, set while a
+     * CROSS_CHAIN profile's exit is an Aether profile (the core dials out through it); null on
+     * every other start, so a plain Aether profile never learns of a stale carrier.
+     */
+    @Volatile
+    private var aetherUpstreamPort: Int? = null
+
     @Volatile
     private var isReloading = false
 
@@ -143,6 +151,7 @@ object CoreServiceManager {
     private fun launchCore(service: Service, vpnInterface: ParcelFileDescriptor?, isReload: Boolean = false) {
         val guid = MmkvManager.getSelectServer() ?: error("No server selected")
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
+        aetherUpstreamPort = null
 
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
 
@@ -171,14 +180,17 @@ object CoreServiceManager {
         }
 
         // ── Two-engine chain (CROSS_CHAIN): member ۱ (chainOuterId) is the
-        // FIRST hop, member ۲ (chainInnerId) is the EXIT. Traffic:
-        // تونل → سرور ۲ → سرور ۱ → اینترنت. Every engine type is supported in
-        // EITHER slot (no forced roles):
+        // FIRST hop (the carrier), member ۲ (chainInnerId) is the EXIT.
+        // Traffic: تونل → سرور ۱ → سرور ۲ → اینترنت. Every engine type is
+        // supported in EITHER slot (no forced roles), with one shape per side:
         //   Aether member  → its own core process + a socks outbound at its port
         //   WG/AWG member  → wireguard outbound built from its config
         //   Xray-family    → its normal outbound
-        // All non-exit layers are appended as tagged outbounds chained via
-        // dialerProxy; only the exit layer owns the tun. ──
+        // A carrier that is itself dialable is chained via dialerProxy on the
+        // exit's first outbound. An Aether EXIT is the one shape dialerProxy
+        // cannot carry — its outbound dials the loopback — so its core instead
+        // dials out through the carrier over a loopback socks inbound
+        // (aetherUpstreamPort) and is warmed up like a carrier would be. ──
         var content: String
         val aetherWarmup = ArrayList<Pair<String, ProfileItem>>()
         if (config.configType == EConfigType.CROSS_CHAIN) {
@@ -214,7 +226,11 @@ object CoreServiceManager {
             val exit = MmkvManager.decodeServerConfig(exitGuid)
                 ?: error(service.getString(R.string.crosschain_bad_inner, exitGuid.take(8)))
 
-            if (aetherWarmup.isNotEmpty() && !AetherCoreManager.isSupported(service)) {
+            val exitIsAether = exit.configType == EConfigType.AETHER
+            if (exitIsAether && first.configType == EConfigType.AETHER) {
+                error(service.getString(R.string.crosschain_bad_pair))
+            }
+            if ((aetherWarmup.isNotEmpty() || exitIsAether) && !AetherCoreManager.isSupported(service)) {
                 error(service.getString(R.string.aether_unsupported_abi))
             }
             aetherExitHandled = false
@@ -229,17 +245,28 @@ object CoreServiceManager {
             val outbounds = root.getAsJsonArray("outbounds")
                 ?: error("Exit config has no outbounds")
 
-            // Carrier layer: appended as a tagged outbound, then the exit's
-            // first outbound is pointed at it via dialerProxy.
+            // Carrier layer: appended as a tagged outbound. For an Xray-dialable
+            // carrier the exit's first outbound is pointed at it via dialerProxy.
+            // An Aether exit dials its own core on the loopback instead, so that
+            // dial must stay local: the core is told to dial out through the
+            // carrier over a loopback socks inbound routed to chain1, and joins
+            // the warm-up list so the app waits for it before declaring start.
             val firstFragment = fragmentOf(first, firstGuid, "chain1")
                 ?: error(service.getString(R.string.crosschain_bad_carrier, first.remarks))
-            val entry = outbounds.firstOrNull() as? JsonObject
-            if (entry != null) {
-                val stream = entry.getAsJsonObject("streamSettings")
-                    ?: JsonObject().also { entry.add("streamSettings", it) }
-                val sockopt = stream.getAsJsonObject("sockopt")
-                    ?: JsonObject().also { stream.add("sockopt", it) }
-                sockopt.addProperty("dialerProxy", "chain1")
+            if (exitIsAether) {
+                val carrierInPort = Utils.findRandomFreePort()
+                CoreOutboundBuilder.addCarrierInbound(root, carrierInPort, "chain1in", "chain1")
+                aetherUpstreamPort = carrierInPort
+                aetherWarmup += exitGuid to exit
+            } else {
+                val entry = outbounds.firstOrNull() as? JsonObject
+                if (entry != null) {
+                    val stream = entry.getAsJsonObject("streamSettings")
+                        ?: JsonObject().also { entry.add("streamSettings", it) }
+                    val sockopt = stream.getAsJsonObject("sockopt")
+                        ?: JsonObject().also { stream.add("sockopt", it) }
+                    sockopt.addProperty("dialerProxy", "chain1")
+                }
             }
             outbounds.add(com.google.gson.JsonParser.parseString(com.google.gson.Gson().toJson(firstFragment)).asJsonObject)
             content = root.toString()
@@ -341,7 +368,13 @@ object CoreServiceManager {
      */
     private fun announceAetherWarmUp(service: Service, guid: String, config: ProfileItem, isReload: Boolean) {
         aetherWarmUpJob = aetherScope.launch {
-            AetherCoreManager.start(service, AetherCore.of(config), afterProbes = false) { onAetherExit(guid) }
+            AetherCoreManager.start(
+                service,
+                AetherCore.of(config),
+                afterProbes = false,
+                onExit = { onAetherExit(guid) },
+                upstreamPort = aetherUpstreamPort,
+            )
 
             var listening = false
             while (isActive && !listening && AetherCoreManager.isRunning) {

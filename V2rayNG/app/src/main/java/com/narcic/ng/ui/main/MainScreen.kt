@@ -133,13 +133,14 @@ fun MainScreen(
     // Persisted in MMKV so leaving the app from one page and coming back
     // lands on the same page instead of always resetting to وی‌تو‌ری.
     var selectedTab by rememberSaveable {
-        mutableStateOf(MmkvManager.decodeSettingsString(PREF_MAIN_SELECTED_TAB) ?: "v2") // "awg" | "v2" | "ae"
+        mutableStateOf(MmkvManager.decodeSettingsString(PREF_MAIN_SELECTED_TAB) ?: "v2") // "awg" | "v2" | "ae" | "nc"
     }
     LaunchedEffect(selectedTab) {
         MmkvManager.encodeSettings(PREF_MAIN_SELECTED_TAB, selectedTab)
     }
     val engineIsAwg = selectedTab == "awg"
     val aetherTab = selectedTab == "ae"
+    val chainTab = selectedTab == "nc"
     val connectedServer = remember(selectedGuid) { mainViewModel.findServerCache(selectedGuid) }
     LaunchedEffect(selectedGuid) {
         val type = connectedServer?.profile?.configType
@@ -147,17 +148,20 @@ fun MainScreen(
             selectedTab = when {
                 type == EConfigType.WIREGUARD || type == EConfigType.AMNEZIAWG -> "awg"
                 type == EConfigType.AETHER -> "ae"
+                type == EConfigType.CROSS_CHAIN -> "nc"
                 else -> "v2"
             }
         }
     }
     val accentPair = when (selectedTab) {
         "ae" -> AccentPair(Nc.BadgeAether, Color(0xFFFB923C))
+        "nc" -> AccentPair(Nc.Violet, Color(0xFFA78BFA))
         else -> accentFor(engineIsAwg)
     }
     val engineLabel = when (selectedTab) {
         "ae" -> "AE"
         "awg" -> "AWG"
+        "nc" -> "Chain"
         else -> "V2Ray"
     }
 
@@ -188,18 +192,23 @@ fun MainScreen(
             val servers = serversByGroup[g.id].orEmpty()
             val hasAwg = servers.any { isAwgType(it.profile.configType) }
             val hasAe = servers.any { it.profile.configType == EConfigType.AETHER }
+            val hasChain = servers.any { it.profile.configType == EConfigType.CROSS_CHAIN }
             val hasV2 = servers.any {
-                !isAwgType(it.profile.configType) && it.profile.configType != EConfigType.AETHER
+                !isAwgType(it.profile.configType) &&
+                    it.profile.configType != EConfigType.AETHER &&
+                    it.profile.configType != EConfigType.CROSS_CHAIN
             }
             val matches = when (selectedTab) {
                 "ae" -> hasAe
                 "awg" -> hasAwg
+                "nc" -> hasChain
                 else -> hasV2
             }
             when {
                 g.remarks == DefaultConfigSource.DEFAULT_GROUP_AWG_NAME -> selectedTab == "awg"
                 g.remarks == DefaultConfigSource.DEFAULT_GROUP_AETHER_NAME -> selectedTab == "ae"
                 g.remarks == DefaultConfigSource.DEFAULT_GROUP_V2_NAME -> selectedTab == "v2"
+                g.remarks == DefaultConfigSource.DEFAULT_GROUP_CHAIN_NAME -> selectedTab == "nc"
                 g.remarks == "Narcic NG - WireGuard" -> selectedTab == "awg"
                 g.remarks == "Narcic Irancell" || g.remarks == "Narcic NG - JSON" -> selectedTab == "v2"
                 else -> matches
@@ -589,6 +598,7 @@ fun MainScreen(
                     isTesting = uiState.isTesting,
                     engineIsAwg = engineIsAwg,
                     aetherOnly = aetherTab,
+                    chainOnly = chainTab,
                     accent = accentPair.main,
                     onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
                     onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },

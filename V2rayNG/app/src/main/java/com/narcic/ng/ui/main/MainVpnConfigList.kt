@@ -62,6 +62,7 @@ fun MainServerListSection(
     isTesting: Boolean,
     engineIsAwg: Boolean,
     aetherOnly: Boolean = false,
+    chainOnly: Boolean = false,
     accent: Color,
     onSelectServer: (String) -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
@@ -90,9 +91,19 @@ fun MainServerListSection(
                 EConfigType.TROJAN, EConfigType.HTTP,
             )
         }
+        // A chain the links brought in keeps an AmneziaWG carrier or an Aether
+        // exit; either shows as an extra option so editing keeps its members.
+        val carrierOptions = carriers.map { it.guid to it.profile.remarks }.toMutableList()
+        existing?.chainOuterId?.takeUnless { id -> carrierOptions.any { it.first == id } }?.let { id ->
+            MmkvManager.decodeServerConfig(id)?.let { carrierOptions += id to it.remarks }
+        }
+        val dialerOptions = dialers.map { it.guid to it.profile.remarks }.toMutableList()
+        existing?.chainInnerId?.takeUnless { id -> dialerOptions.any { it.first == id } }?.let { id ->
+            MmkvManager.decodeServerConfig(id)?.let { dialerOptions += id to it.remarks }
+        }
         CrossChainDialog(
-            carriers = carriers.map { it.guid to it.profile.remarks },
-            dialers = dialers.map { it.guid to it.profile.remarks },
+            carriers = carrierOptions,
+            dialers = dialerOptions,
             initialRemarks = existing?.remarks ?: "زنجیره: Aether → سرور",
             initialCarrier = existing?.chainOuterId ?: carriers.firstOrNull()?.guid,
             initialInner = existing?.chainInnerId ?: dialers.firstOrNull()?.guid,
@@ -235,9 +246,10 @@ fun MainServerListSection(
         )
     }
 
-    val sorted = remember(sortedAll, engineIsAwg, aetherOnly) {
+    val sorted = remember(sortedAll, engineIsAwg, aetherOnly, chainOnly) {
         sortedAll.filter {
             when {
+                chainOnly -> it.profile.configType == EConfigType.CROSS_CHAIN
                 aetherOnly -> it.profile.configType == EConfigType.AETHER
                 else -> isAwgConfig(it.profile.configType) == engineIsAwg
             }
@@ -251,6 +263,7 @@ fun MainServerListSection(
         // ---- Header Bar: کلاینت‌های AmneziaWG + دکمه‌های عملیاتی ----
         ConfigsHeaderBar(
             title = when {
+                chainOnly -> "زنجیره‌های دوموتوره"
                 aetherOnly -> "کانفیگ‌های Aether"
                 engineIsAwg -> "کلاینت‌های AmneziaWG"
                 else -> "کلاینت‌های V2Ray"
@@ -259,10 +272,17 @@ fun MainServerListSection(
             accent = accent,
             // Aether page: the + opens the Aether editor directly — no
             // intermediate dialog (manual Aether entry lives only here now).
-            onAddClick = if (aetherOnly) {
-                { onAddManualConfig(EConfigType.AETHER.value) }
-            } else {
-                { showAddOptionsDialog = true }
+            // Chain page: the + opens the two-engine chain dialog.
+            onAddClick = when {
+                aetherOnly -> {
+                    { onAddManualConfig(EConfigType.AETHER.value) }
+                }
+                chainOnly -> {
+                    { showCrossChainDialog = "" }
+                }
+                else -> {
+                    { showAddOptionsDialog = true }
+                }
             },
             onSortClick = onAutoSelectBest,
             onTestClick = onRetest,
@@ -347,6 +367,8 @@ fun MainServerListSection(
             ) {
                 Text(
                     text = when {
+                        chainOnly ->
+                            "هنوز زنجیره‌ای ندارید\nاز دکمه + بالای لیست یکی بسازید یا لینک‌های Narcic Chain را ایمپورت کنید"
                         aetherOnly ->
                             "هنوز کانفیگ Aether ندارید\nاز دکمه + بالای لیست یکی اضافه کنید"
                         sortedAll.isNotEmpty() ->
