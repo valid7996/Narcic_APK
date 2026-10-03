@@ -219,7 +219,7 @@ object AngConfigManager {
      *
      * @return The number of links imported.
      */
-    private fun importNarcicChainBatch(server: String?, subid: String): Int {
+    internal fun importNarcicChainBatch(server: String?, subid: String): Int {
         if (server.isNullOrEmpty()) return 0
         var count = 0
         server.lines()
@@ -240,6 +240,23 @@ object AngConfigManager {
                 }
             }
         return count
+    }
+
+    /**
+     * The Narcic Chain fleet the app ships with: the [AppConfig.NARCIC_CHAIN_ASSET] asset carries
+     * the built-in links — the two-engine chain per Psiphon exit country plus the plain AmneziaWG
+     * config — and they become profiles here, in the per-engine default groups. Nothing is fetched
+     * and nothing is duplicated: every profile a previous start created is found again by its
+     * config text, region or member pair.
+     *
+     * @return How many profiles were newly created.
+     */
+    fun importBuiltInNarcicChains(context: Context): Int = try {
+        val text = context.assets.open(AppConfig.NARCIC_CHAIN_ASSET).bufferedReader().use { it.readText() }
+        importNarcicChainBatch(text, "")
+    } catch (e: Exception) {
+        LogUtil.e(AppConfig.TAG, "Failed to import the built-in Narcic Chain links", e)
+        0
     }
 
     /** The plain AmneziaWG profile a region-less link stands for; true when it was new. */

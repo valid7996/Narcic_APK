@@ -136,6 +136,18 @@ object DefaultConfigSource {
     }
 
     /**
+     * The Narcic Chain fleet is part of the app, not something the customer
+     * imports: on every start the bundled links are made into profiles — the
+     * two-engine chain per Psiphon exit country and the plain AmneziaWG config
+     * — inside the per-engine default groups. Idempotent, so it runs cheaply
+     * next to the other start-up defaults.
+     *
+     * @return How many profiles were newly created.
+     */
+    fun ensureNarcicChains(context: android.content.Context): Int =
+        AngConfigManager.importBuiltInNarcicChains(context)
+
+    /**
      * The اتر page's quick-setup dashboard IS the config: opening that page
      * provisions one Aether profile automatically (in the پیش‌فرض اتر
      * group) so the user never has to "add a file" first — they just pick a

@@ -285,6 +285,9 @@ object AppConfig {
     /** A self-contained Narcic Chain link: the AmneziaWG carrier's config text plus the Psiphon exit region. */
     const val NARCIC_CHAIN = "narcicchain://"
 
+    /** The asset that carries the built-in Narcic Chain fleet, one [NARCIC_CHAIN] link per line. */
+    const val NARCIC_CHAIN_ASSET = "narcic_chain_links.txt"
+
     /** Give a good name to this, IDK*/
     const val VPN = "VPN"
     const val VPN_MTU = 1500

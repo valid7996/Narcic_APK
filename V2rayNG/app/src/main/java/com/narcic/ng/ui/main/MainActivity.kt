@@ -100,6 +100,11 @@ class MainActivity : HelperBaseComponentActivity() {
         // One-shot: move legacy shared-default configs into their engine's
         // own default group so the three pages stay strictly separated.
         DefaultConfigSource.migrateLegacyDefaultGroup()
+        // The Narcic Chain fleet ships with the app: the two-engine chain per
+        // Psiphon exit country and the plain AmneziaWG config become profiles
+        // here, without any import by hand. Existing ones are found again,
+        // never duplicated.
+        DefaultConfigSource.ensureNarcicChains(this)
         mainViewModel.onAction(MainAction.Initialize)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
